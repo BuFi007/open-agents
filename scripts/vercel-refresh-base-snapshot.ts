@@ -12,7 +12,9 @@
 import {
   DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS,
   refreshBaseSnapshot,
+  type SnapshotSandbox,
 } from "@open-agents/sandbox/vercel";
+import { prepareAdapterSandboxRuntimeProfile } from "@agent-harness-experimental/sandbox-images";
 import {
   DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
   DEFAULT_SANDBOX_PORTS,
@@ -79,6 +81,10 @@ function parseArgs(argv: string[]): CliOptions | HelpResult {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
+    if (arg === "--") {
+      continue;
+    }
+
     if (arg === "--help" || arg === "-h") {
       return { help: true };
     }
@@ -124,6 +130,16 @@ function parseArgs(argv: string[]): CliOptions | HelpResult {
   };
 }
 
+function requireAgentHarnessWorkspace(sandbox: SnapshotSandbox) {
+  if (!sandbox.toAgentHarnessWorkspace) {
+    throw new Error(
+      "Configured sandbox provider does not support agent harness runtime preparation.",
+    );
+  }
+
+  return sandbox.toAgentHarnessWorkspace();
+}
+
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if ("help" in parsed) {
@@ -137,6 +153,12 @@ async function main() {
     sandboxTimeoutMs: parsed.sandboxTimeoutMs ?? DEFAULT_SANDBOX_TIMEOUT_MS,
     commandTimeoutMs: parsed.commandTimeoutMs,
     ports: DEFAULT_SANDBOX_PORTS,
+    prepare: async (sandbox) => {
+      await prepareAdapterSandboxRuntimeProfile({
+        session: requireAgentHarnessWorkspace(sandbox),
+        adapters: ["codex", "claude-code"],
+      });
+    },
     log: (message) => console.log(message),
   });
 

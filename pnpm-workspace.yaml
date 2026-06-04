@@ -18,8 +18,31 @@ minimumReleaseAgeIgnoreMissingTime: false
 minimumReleaseAgeStrict: true
 
 allowBuilds:
+  "@google/genai": false
   "@nestjs/core": false
   "@swc/core": true
   cbor-extract: true
   esbuild: true
+  koffi: false
+  protobufjs: false
   sharp: true
+
+minimumReleaseAgeExclude:
+  - "@agent-harness-experimental/adapter-catalog@0.0.5"
+  - "@agent-harness-experimental/adapter-claude-code@0.0.5"
+  - "@agent-harness-experimental/adapter-claude-managed-agents@0.0.5"
+  - "@agent-harness-experimental/adapter-codex@0.0.5"
+  - "@agent-harness-experimental/adapter-deepagents@0.0.5"
+  - "@agent-harness-experimental/adapter-goose@0.0.5"
+  - "@agent-harness-experimental/adapter-mastra@0.0.5"
+  - "@agent-harness-experimental/adapter-openai-agents@0.0.5"
+  - "@agent-harness-experimental/adapter-opencode@0.0.5"
+  - "@agent-harness-experimental/adapter-pi@0.0.5"
+  - "@agent-harness-experimental/bridge@0.0.5"
+  - "@agent-harness-experimental/channel@0.0.5"
+  - "@agent-harness-experimental/debug@0.0.5"
+  - "@agent-harness-experimental/protocol@0.0.5"
+  - "@agent-harness-experimental/sandbox-images@0.0.5"
+  - "@agent-harness-experimental/sandbox-interface@0.0.5"
+  - "@agent-harness-experimental/sandbox-vercel@0.0.5"
+  - agent-harness-experimental@0.0.5

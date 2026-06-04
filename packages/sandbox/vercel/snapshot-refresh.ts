@@ -1,5 +1,6 @@
 import { connectSandbox, type SandboxConnectConfig } from "../factory.ts";
 import type { ExecResult, SnapshotResult } from "../interface.ts";
+import type { AgentHarnessHostedWorkspace } from "./sandbox.ts";
 
 export const DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -8,6 +9,7 @@ export interface SnapshotSandbox {
   exec(command: string, cwd: string, timeoutMs: number): Promise<ExecResult>;
   stop(): Promise<void>;
   snapshot?(): Promise<SnapshotResult>;
+  toAgentHarnessWorkspace?(): AgentHarnessHostedWorkspace;
 }
 
 type SnapshotSandboxConnector = (

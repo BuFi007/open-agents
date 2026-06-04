@@ -159,11 +159,10 @@ The SDK helper is merged on `agent-harness-sdk` main at:
 174f4aac23661a90830775a333bcdb88f1d6ad99
 ```
 
-The currently published experimental `0.0.4` packages predate that helper.
-Publish the next SDK package version before adding the Open Agents runner
-dependency or enabling Codex execution. A pnpm Git subdirectory dependency is
-not a deployable fallback for this monorepo because the fetched package retains
-internal `workspace:*` dependencies without the rest of the SDK workspace.
+The helper is published in
+`@agent-harness-experimental/sandbox-images@0.0.5`. The Open Agents base
+snapshot refresh command now uses it to prepare the combined Codex + Claude
+Code profile before snapshotting.
 
 Open Agents must remain the sandbox lifecycle owner. Harness cleanup should
 close bridge/proxy handles without deleting the underlying sandbox.
@@ -223,8 +222,8 @@ unless there is a specific reason. They already provide native built-ins.
    caller-owned dependency setup in `agent-harness-sdk`.
 3. Completed: adapt the connected Open Agents wrapper, reserve sandbox bridge
    port `5001`, and add the Open Agents base-snapshot preparation hook.
-4. Publish the merged SDK helper packages and wire the combined Codex + Claude
-   Code profile into the base-snapshot refresh command.
+4. Completed: publish the merged SDK helper packages and wire the combined
+   Codex + Claude Code profile into the base-snapshot refresh command.
 5. Resolve the AI SDK version/event protocol boundary.
 6. Add `runHarnessAgentSlice()` with Codex first.
 7. Verify detach, resume, cancellation, and post-finish Git behavior.
