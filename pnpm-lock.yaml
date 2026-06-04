@@ -27,12 +27,24 @@ importers:
 
   .:
     devDependencies:
+      '@agent-harness-experimental/adapter-codex':
+        specifier: 0.0.5
+        version: 0.0.5(@opentelemetry/api@1.9.1)(ai@7.0.0-canary.126(zod@4.4.3))(zod@4.4.3)
       '@agent-harness-experimental/sandbox-images':
         specifier: 0.0.5
         version: 0.0.5(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@opentelemetry/api@1.9.1)(ai@7.0.0-canary.126(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
+      '@agent-harness-experimental/sandbox-vercel':
+        specifier: 0.0.5
+        version: 0.0.5
       '@open-agents/sandbox':
         specifier: workspace:*
         version: link:packages/sandbox
+      agent-harness-experimental:
+        specifier: 0.0.5
+        version: 0.0.5(@opentelemetry/api@1.9.1)(ai@7.0.0-canary.126(zod@4.4.3))(zod@4.4.3)
+      ai:
+        specifier: 7.0.0-canary.126
+        version: 7.0.0-canary.126(zod@4.4.3)
       oxfmt:
         specifier: ^0.43.0
         version: 0.43.0

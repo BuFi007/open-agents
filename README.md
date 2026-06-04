@@ -223,6 +223,7 @@ pnpm check                  # lint + format check
 pnpm fix                    # lint + format fix
 pnpm typecheck              # typecheck all packages
 pnpm run ci                 # full CI: check, typecheck, tests, migration check
+pnpm harness:smoke:codex    # run one Codex turn against an existing sandbox
 pnpm sandbox:snapshot-base  # manually layer a new sandbox snapshot from an existing snapshot
 ```
 

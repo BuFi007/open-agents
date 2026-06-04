@@ -6,6 +6,7 @@
     "web": "pnpm --dir apps/web dev",
     "dev": "turbo dev",
     "build": "turbo build",
+    "harness:smoke:codex": "node scripts/codex-harness-smoke.ts",
     "sandbox:snapshot-base": "node scripts/vercel-refresh-base-snapshot.ts",
     "typecheck": "turbo typecheck",
     "check": "ultracite check",
@@ -15,8 +16,12 @@
     "test:verbose": "bun test --reporter=junit --reporter-outfile /dev/stdout"
   },
   "devDependencies": {
+    "@agent-harness-experimental/adapter-codex": "0.0.5",
     "@agent-harness-experimental/sandbox-images": "0.0.5",
+    "@agent-harness-experimental/sandbox-vercel": "0.0.5",
     "@open-agents/sandbox": "workspace:*",
+    "agent-harness-experimental": "0.0.5",
+    "ai": "7.0.0-canary.126",
     "oxfmt": "^0.43.0",
     "oxlint": "1.57.0",
     "turbo": "^2.5.4",
