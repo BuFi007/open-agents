@@ -20,4 +20,5 @@ export type {
   RefreshBaseSnapshotCommandResult,
   RefreshBaseSnapshotOptions,
   RefreshBaseSnapshotResult,
+  SnapshotSandbox,
 } from "./snapshot-refresh.ts";

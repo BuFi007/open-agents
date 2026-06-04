@@ -1,7 +1,8 @@
 # Chat Harness Selector Handoff
 
-Status: foundational selector and sandbox-attachment work complete. Runtime
-dispatch is intentionally incomplete. Do not enable Codex or Claude Code yet.
+Status: foundational selector, sandbox attachment, and base-snapshot preparation
+hook work complete. Runtime dispatch is intentionally incomplete. Do not enable
+Codex or Claude Code yet.
 
 ## Goal
 
@@ -134,16 +135,35 @@ const provided = provideSandbox({
 `agent-harness-sdk` also accepts a Vercel Sandbox name resolver when direct
 attachment is useful, but the wrapper adapter avoids reconnecting twice.
 
-Use `runtimeSetup: "install"` for the first runner slice. Generic Open Agents
-sandboxes do not already include Codex or Claude Code adapter dependencies.
-This explicit SDK mode installs adapter dependencies and post-install commands,
-records a hashed readiness marker, and refreshes bridge files while preserving
-the existing fast `refresh` default for prebuilt sandboxes.
+Prepare the Open Agents base snapshot explicitly before attaching harness
+runs. The SDK provides a combined profile helper:
 
-The `install` mode exists in the local `agent-harness-sdk` working tree but is
-not in the currently published experimental `0.0.4` packages. Publish the next
-SDK version before adding the Open Agents runner package dependency or enabling
-Codex execution.
+```ts
+await prepareAdapterSandboxRuntimeProfile({
+  session: sandbox.toAgentHarnessWorkspace(),
+  adapters: ["codex", "claude-code"],
+});
+```
+
+The helper installs one union dependency manifest, adapter post-install steps,
+base tooling, and the proxy binary. It deliberately excludes bridge files:
+provided-mode runs keep the default `runtimeSetup: "refresh"` behavior and
+write the selected adapter's current bridge files when attaching.
+
+`refreshBaseSnapshot()` now accepts a `prepare` callback that runs before
+snapshotting, so the SDK helper has a stable Open Agents provisioning hook.
+
+The SDK helper is merged on `agent-harness-sdk` main at:
+
+```text
+174f4aac23661a90830775a333bcdb88f1d6ad99
+```
+
+The currently published experimental `0.0.4` packages predate that helper.
+Publish the next SDK package version before adding the Open Agents runner
+dependency or enabling Codex execution. A pnpm Git subdirectory dependency is
+not a deployable fallback for this monorepo because the fetched package retains
+internal `workspace:*` dependencies without the rest of the SDK workspace.
 
 Open Agents must remain the sandbox lifecycle owner. Harness cleanup should
 close bridge/proxy handles without deleting the underlying sandbox.
@@ -201,13 +221,15 @@ unless there is a specific reason. They already provide native built-ins.
    `open-agent` executable.
 2. Completed: add configurable Vercel Sandbox name attachment and explicit
    caller-owned dependency setup in `agent-harness-sdk`.
-3. Completed: adapt the connected Open Agents wrapper and reserve sandbox
-   bridge port `5001`.
-4. Resolve the AI SDK version/event protocol boundary.
-5. Add `runHarnessAgentSlice()` with Codex first.
-6. Verify detach, resume, cancellation, and post-finish Git behavior.
-7. Enable `codex` in `CHAT_HARNESS_OPTIONS`.
-8. Repeat for Claude Code and enable `claude-code`.
+3. Completed: adapt the connected Open Agents wrapper, reserve sandbox bridge
+   port `5001`, and add the Open Agents base-snapshot preparation hook.
+4. Publish the merged SDK helper packages and wire the combined Codex + Claude
+   Code profile into the base-snapshot refresh command.
+5. Resolve the AI SDK version/event protocol boundary.
+6. Add `runHarnessAgentSlice()` with Codex first.
+7. Verify detach, resume, cancellation, and post-finish Git behavior.
+8. Enable `codex` in `CHAT_HARNESS_OPTIONS`.
+9. Repeat for Claude Code and enable `claude-code`.
 
 ## Validation
 

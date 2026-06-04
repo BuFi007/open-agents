@@ -3,7 +3,7 @@ import type { ExecResult, SnapshotResult } from "../interface.ts";
 
 export const DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 
-interface SnapshotSandbox {
+export interface SnapshotSandbox {
   workingDirectory: string;
   exec(command: string, cwd: string, timeoutMs: number): Promise<ExecResult>;
   stop(): Promise<void>;
@@ -21,6 +21,7 @@ export interface RefreshBaseSnapshotOptions {
   commandTimeoutMs?: number;
   ports?: number[];
   env?: Record<string, string>;
+  prepare?: (sandbox: SnapshotSandbox) => Promise<void>;
   log?: (message: string) => void;
 }
 
@@ -128,6 +129,11 @@ export async function refreshBaseSnapshot(
       if (!result.success) {
         throw new Error(formatCommandFailure(command, result));
       }
+    }
+
+    if (options.prepare) {
+      log("Preparing sandbox runtime profile.");
+      await options.prepare(sandbox);
     }
 
     log("Creating snapshot from prepared sandbox.");
