@@ -365,6 +365,7 @@ function makeOptions(overrides?: Record<string, unknown>) {
       },
     ],
     chatId: "chat-1",
+    harnessId: "open-agent",
     sessionId: "session-1",
     userId: "user-1",
     requestUrl: "http://localhost/api/chat",
@@ -442,6 +443,16 @@ describe("runAgentWorkflow", () => {
     } catch (error) {
       expect((error as Error).message).toContain("at least one message");
     }
+  });
+
+  test("rejects an unimplemented harness before side effects", async () => {
+    await expect(
+      runAgentWorkflow(makeOptions({ harnessId: "codex" })),
+    ).rejects.toThrow('Harness "codex" is not wired yet');
+
+    expect(spies.claimActiveStream).not.toHaveBeenCalled();
+    expect(spies.resolveChatSandboxRuntime).not.toHaveBeenCalled();
+    expect(spies.persistAssistantMessage).not.toHaveBeenCalled();
   });
 
   test("exits before side effects when another workflow owns the stream slot", async () => {

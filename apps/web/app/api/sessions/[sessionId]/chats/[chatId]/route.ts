@@ -7,8 +7,14 @@ import {
   deleteChat,
   getChatMessages,
   getChatsBySessionId,
+  updateEmptyChat,
   updateChat,
 } from "@/lib/db/sessions";
+import {
+  type ChatHarnessId,
+  isAvailableChatHarnessId,
+  isChatHarnessId,
+} from "@/lib/chat-harnesses";
 import { getUserPreferences } from "@/lib/db/user-preferences";
 import { sanitizeSelectedModelIdForSession } from "@/lib/model-access";
 import { getAllVariants } from "@/lib/model-variants";
@@ -21,12 +27,14 @@ type RouteContext = {
 interface UpdateChatRequest {
   title?: string;
   modelId?: string;
+  harnessId?: string;
 }
 
 export interface ChatRefreshResponse {
   chat: {
     id: string;
     modelId: string | null;
+    harnessId: string;
     activeStreamId: string | null;
   };
   isStreaming: boolean;
@@ -69,6 +77,7 @@ export async function GET(req: Request, context: RouteContext) {
     chat: {
       id: chatContext.chat.id,
       modelId,
+      harnessId: chatContext.chat.harnessId,
       activeStreamId: chatContext.chat.activeStreamId,
     },
     isStreaming: chatContext.chat.activeStreamId !== null,
@@ -103,15 +112,20 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   const nextTitle = body.title?.trim();
   const nextModelId = body.modelId?.trim();
+  const nextHarnessId = body.harnessId?.trim();
 
-  if (!nextTitle && !nextModelId) {
+  if (!nextTitle && !nextModelId && !nextHarnessId) {
     return Response.json(
       { error: "At least one field is required" },
       { status: 400 },
     );
   }
 
-  const updatePayload: { title?: string; modelId?: string } = {};
+  const updatePayload: {
+    title?: string;
+    modelId?: string;
+    harnessId?: ChatHarnessId;
+  } = {};
   if (nextTitle) {
     updatePayload.title = nextTitle;
   }
@@ -126,8 +140,35 @@ export async function PATCH(req: Request, context: RouteContext) {
     updatePayload.modelId = sanitizedModelId ?? nextModelId;
   }
 
-  const updatedChat = await updateChat(chatId, updatePayload);
+  if (nextHarnessId) {
+    if (!isChatHarnessId(nextHarnessId)) {
+      return Response.json({ error: "Invalid harness" }, { status: 400 });
+    }
+
+    if (!isAvailableChatHarnessId(nextHarnessId)) {
+      return Response.json(
+        { error: "Harness is not available yet" },
+        { status: 400 },
+      );
+    }
+
+    updatePayload.harnessId = nextHarnessId;
+  }
+
+  const changesHarness =
+    updatePayload.harnessId !== undefined &&
+    updatePayload.harnessId !== chatContext.chat.harnessId;
+  const updatedChat = changesHarness
+    ? await updateEmptyChat(chatId, updatePayload)
+    : await updateChat(chatId, updatePayload);
   if (!updatedChat) {
+    if (changesHarness) {
+      return Response.json(
+        { error: "Harness cannot be changed after the first message" },
+        { status: 409 },
+      );
+    }
+
     return Response.json({ error: "Chat not found" }, { status: 404 });
   }
 

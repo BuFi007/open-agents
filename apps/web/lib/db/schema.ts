@@ -209,6 +209,11 @@ export const chats = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     modelId: text("model_id").default("anthropic/claude-haiku-4.5"),
+    harnessId: text("harness_id", {
+      enum: ["open-agent", "codex", "claude-code"],
+    })
+      .notNull()
+      .default("open-agent"),
     activeStreamId: text("active_stream_id"),
     lastAssistantMessageAt: timestamp("last_assistant_message_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

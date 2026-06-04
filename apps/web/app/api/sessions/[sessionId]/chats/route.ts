@@ -11,6 +11,7 @@ import {
 import { getUserPreferences } from "@/lib/db/user-preferences";
 import { sanitizeUserPreferencesForSession } from "@/lib/model-access";
 import { getServerSession } from "@/lib/session/get-server-session";
+import { DEFAULT_CHAT_HARNESS_ID } from "@/lib/chat-harnesses";
 
 type RouteContext = {
   params: Promise<{ sessionId: string }>;
@@ -100,6 +101,7 @@ export async function POST(req: Request, context: RouteContext) {
     sessionId,
     title: "New chat",
     modelId: preferences.defaultModelId,
+    harnessId: DEFAULT_CHAT_HARNESS_ID,
   });
 
   return Response.json({ chat });

@@ -19,6 +19,7 @@ type OwnedSessionChatResult =
         sessionId: string;
         title: string;
         modelId: string | null;
+        harnessId: "open-agent" | "codex" | "claude-code";
         activeStreamId: string | null;
       };
     }
@@ -32,6 +33,7 @@ type ChatRecord = {
   sessionId: string;
   title: string;
   modelId: string | null;
+  harnessId: "open-agent" | "codex" | "claude-code";
 };
 
 type ForkResult =
@@ -48,6 +50,7 @@ let ownedSessionChatResult: OwnedSessionChatResult = {
     sessionId: "session-1",
     title: "Original chat",
     modelId: "model-1",
+    harnessId: "codex",
     activeStreamId: null,
   },
 };
@@ -59,6 +62,7 @@ let forkResult: ForkResult = {
     sessionId: "session-1",
     title: "Fork of Original chat",
     modelId: "model-1",
+    harnessId: "codex",
   },
 };
 
@@ -72,6 +76,7 @@ const forkCalls: Array<{
     sessionId: string;
     title: string;
     modelId: string | null;
+    harnessId: "open-agent" | "codex" | "claude-code";
   };
 }> = [];
 
@@ -121,6 +126,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]/fork", () => {
         sessionId: "session-1",
         title: "Original chat",
         modelId: "model-1",
+        harnessId: "codex",
         activeStreamId: null,
       },
     };
@@ -132,6 +138,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]/fork", () => {
         sessionId: "session-1",
         title: "Fork of Original chat",
         modelId: "model-1",
+        harnessId: "codex",
       },
     };
     getChatByIdCalls.length = 0;
@@ -218,6 +225,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]/fork", () => {
       sessionId: "session-1",
       title: "Existing",
       modelId: "model-1",
+      harnessId: "codex",
     };
     const { POST } = await routeModulePromise;
 
@@ -281,6 +289,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]/fork", () => {
           sessionId: "session-1",
           title: "Fork of Original chat",
           modelId: "model-1",
+          harnessId: "codex",
         },
       },
     ]);
@@ -289,6 +298,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]/fork", () => {
       sessionId: "session-1",
       title: "Fork of Original chat",
       modelId: "model-1",
+      harnessId: "codex",
     });
   });
 });

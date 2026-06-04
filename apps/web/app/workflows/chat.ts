@@ -49,6 +49,7 @@ import {
 } from "@/lib/model-access";
 import { getAllVariants } from "@/lib/model-variants";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
+import type { ChatHarnessId } from "@/lib/chat-harnesses";
 import type { Session as AuthSession } from "@/lib/session/types";
 import type {
   WorkflowRunStatus,
@@ -62,6 +63,7 @@ type AuthSessionContext = Pick<AuthSession, "authProvider" | "user"> | null;
 type Options = {
   messages: WebAgentUIMessage[];
   chatId: string;
+  harnessId: ChatHarnessId;
   sessionId: string;
   userId: string;
   requestUrl: string;
@@ -600,6 +602,10 @@ export async function runAgentWorkflow(options: Options) {
 
   if (latestMessage == null) {
     throw new Error("runAgentWorkflow requires at least one message");
+  }
+
+  if (options.harnessId !== "open-agent") {
+    throw new Error(`Harness "${options.harnessId}" is not wired yet`);
   }
 
   const assistantId =
