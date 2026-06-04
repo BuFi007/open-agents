@@ -6,6 +6,7 @@
     "web": "pnpm --dir apps/web dev",
     "dev": "turbo dev",
     "build": "turbo build",
+    "harness:smoke:sandbox:create": "node scripts/vercel-create-harness-smoke-sandbox.ts",
     "harness:smoke:codex": "node scripts/codex-harness-smoke.ts",
     "sandbox:snapshot-base": "node scripts/vercel-refresh-base-snapshot.ts",
     "typecheck": "turbo typecheck",

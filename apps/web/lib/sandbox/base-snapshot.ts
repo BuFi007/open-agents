@@ -2,7 +2,7 @@ import {
   createVercelSnapshotTemplateName,
   resolveVercelSnapshotTemplateId,
 } from "@open-agents/sandbox/vercel";
-import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "./config";
+import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "./config.ts";
 
 let deploymentSnapshotId: Promise<string> | undefined;
 
