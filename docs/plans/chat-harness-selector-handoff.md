@@ -135,8 +135,8 @@ const provided = provideSandbox({
 `agent-harness-sdk` also accepts a Vercel Sandbox name resolver when direct
 attachment is useful, but the wrapper adapter avoids reconnecting twice.
 
-Prepare the Open Agents base snapshot explicitly before attaching harness
-runs. The SDK provides a combined profile helper:
+Prepare the Open Agents sandbox template before attaching harness runs. The
+SDK provides a combined profile helper:
 
 ```ts
 await prepareAdapterSandboxRuntimeProfile({
@@ -150,8 +150,9 @@ base tooling, and the proxy binary. It deliberately excludes bridge files:
 provided-mode runs keep the default `runtimeSetup: "refresh"` behavior and
 write the selected adapter's current bridge files when attaching.
 
-`refreshBaseSnapshot()` now accepts a `prepare` callback that runs before
-snapshotting, so the SDK helper has a stable Open Agents provisioning hook.
+`ensureVercelSnapshotTemplate()` and `refreshBaseSnapshot()` accept a `prepare`
+callback that runs before snapshotting, so the SDK helper has stable automatic
+and manual Open Agents provisioning hooks.
 
 The SDK helper is merged on `agent-harness-sdk` main at:
 
@@ -160,9 +161,12 @@ The SDK helper is merged on `agent-harness-sdk` main at:
 ```
 
 The helper is published in
-`@agent-harness-experimental/sandbox-images@0.0.5`. The Open Agents base
-snapshot refresh command now uses it to prepare the combined Codex + Claude
-Code profile before snapshotting.
+`@agent-harness-experimental/sandbox-images@0.0.5`. The Open Agents web build
+now prewarms a deployment-scoped named Vercel Sandbox template with the
+combined Codex + Claude Code profile. Fresh user sandboxes resolve the
+template's current snapshot internally, so deployments do not need an
+operator-managed snapshot ID. The manual snapshot refresh command remains
+available for explicitly layering a new snapshot from an existing one.
 
 Open Agents must remain the sandbox lifecycle owner. Harness cleanup should
 close bridge/proxy handles without deleting the underlying sandbox.
@@ -223,7 +227,7 @@ unless there is a specific reason. They already provide native built-ins.
 3. Completed: adapt the connected Open Agents wrapper, reserve sandbox bridge
    port `5001`, and add the Open Agents base-snapshot preparation hook.
 4. Completed: publish the merged SDK helper packages and wire the combined
-   Codex + Claude Code profile into the base-snapshot refresh command.
+   Codex + Claude Code profile into build-prewarmed deployment templates.
 5. Resolve the AI SDK version/event protocol boundary.
 6. Add `runHarnessAgentSlice()` with Codex first.
 7. Verify detach, resume, cancellation, and post-finish Git behavior.

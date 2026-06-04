@@ -11,6 +11,7 @@
     "./vercel": "./vercel/index.ts",
     "./vercel/index.js": "./vercel/index.ts",
     "./vercel/snapshot-refresh.js": "./vercel/snapshot-refresh.ts",
+    "./vercel/snapshot-template.js": "./vercel/snapshot-template.ts",
     "./vercel/sandbox.js": "./vercel/sandbox.ts",
     "./vercel/config.js": "./vercel/config.ts"
   },

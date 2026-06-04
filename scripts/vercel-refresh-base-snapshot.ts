@@ -12,16 +12,13 @@
 import {
   DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS,
   refreshBaseSnapshot,
-  type SnapshotSandbox,
 } from "@open-agents/sandbox/vercel";
-import { prepareAdapterSandboxRuntimeProfile } from "@agent-harness-experimental/sandbox-images";
 import {
   DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
   DEFAULT_SANDBOX_PORTS,
   DEFAULT_SANDBOX_TIMEOUT_MS,
 } from "../apps/web/lib/sandbox/config.ts";
-
-const SANDBOX_BASE_SNAPSHOT_CONFIG_PATH = "apps/web/lib/sandbox/config.ts";
+import { prepareAgentHarnessSandboxRuntimeProfile } from "./agent-harness-sandbox-profile.ts";
 
 interface CliOptions {
   baseSnapshotId?: string;
@@ -130,16 +127,6 @@ function parseArgs(argv: string[]): CliOptions | HelpResult {
   };
 }
 
-function requireAgentHarnessWorkspace(sandbox: SnapshotSandbox) {
-  if (!sandbox.toAgentHarnessWorkspace) {
-    throw new Error(
-      "Configured sandbox provider does not support agent harness runtime preparation.",
-    );
-  }
-
-  return sandbox.toAgentHarnessWorkspace();
-}
-
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if ("help" in parsed) {
@@ -147,18 +134,21 @@ async function main() {
     return;
   }
 
+  const baseSnapshotId =
+    parsed.baseSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID;
+  if (!baseSnapshotId) {
+    throw new Error(
+      "Pass --from <snapshot-id> or configure VERCEL_SANDBOX_BASE_SNAPSHOT_ID.",
+    );
+  }
+
   const result = await refreshBaseSnapshot({
-    baseSnapshotId: parsed.baseSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
+    baseSnapshotId,
     commands: parsed.commands,
     sandboxTimeoutMs: parsed.sandboxTimeoutMs ?? DEFAULT_SANDBOX_TIMEOUT_MS,
     commandTimeoutMs: parsed.commandTimeoutMs,
     ports: DEFAULT_SANDBOX_PORTS,
-    prepare: async (sandbox) => {
-      await prepareAdapterSandboxRuntimeProfile({
-        session: requireAgentHarnessWorkspace(sandbox),
-        adapters: ["codex", "claude-code"],
-      });
-    },
+    prepare: prepareAgentHarnessSandboxRuntimeProfile,
     log: (message) => console.log(message),
   });
 
@@ -166,7 +156,7 @@ async function main() {
   console.log(`New snapshot id: ${result.snapshotId}`);
   console.log(`Started from snapshot: ${result.sourceSnapshotId}`);
   console.log(
-    `Update ${SANDBOX_BASE_SNAPSHOT_CONFIG_PATH} to use: "${result.snapshotId}"`,
+    `Set VERCEL_SANDBOX_BASE_SNAPSHOT_ID=${result.snapshotId} to use it as an explicit override.`,
   );
 }
 

@@ -22,3 +22,12 @@ export type {
   RefreshBaseSnapshotResult,
   SnapshotSandbox,
 } from "./snapshot-refresh.ts";
+export {
+  createVercelSnapshotTemplateName,
+  ensureVercelSnapshotTemplate,
+  resolveVercelSnapshotTemplateId,
+} from "./snapshot-template.ts";
+export type {
+  EnsureVercelSnapshotTemplateOptions,
+  EnsureVercelSnapshotTemplateResult,
+} from "./snapshot-template.ts";

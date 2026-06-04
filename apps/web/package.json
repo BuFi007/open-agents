@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm db:migrate:apply && next build",
+    "build": "pnpm db:migrate:apply && pnpm sandbox:prewarm && next build",
     "db:migrate:apply": "node lib/db/migrate.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -13,7 +13,8 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:check": "node scripts/check-migrations.ts"
+    "db:check": "node scripts/check-migrations.ts",
+    "sandbox:prewarm": "node ../../scripts/vercel-prewarm-sandbox-template.ts"
   },
   "dependencies": {
     "@ai-sdk/elevenlabs": "^2.0.29",

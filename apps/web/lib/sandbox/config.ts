@@ -63,11 +63,11 @@ export const CODE_SERVER_PORT = 8000;
 export const DEFAULT_WORKING_DIRECTORY = "/vercel/sandbox";
 
 /**
- * Optional base snapshot for fresh cloud sandboxes.
+ * Optional explicit base snapshot override for fresh cloud sandboxes.
  *
- * Forked deployments should provide their own snapshot ID if they want a
- * preconfigured image. When unset, sandboxes start from Vercel's standard
- * runtime so deployments are not tied to a private snapshot in another scope.
+ * Vercel deployments normally resolve their build-prewarmed named template.
+ * When unset outside a deployment, sandboxes start from Vercel's standard
+ * runtime.
  */
 export const DEFAULT_SANDBOX_BASE_SNAPSHOT_ID =
   process.env.VERCEL_SANDBOX_BASE_SNAPSHOT_ID;
