@@ -47,22 +47,22 @@ export async function POST(request: Request, context: RouteContext) {
     // Best-effort — don't block cancellation if persistence fails.
   }
 
+  let cancelFailed = false;
   try {
     const run = getRun(chat.activeStreamId);
     await run.cancel();
   } catch (error) {
+    cancelFailed = true;
     console.error(
       `[workflow] Failed to cancel workflow run for chat ${chatId}:`,
       error,
     );
-    return Response.json(
-      { error: "Failed to cancel workflow run" },
-      { status: 500 },
-    );
   }
 
   // Clear activeStreamId immediately so a follow-up prompt does not
-  // reconnect to the cancelled (but not yet terminal) workflow.
+  // reconnect to the cancelled (but not yet terminal) workflow. This is
+  // still correct when cancellation fails: old deployment-pinned workflow
+  // runs can become impossible to cancel, but should not keep the chat stuck.
   // Uses CAS to avoid clobbering a newer workflow that raced in.
   await compareAndSetChatActiveStreamId(
     chatId,
@@ -75,7 +75,10 @@ export async function POST(request: Request, context: RouteContext) {
     );
   });
 
-  return Response.json({ success: true });
+  return Response.json({
+    success: true,
+    ...(cancelFailed ? { warning: "Failed to cancel workflow run" } : {}),
+  });
 }
 
 async function persistAssistantSnapshot(

@@ -156,15 +156,23 @@ describe("POST /api/chat/[chatId]/stop", () => {
     );
   });
 
-  test("returns 500 when workflow cancel fails", async () => {
+  test("clears activeStreamId when workflow cancel fails", async () => {
     cancelShouldThrow = true;
     const { POST } = await routeModulePromise;
 
     const response = await POST(createStopRequest(), routeContext);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
 
     const body = await response.json();
-    expect(body).toEqual({ error: "Failed to cancel workflow run" });
+    expect(body).toEqual({
+      success: true,
+      warning: "Failed to cancel workflow run",
+    });
+    expect(spies.compareAndSetChatActiveStreamId).toHaveBeenCalledWith(
+      "chat-1",
+      "wrun_active-123",
+      null,
+    );
   });
 
   test("persists assistant snapshot when valid message in body", async () => {
