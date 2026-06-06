@@ -3,6 +3,11 @@ import { withBotId } from "botid/next/config";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: [
+    "@agent-harness-experimental/adapter-codex",
+    "@agent-harness-experimental/sandbox-vercel",
+    "agent-harness-experimental",
+  ],
   images: {
     remotePatterns: [
       {

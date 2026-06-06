@@ -339,7 +339,7 @@ describe("/api/chat route", () => {
     if (!chatRecord) {
       throw new Error("chatRecord must be set");
     }
-    chatRecord.harnessId = "codex";
+    chatRecord.harnessId = "claude-code";
     const { POST } = await routeModulePromise;
 
     const response = await POST(createValidRequest());

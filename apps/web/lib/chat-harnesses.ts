@@ -21,8 +21,8 @@ export const CHAT_HARNESS_OPTIONS: ChatHarnessOption[] = [
   {
     id: "codex",
     label: "Codex",
-    description: "Codex bridge runtime is not wired yet",
-    available: false,
+    description: "Codex native coding agent",
+    available: true,
   },
   {
     id: "claude-code",

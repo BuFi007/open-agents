@@ -1,0 +1,28 @@
+{
+  "name": "@open-agents/harness-runner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agent-harness-experimental/adapter-codex": "0.0.5",
+    "@agent-harness-experimental/sandbox-vercel": "0.0.5",
+    "@open-agents/sandbox": "workspace:*",
+    "agent-harness-experimental": "0.0.5",
+    "ai": "7.0.0-canary.126"
+  },
+  "devDependencies": {
+    "@open-agents/tsconfig": "workspace:*",
+    "@types/bun": "1.3.12",
+    "@types/node": "^22"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

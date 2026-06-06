@@ -105,6 +105,41 @@ const spies = {
       prUrl: "https://github.com/acme/repo/pull/42",
     }),
   ),
+  runHarnessTurn: mock(
+    async (input: {
+      onChunk: (chunk: UIMessageChunk) => Promise<void> | void;
+      messageId: string;
+    }) => {
+      await input.onChunk({
+        type: "text-start",
+        id: "harness-text",
+      });
+      await input.onChunk({
+        type: "text-delta",
+        id: "harness-text",
+        delta: "Hello from Codex",
+      });
+      await input.onChunk({
+        type: "text-end",
+        id: "harness-text",
+      });
+      return {
+        responseMessage: {
+          id: input.messageId,
+          role: "assistant" as const,
+          parts: [{ type: "text", text: "Hello from Codex" }],
+          metadata: {},
+        },
+        finishReason: "stop" as const,
+        rawFinishReason: "stop",
+        usage: {
+          inputTokens: 12,
+          outputTokens: 4,
+          totalTokens: 16,
+        },
+      };
+    },
+  ),
 };
 
 let testSessionRecord: {
@@ -328,7 +363,9 @@ mock.module("ai", () => ({
     }),
   generateId: () => "gen-id-1",
   isToolUIPart: (part: { type: string }) =>
-    part.type === "tool-invocation" || part.type.startsWith("tool-"),
+    part.type === "dynamic-tool" ||
+    part.type === "tool-invocation" ||
+    part.type.startsWith("tool-"),
   pruneMessages: ({ messages }: { messages: Array<Record<string, unknown>> }) =>
     messages.filter((message) => {
       const content = message.content;
@@ -337,6 +374,10 @@ mock.module("ai", () => ({
 }));
 
 mock.module("@open-agents/agent", () => ({}));
+
+mock.module("@/lib/harness-runner/client", () => ({
+  runHarnessTurnViaApi: spies.runHarnessTurn,
+}));
 
 mock.module("@/lib/db/sessions", () => ({
   getChatById: async () => testChatRecord,
@@ -447,12 +488,41 @@ describe("runAgentWorkflow", () => {
 
   test("rejects an unimplemented harness before side effects", async () => {
     await expect(
-      runAgentWorkflow(makeOptions({ harnessId: "codex" })),
-    ).rejects.toThrow('Harness "codex" is not wired yet');
+      runAgentWorkflow(makeOptions({ harnessId: "claude-code" })),
+    ).rejects.toThrow('Harness "claude-code" is not wired yet');
 
     expect(spies.claimActiveStream).not.toHaveBeenCalled();
     expect(spies.resolveChatSandboxRuntime).not.toHaveBeenCalled();
     expect(spies.persistAssistantMessage).not.toHaveBeenCalled();
+  });
+
+  test("runs Codex through the isolated harness runner", async () => {
+    await runAgentWorkflow(makeOptions({ harnessId: "codex" }));
+
+    expect(spies.runHarnessTurn).toHaveBeenCalledTimes(1);
+    expect(spies.runHarnessTurn.mock.calls[0]?.[0]).toMatchObject({
+      harnessId: "codex",
+      sandboxState: {
+        type: "vercel",
+        sandboxName: "session_session-1",
+      },
+      workingDirectory: "/vercel/sandbox",
+      selectedModelId: "gpt-4",
+      modelId: "gpt-4",
+      requestUrl: "http://localhost/api/chat",
+    });
+    expect(writtenChunks).toContainEqual({
+      type: "text-delta",
+      id: "harness-text",
+      delta: "Hello from Codex",
+    });
+    expect(spies.persistAssistantMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        role: "assistant",
+        parts: [{ type: "text", text: "Hello from Codex" }],
+      }),
+    );
   });
 
   test("exits before side effects when another workflow owns the stream slot", async () => {
@@ -1200,6 +1270,27 @@ describe("runAgentWorkflow", () => {
       output: { success: true },
     };
     agentAssistantParts = [writeToolPart];
+
+    await runAgentWorkflow(makeOptions());
+
+    expect(spies.refreshDiffCache).toHaveBeenCalledTimes(1);
+  });
+
+  test("refreshes diff cache after a dynamic harness edit tool runs", async () => {
+    agentStreamParts = [];
+    agentResponseMessages = [];
+    agentResponse = { messages: agentResponseMessages };
+    streamOnFinishCallback = undefined;
+    agentAssistantParts = [
+      {
+        type: "dynamic-tool",
+        toolName: "edit",
+        toolCallId: "edit-1",
+        state: "output-available",
+        input: { path: "app/page.tsx" },
+        output: { success: true },
+      },
+    ];
 
     await runAgentWorkflow(makeOptions());
 

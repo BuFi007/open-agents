@@ -381,7 +381,7 @@ describe("/api/sessions/[sessionId]/chats/[chatId]", () => {
     const { PATCH } = await routeModulePromise;
 
     const response = await PATCH(
-      createPatchRequest({ harnessId: "codex" }),
+      createPatchRequest({ harnessId: "claude-code" }),
       createContext(),
     );
     const body = (await response.json()) as { error: string };

@@ -1,7 +1,8 @@
 /**
- * Run one Codex harness turn against an existing caller-owned Open Agents
- * sandbox. This validates bridge startup, AI Gateway auth, and bridge cleanup
- * without routing through the chat workflow.
+ * Run one Codex harness-runner turn against an existing caller-owned Open
+ * Agents sandbox. This validates bridge startup, AI Gateway auth, AI SDK UI
+ * stream conversion, and bridge cleanup without routing through the chat
+ * workflow.
  *
  * Usage:
  *   pnpm harness:smoke:codex -- --sandbox session_<session-id>
@@ -9,18 +10,10 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { codex } from "@agent-harness-experimental/adapter-codex";
-import { createVercelSandboxBackend } from "@agent-harness-experimental/sandbox-vercel";
-import {
-  createAgentSession,
-  ensureGatewayApiKeyEnv,
-  provideSandbox,
-} from "agent-harness-experimental";
+import { ensureGatewayApiKeyEnv } from "agent-harness-experimental";
 import { connectVercelSandbox } from "@open-agents/sandbox/vercel";
-import {
-  AGENT_HARNESS_BRIDGE_PORT,
-  DEFAULT_SANDBOX_PORTS,
-} from "../apps/web/lib/sandbox/config.ts";
+import { runHarnessTurn } from "../packages/harness-runner/index.ts";
+import { DEFAULT_SANDBOX_PORTS } from "../apps/web/lib/sandbox/config.ts";
 
 const DEFAULT_PROMPT =
   "Reply with exactly: codex harness smoke ok. Do not call tools.";
@@ -127,48 +120,54 @@ async function main() {
     resume: true,
     ports: DEFAULT_SANDBOX_PORTS,
   });
-  const backend = createVercelSandboxBackend();
-  const provided = provideSandbox({
-    backend,
-    session: sandbox.toAgentHarnessWorkspace(),
-    bridgePorts: [AGENT_HARNESS_BRIDGE_PORT],
-  });
   const sessionId = `codex-smoke-${randomUUID()}`;
-  const agent = createAgentSession({
-    adapter: codex(parsed.model ? { model: parsed.model } : undefined),
+  const messageId = `assistant-${randomUUID()}`;
+  const chunks: Array<{ type: string; [key: string]: unknown }> = [];
+  const modelId = parsed.model
+    ? `openai/${parsed.model.replace(/^openai\//, "")}`
+    : "openai/gpt-5.4";
+  const result = await runHarnessTurn({
+    harnessId: "codex",
+    workspace: sandbox.toAgentHarnessWorkspace(),
+    workingDirectory: sandbox.workingDirectory,
     sessionId,
-    sandbox: {
-      mode: "provided",
-      provided,
-      runtimeSetup: "refresh",
-      workingDirectory: {
-        kind: "path",
-        path: sandbox.workingDirectory,
+    messageId,
+    messages: [
+      {
+        id: `user-${randomUUID()}`,
+        role: "user",
+        parts: [{ type: "text", text: parsed.prompt }],
       },
+    ],
+    originalMessages: [],
+    selectedModelId: modelId,
+    modelId,
+    onChunk: (chunk) => {
+      chunks.push(chunk);
     },
   });
+  const text = result.responseMessage.parts
+    .filter(
+      (part): part is { type: "text"; text: string } =>
+        part.type === "text" && typeof part.text === "string",
+    )
+    .map((part) => part.text)
+    .join("");
+  const output = {
+    ok: result.finishReason !== "error",
+    sandboxName: parsed.sandboxName,
+    sessionId,
+    finishReason: result.finishReason,
+    rawFinishReason: result.rawFinishReason,
+    text,
+    chunkTypes: chunks.map((chunk) => chunk.type),
+    responseMessage: result.responseMessage,
+  };
 
-  try {
-    const result = await agent.generate(parsed.prompt);
-    const output = {
-      ok: result.finishReason !== "error",
-      sandboxName: parsed.sandboxName,
-      sessionId,
-      status: result.status,
-      finishReason: result.finishReason,
-      rawFinishReason: result.rawFinishReason,
-      text: result.text,
-      pending: result.pending,
-      resumeState: agent.session.exportState(),
-    };
+  console.log(JSON.stringify(output, null, 2));
 
-    console.log(JSON.stringify(output, null, 2));
-
-    if (result.finishReason === "error") {
-      throw new Error(result.rawFinishReason ?? "Codex harness turn failed.");
-    }
-  } finally {
-    await agent.close("stop");
+  if (result.finishReason === "error") {
+    throw new Error(result.rawFinishReason ?? "Codex harness turn failed.");
   }
 }
 
