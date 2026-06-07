@@ -582,6 +582,74 @@ describe("runAgentWorkflow", () => {
     );
   });
 
+  test("appends visible Codex errors after partial harness text", async () => {
+    spies.runHarnessTurn.mockImplementationOnce(
+      async (input: {
+        messageId: string;
+        onChunk: (chunk: UIMessageChunk) => Promise<void> | void;
+      }) => {
+        await input.onChunk({
+          type: "text-start",
+          id: "harness-text",
+        });
+        await input.onChunk({
+          type: "text-delta",
+          id: "harness-text",
+          delta: "I’m gathering the minimum inputs needed.",
+        });
+        await input.onChunk({
+          type: "text-end",
+          id: "harness-text",
+        });
+
+        return {
+          responseMessage: {
+            id: input.messageId,
+            role: "assistant" as const,
+            parts: [
+              {
+                type: "text",
+                text: "I’m gathering the minimum inputs needed.",
+              },
+            ],
+            metadata: {},
+          },
+          finishReason: "error" as const,
+          rawFinishReason:
+            'codex: Authentication failed for model "gpt-5.4". Check the configured credentials and provider base URL.\nRaw: unexpected status 401 Unauthorized: Authentication failed. Create an API key and set in AI_GATEWAY_API_KEY environment variable',
+          usage: undefined,
+        };
+      },
+    );
+
+    await runAgentWorkflow(makeOptions({ harnessId: "codex" }));
+
+    const expectedText =
+      "\n\nCodex failed after producing a partial response because AI Gateway rejected the configured credentials. Check AI_GATEWAY_API_KEY or Vercel OIDC for this deployment and try again.";
+    expect(writtenChunks).toContainEqual({
+      type: "text-delta",
+      id: expect.stringContaining(":harness-error"),
+      delta: expectedText,
+    });
+    expect(writtenChunks).toContainEqual({
+      type: "finish",
+      finishReason: "error",
+    });
+    expect(spies.persistAssistantMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: "I’m gathering the minimum inputs needed.",
+          },
+          { type: "text", text: expectedText },
+        ],
+      }),
+    );
+  });
+
   test("exits before side effects when another workflow owns the stream slot", async () => {
     spies.claimActiveStream.mockImplementationOnce(() =>
       Promise.resolve("conflict"),

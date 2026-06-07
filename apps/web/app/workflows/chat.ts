@@ -304,26 +304,40 @@ function getSetupErrorMessage(error: unknown): string {
   return "Workspace setup failed. Try again in a moment.";
 }
 
-function getHarnessErrorMessage(rawFinishReason: string | undefined): string {
+function getHarnessErrorMessage(
+  rawFinishReason: string | undefined,
+  hasPartialResponse = false,
+): string {
+  const timing = hasPartialResponse
+    ? "after producing a partial response"
+    : "before it could respond";
+
   if (!rawFinishReason) {
-    return "Codex failed before it could respond. Try again in a moment.";
+    return `Codex failed ${timing}. Try again in a moment.`;
   }
 
   if (rawFinishReason.includes("Cannot find package 'ws'")) {
-    return "Codex failed before it could respond because this sandbox is missing the prepared harness runtime. Recreate the sandbox and try again.";
+    return `Codex failed ${timing} because this sandbox is missing the prepared harness runtime. Recreate the sandbox and try again.`;
+  }
+
+  if (
+    rawFinishReason.includes("Authentication failed") &&
+    rawFinishReason.includes("AI_GATEWAY_API_KEY")
+  ) {
+    return `Codex failed ${timing} because AI Gateway rejected the configured credentials. Check AI_GATEWAY_API_KEY or Vercel OIDC for this deployment and try again.`;
   }
 
   if (
     rawFinishReason.includes("Bridge process exited without becoming ready")
   ) {
-    return "Codex failed before it could respond because the sandbox bridge did not start. Recreate the sandbox and try again.";
+    return `Codex failed ${timing} because the sandbox bridge did not start. Recreate the sandbox and try again.`;
   }
 
   const reason =
     rawFinishReason.length > 500
       ? `${rawFinishReason.slice(0, 500)}...`
       : rawFinishReason;
-  return `Codex failed before it could respond: ${reason}`;
+  return `Codex failed ${timing}: ${reason}`;
 }
 
 function isStepTimingError(
@@ -811,18 +825,27 @@ export async function runAgentWorkflow(options: Options) {
         result.responseMessage ?? pendingAssistantResponse;
       if (
         options.harnessId !== "open-agent" &&
-        result.finishReason === "error" &&
-        pendingAssistantResponse.parts.length === 0
+        result.finishReason === "error"
       ) {
-        const errorText = getHarnessErrorMessage(result.rawFinishReason);
+        const hasPartialResponse = pendingAssistantResponse.parts.length > 0;
+        const errorText = getHarnessErrorMessage(
+          result.rawFinishReason,
+          hasPartialResponse,
+        );
+        const errorPartText = hasPartialResponse
+          ? `\n\n${errorText}`
+          : errorText;
         pendingAssistantResponse = {
           ...pendingAssistantResponse,
-          parts: [{ type: "text", text: errorText }],
+          parts: [
+            ...pendingAssistantResponse.parts,
+            { type: "text", text: errorPartText },
+          ],
         };
         await sendTextMessage(
           writable,
           `${assistantId}:harness-error`,
-          errorText,
+          errorPartText,
         );
       }
       shouldRefreshCachedDiff =
