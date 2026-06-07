@@ -67,6 +67,152 @@ export type RunHarnessTurnInput = {
   onChunk: (chunk: HarnessUIMessageChunk) => Promise<void> | void;
 };
 
+const OPEN_AGENT_TOOL_NAMES = new Set([
+  "todo_write",
+  "read",
+  "write",
+  "edit",
+  "grep",
+  "glob",
+  "bash",
+  "task",
+  "ask_user_question",
+  "skill",
+  "web_fetch",
+]);
+
+function isOpenAgentToolName(toolName: unknown): toolName is string {
+  return typeof toolName === "string" && OPEN_AGENT_TOOL_NAMES.has(toolName);
+}
+
+function stripDynamicFlag(chunk: HarnessUIMessageChunk): HarnessUIMessageChunk {
+  const { dynamic: _dynamic, ...mappedChunk } = chunk;
+  return mappedChunk;
+}
+
+export function mapOpenAgentToolChunk(
+  chunk: HarnessUIMessageChunk,
+): HarnessUIMessageChunk {
+  if (
+    (chunk.type === "tool-input-start" ||
+      chunk.type === "tool-input-available" ||
+      chunk.type === "tool-input-error") &&
+    chunk.dynamic === true &&
+    isOpenAgentToolName(chunk.toolName)
+  ) {
+    return stripDynamicFlag(chunk);
+  }
+
+  return chunk;
+}
+
+function createOpenAgentToolMappingStream(): TransformStream<
+  HarnessUIMessageChunk,
+  HarnessUIMessageChunk
+> {
+  return new TransformStream({
+    transform(chunk, controller) {
+      controller.enqueue(mapOpenAgentToolChunk(chunk));
+    },
+  });
+}
+
+function stringifyCompact(value: unknown): string {
+  const serialized = JSON.stringify(value) ?? String(value);
+  return serialized.length > 2_000
+    ? `${serialized.slice(0, 2_000)}...`
+    : serialized;
+}
+
+function formatAskUserQuestionOutput(output: unknown): string | null {
+  if (typeof output !== "object" || output === null) {
+    return null;
+  }
+
+  if ("declined" in output && output.declined === true) {
+    return "User declined to answer the questions.";
+  }
+
+  if (!("answers" in output)) {
+    return null;
+  }
+
+  const answers = output.answers;
+  if (typeof answers !== "object" || answers === null) {
+    return null;
+  }
+
+  const formattedAnswers = Object.entries(
+    answers as Record<string, unknown>,
+  ).map(([question, answer]) => {
+    const formattedAnswer = Array.isArray(answer)
+      ? answer.join(", ")
+      : String(answer);
+    return `"${question}"="${formattedAnswer}"`;
+  });
+
+  if (formattedAnswers.length === 0) {
+    return "User answered the questions.";
+  }
+
+  return `User answered questions: ${formattedAnswers.join(", ")}.`;
+}
+
+function toolNameFromPart(part: Record<string, unknown>): string | null {
+  if (part.type === "dynamic-tool" && typeof part.toolName === "string") {
+    return part.toolName;
+  }
+
+  if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+    return part.type.slice("tool-".length);
+  }
+
+  return null;
+}
+
+function textFromToolPart(part: Record<string, unknown>): string | null {
+  const toolName = toolNameFromPart(part);
+  if (!toolName) {
+    return null;
+  }
+
+  if (part.state === "approval-responded") {
+    const approval =
+      typeof part.approval === "object" && part.approval !== null
+        ? (part.approval as Record<string, unknown>)
+        : undefined;
+    const approved = approval?.approved;
+    if (approved === true) {
+      return `User approved the ${toolName} tool call.`;
+    }
+    if (approved === false) {
+      const reason =
+        typeof approval?.reason === "string"
+          ? ` Reason: ${approval.reason}`
+          : "";
+      return `User denied the ${toolName} tool call.${reason}`;
+    }
+  }
+
+  if (part.state === "output-denied") {
+    return `User denied the ${toolName} tool call.`;
+  }
+
+  if (part.state !== "output-available") {
+    return null;
+  }
+
+  if (toolName === "ask_user_question") {
+    return formatAskUserQuestionOutput(part.output);
+  }
+
+  if (!("output" in part)) {
+    return null;
+  }
+
+  return `${toolName} tool output: ${stringifyCompact(part.output)}`;
+}
+
 function textFromPart(part: Record<string, unknown>): string | null {
   if (part.type === "text" && typeof part.text === "string") {
     return part.text;
@@ -74,6 +220,11 @@ function textFromPart(part: Record<string, unknown>): string | null {
 
   if (part.type === "data-snippet" && typeof part.data === "object") {
     return JSON.stringify(part.data);
+  }
+
+  const toolText = textFromToolPart(part);
+  if (toolText) {
+    return toolText;
   }
 
   return null;
@@ -146,10 +297,11 @@ export async function assembleHarnessResponseMessage(
     role: "assistant",
     parts: [],
   };
+  const mappedStream = stream.pipeThrough(createOpenAgentToolMappingStream());
 
   for await (const message of readUIMessageStream({
     message: responseMessage as never,
-    stream: stream as never,
+    stream: mappedStream as never,
     terminateOnError: true,
   })) {
     responseMessage = message as HarnessUIMessage;
@@ -202,6 +354,7 @@ export async function runHarnessTurn(
         sendStart: false,
         sendFinish: false,
       })
+      .pipeThrough(createOpenAgentToolMappingStream())
       .tee();
     const responseMessagePromise = assembleHarnessResponseMessage(
       responseStream as ReadableStream<HarnessUIMessageChunk>,

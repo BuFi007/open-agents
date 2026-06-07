@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   assembleHarnessResponseMessage,
   buildHarnessPrompt,
+  mapOpenAgentToolChunk,
   resolveCodexModelId,
 } from "./index";
 
@@ -40,6 +41,40 @@ describe("buildHarnessPrompt", () => {
         },
       ]),
     ).toBe("");
+  });
+
+  test("includes completed interactive tool outputs", () => {
+    expect(
+      buildHarnessPrompt([
+        {
+          id: "assistant-1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-ask_user_question",
+              toolCallId: "question-1",
+              state: "output-available",
+              input: {
+                questions: [
+                  {
+                    question: "Which direction?",
+                    header: "Direction",
+                    options: [],
+                  },
+                ],
+              },
+              output: {
+                answers: {
+                  "Which direction?": "Keep it simple",
+                },
+              },
+            },
+          ],
+        },
+      ]),
+    ).toBe(
+      'Assistant:\nUser answered questions: "Which direction?"="Keep it simple".',
+    );
   });
 });
 
@@ -108,13 +143,76 @@ describe("assembleHarnessResponseMessage", () => {
 
     expect(responseMessage.parts).toEqual([
       {
-        type: "dynamic-tool",
-        toolName: "bash",
+        type: "tool-bash",
         toolCallId: "tool-1",
         state: "output-available",
         input: { command: "pwd" },
         output: { exitCode: 0, output: "/vercel/sandbox\n" },
       },
     ]);
+  });
+});
+
+describe("mapOpenAgentToolChunk", () => {
+  test.each([
+    "todo_write",
+    "read",
+    "write",
+    "edit",
+    "grep",
+    "glob",
+    "bash",
+    "task",
+    "ask_user_question",
+    "skill",
+    "web_fetch",
+  ])("maps known Open Agents tool %s to a static tool chunk", (toolName) => {
+    expect(
+      mapOpenAgentToolChunk({
+        type: "tool-input-available",
+        toolCallId: "tool-1",
+        toolName,
+        input: {},
+        dynamic: true,
+      }),
+    ).toEqual({
+      type: "tool-input-available",
+      toolCallId: "tool-1",
+      toolName,
+      input: {},
+    });
+  });
+
+  test("maps streaming input starts before the part is created", () => {
+    expect(
+      mapOpenAgentToolChunk({
+        type: "tool-input-start",
+        toolCallId: "tool-1",
+        toolName: "ask_user_question",
+        dynamic: true,
+      }),
+    ).toEqual({
+      type: "tool-input-start",
+      toolCallId: "tool-1",
+      toolName: "ask_user_question",
+    });
+  });
+
+  test("preserves unknown dynamic tools", () => {
+    expect(
+      mapOpenAgentToolChunk({
+        type: "tool-input-available",
+        toolCallId: "tool-1",
+        toolName: "custom_tool",
+        input: {},
+        dynamic: true,
+      }),
+    ).toEqual({
+      type: "tool-input-available",
+      toolCallId: "tool-1",
+      toolName: "custom_tool",
+      input: {},
+      dynamic: true,
+    });
   });
 });
