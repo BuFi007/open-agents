@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  OPEN_AGENT_HARNESS_TOOLS,
   assembleHarnessResponseMessage,
   buildHarnessPrompt,
   mapOpenAgentToolChunk,
@@ -85,6 +86,15 @@ describe("resolveCodexModelId", () => {
 
   test("uses the Codex default for models from another provider", () => {
     expect(resolveCodexModelId("anthropic/claude-opus-4.6")).toBeUndefined();
+  });
+});
+
+describe("OPEN_AGENT_HARNESS_TOOLS", () => {
+  test("exposes ask_user_question as an external client-side tool", () => {
+    expect(Object.keys(OPEN_AGENT_HARNESS_TOOLS)).toEqual([
+      "ask_user_question",
+    ]);
+    expect("execute" in OPEN_AGENT_HARNESS_TOOLS.ask_user_question).toBeFalse();
   });
 });
 

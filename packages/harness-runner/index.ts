@@ -6,7 +6,7 @@ import {
   ensureGatewayApiKeyEnv,
   provideSandbox,
 } from "agent-harness-experimental";
-import { readUIMessageStream } from "ai";
+import { jsonSchema, readUIMessageStream, tool, type ToolSet } from "ai";
 
 export type ExternalHarnessId = "codex";
 
@@ -66,6 +66,74 @@ export type RunHarnessTurnInput = {
   abortSignal?: AbortSignal;
   onChunk: (chunk: HarnessUIMessageChunk) => Promise<void> | void;
 };
+
+const OPEN_AGENT_HARNESS_INSTRUCTIONS = [
+  "You are running inside Open Agents.",
+  "When you need to ask the user structured follow-up questions, call the ask_user_question tool instead of writing the questions as plain text.",
+  "Put related questions in one ask_user_question call, and wait for the user's answer before continuing.",
+].join("\n");
+
+export const OPEN_AGENT_HARNESS_TOOLS = {
+  ask_user_question: tool({
+    description: `Ask the user structured questions during execution to gather preferences, clarify requirements, or get decisions.
+
+Use this when the user asks you to ask questions, when requirements are ambiguous, or when the next step depends on a human choice.
+
+Users can select provided options or enter custom text.`,
+    inputSchema: jsonSchema({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        questions: {
+          type: "array",
+          minItems: 1,
+          maxItems: 4,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              question: {
+                type: "string",
+                description: "The complete question to ask the user.",
+              },
+              header: {
+                type: "string",
+                maxLength: 12,
+                description: "Short label for tab/chip display.",
+              },
+              options: {
+                type: "array",
+                minItems: 2,
+                maxItems: 4,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    label: {
+                      type: "string",
+                      description: "1-5 words, concise choice text.",
+                    },
+                    description: {
+                      type: "string",
+                      description: "Explanation of trade-offs or implications.",
+                    },
+                  },
+                  required: ["label", "description"],
+                },
+              },
+              multiSelect: {
+                type: "boolean",
+                description: "Whether the user can select multiple options.",
+              },
+            },
+            required: ["question", "header", "options"],
+          },
+        },
+      },
+      required: ["questions"],
+    }),
+  }),
+} satisfies ToolSet;
 
 const OPEN_AGENT_TOOL_NAMES = new Set([
   "todo_write",
@@ -330,6 +398,8 @@ export async function runHarnessTurn(
     adapter: codex({
       model: resolveCodexModelId(input.modelId),
     }),
+    instructions: OPEN_AGENT_HARNESS_INSTRUCTIONS,
+    tools: OPEN_AGENT_HARNESS_TOOLS,
     sessionId: input.sessionId,
     sandbox: {
       mode: "provided",
