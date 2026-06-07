@@ -92,11 +92,33 @@ interface SandboxNetworkPolicy {
   allow: Record<string, SandboxNetworkRule[]>;
 }
 
-const DEFAULT_NETWORK_POLICY: SandboxNetworkPolicy = {
-  allow: {
-    "*": [],
-  },
-};
+function getAiGatewayApiKey(): string | undefined {
+  return process.env.AI_GATEWAY_API_KEY || process.env.AI_GATEWAY_TOKEN;
+}
+
+function buildDefaultCredentialBrokeringPolicy(): SandboxNetworkPolicy {
+  const aiGatewayApiKey = getAiGatewayApiKey();
+  return {
+    allow: {
+      ...(aiGatewayApiKey
+        ? {
+            "ai-gateway.vercel.sh": [
+              {
+                transform: [
+                  {
+                    headers: {
+                      Authorization: `Bearer ${aiGatewayApiKey}`,
+                    },
+                  },
+                ],
+              },
+            ],
+          }
+        : {}),
+      "*": [],
+    },
+  };
+}
 
 function toAgentHarnessNetworkPolicy(
   policy: AgentHarnessNetworkPolicy | undefined,
@@ -175,11 +197,11 @@ async function toAgentHarnessExecResult(
   };
 }
 
-function buildGitHubCredentialBrokeringPolicy(
-  token?: string,
-): SandboxNetworkPolicy {
+function buildCredentialBrokeringPolicy(token?: string): SandboxNetworkPolicy {
+  const policy = buildDefaultCredentialBrokeringPolicy();
+
   if (!token) {
-    return DEFAULT_NETWORK_POLICY;
+    return policy;
   }
 
   const basicAuthToken = Buffer.from(
@@ -189,6 +211,7 @@ function buildGitHubCredentialBrokeringPolicy(
 
   return {
     allow: {
+      ...policy.allow,
       "api.github.com": [
         {
           transform: [{ headers: { Authorization: `Bearer ${token}` } }],
@@ -235,10 +258,7 @@ async function syncGitHubCredentialBrokering(
     return;
   }
 
-  await updateNetworkPolicy.call(
-    sdk,
-    buildGitHubCredentialBrokeringPolicy(token),
-  );
+  await updateNetworkPolicy.call(sdk, buildCredentialBrokeringPolicy(token));
 }
 
 async function clearGitHubCredentialBrokering(
@@ -675,7 +695,7 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
       timeout: sdkTimeout,
       runtime,
       persistent,
-      networkPolicy: buildGitHubCredentialBrokeringPolicy(githubToken),
+      networkPolicy: buildCredentialBrokeringPolicy(githubToken),
       ...(ports && { ports }),
       ...(snapshotExpiration !== undefined && { snapshotExpiration }),
     };
