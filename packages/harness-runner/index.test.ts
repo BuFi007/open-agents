@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  OPEN_AGENT_HARNESS_INSTRUCTIONS,
   OPEN_AGENT_HARNESS_TOOLS,
   assembleHarnessResponseMessage,
   buildHarnessPrompt,
@@ -95,6 +96,18 @@ describe("OPEN_AGENT_HARNESS_TOOLS", () => {
       "ask_user_question",
     ]);
     expect("execute" in OPEN_AGENT_HARNESS_TOOLS.ask_user_question).toBeFalse();
+  });
+
+  test("instructs Codex to use ask_user_question instead of prose fallback", () => {
+    expect(OPEN_AGENT_HARNESS_INSTRUCTIONS).toContain(
+      "The ask_user_question tool is available",
+    );
+    expect(OPEN_AGENT_HARNESS_INSTRUCTIONS).toContain(
+      "Do not say that the structured question tool is unavailable",
+    );
+    expect(OPEN_AGENT_HARNESS_INSTRUCTIONS).toContain(
+      "your first assistant action must be an ask_user_question tool call",
+    );
   });
 });
 

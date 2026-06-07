@@ -67,10 +67,13 @@ export type RunHarnessTurnInput = {
   onChunk: (chunk: HarnessUIMessageChunk) => Promise<void> | void;
 };
 
-const OPEN_AGENT_HARNESS_INSTRUCTIONS = [
+export const OPEN_AGENT_HARNESS_INSTRUCTIONS = [
   "You are running inside Open Agents.",
-  "When you need to ask the user structured follow-up questions, call the ask_user_question tool instead of writing the questions as plain text.",
-  "Put related questions in one ask_user_question call, and wait for the user's answer before continuing.",
+  "The ask_user_question tool is available in this Codex harness session.",
+  "When you need to ask the user structured follow-up questions, call ask_user_question instead of writing the questions as plain text.",
+  "If the user explicitly asks you to ask questions, your first assistant action must be an ask_user_question tool call.",
+  "Do not say that the structured question tool is unavailable. If Codex exposes user-defined tools through MCP, use the harness-tools MCP tool. If the MCP namespace is not visible, use the custom-tool relay command shown in the prompt for ask_user_question.",
+  "Put related questions in one ask_user_question call, then wait for the user's answer before continuing.",
 ].join("\n");
 
 export const OPEN_AGENT_HARNESS_TOOLS = {
