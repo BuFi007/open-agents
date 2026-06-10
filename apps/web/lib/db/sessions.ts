@@ -183,6 +183,8 @@ type SessionSidebarFields = Pick<
   | "linesRemoved"
   | "prNumber"
   | "prStatus"
+  | "evalScore"
+  | "evalLabel"
   | "createdAt"
 >;
 
@@ -230,6 +232,8 @@ export async function getSessionsWithUnreadByUserId(
       linesRemoved: sessions.linesRemoved,
       prNumber: sessions.prNumber,
       prStatus: sessions.prStatus,
+      evalScore: sessions.evalScore,
+      evalLabel: sessions.evalLabel,
       createdAt: sessions.createdAt,
       lastActivityAt: sql<Date>`COALESCE(MAX(${chats.updatedAt}), ${sessions.createdAt})`,
       hasUnread: sql<boolean>`COALESCE(BOOL_OR(

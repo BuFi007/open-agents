@@ -17,3 +17,12 @@ export {
 } from "./ask-user-question";
 export { skillTool, type SkillToolInput } from "./skill";
 export { webFetchTool } from "./fetch";
+export {
+  findResolvedGapTool,
+  recallSimilarRunsTool,
+} from "./phoenix-introspection";
+export {
+  getPhoenixMcpTools,
+  getPhoenixMcpToolsIfReady,
+  isPhoenixMcpEnabled,
+} from "./phoenix-mcp";

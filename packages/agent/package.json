@@ -12,7 +12,10 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "catalog:",
+    "@ai-sdk/mcp": "^1.0.46",
     "@ai-sdk/openai": "catalog:",
+    "@arizeai/phoenix-mcp": "^4.0.13",
+    "@open-agents/arize-phoenix": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
     "ai": "catalog:",
     "zod": "catalog:"

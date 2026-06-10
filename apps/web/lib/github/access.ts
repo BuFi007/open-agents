@@ -2,6 +2,15 @@ import { getInstallationByAccountLogin } from "@/lib/db/installations";
 import { withScopedInstallationOctokit } from "./app";
 import { getUserOctokit } from "./client";
 
+/**
+ * BUFI bridge bot user — server-to-server dispatched sessions own no
+ * OAuth token. We bypass the user-octokit precondition for this user
+ * and trust the App installation scope alone.
+ *
+ * See: docs/superpowers/specs/2026-05-11-phase-1-minion-bridge.md
+ */
+const BUFI_BOT_USER_ID = "bufi-bridge-bot";
+
 export type RepoAccessDeniedReason =
   | "no_user_token"
   | "user_no_access"
@@ -70,6 +79,12 @@ export async function verifyRepoAccess(params: {
 }): Promise<RepoAccessResult> {
   const { userId, owner, repo, requiredUserPermission = "read" } = params;
 
+  // BUFI bridge bot: no OAuth token by design — fall through to App-only
+  // verification using the persisted github_installations row.
+  if (userId === BUFI_BOT_USER_ID) {
+    return verifyRepoAccessAppOnly({ userId, owner, repo });
+  }
+
   // 1. check user can see the repo
   const userOctokit = await getUserOctokit(userId);
   if (!userOctokit) {
@@ -132,6 +147,53 @@ export async function verifyRepoAccess(params: {
     repositoryId,
     defaultBranch,
   };
+}
+
+/**
+ * App-only repo access check — used for the BUFI bridge bot which has no
+ * OAuth token. Uses the App installation directly to fetch the repo id +
+ * default branch.
+ *
+ * Auth: an App-installation-authenticated Octokit. Scope = the entire
+ * installation, not a specific repo, so we can call `repos.get` to look
+ * up the repo id we'd otherwise need to pre-fetch.
+ */
+async function verifyRepoAccessAppOnly(params: {
+  userId: string;
+  owner: string;
+  repo: string;
+}): Promise<RepoAccessResult> {
+  const installation = await getInstallationByAccountLogin(
+    params.userId,
+    params.owner,
+  );
+  if (!installation) {
+    return { ok: false, reason: "no_installation" };
+  }
+
+  const { getInstallationOctokit } = await import("./app");
+  const installationOctokit = await getInstallationOctokit(
+    installation.installationId,
+  );
+
+  try {
+    const response = await installationOctokit.rest.repos.get({
+      owner: params.owner,
+      repo: params.repo,
+    });
+    return {
+      ok: true,
+      installationId: installation.installationId,
+      repositoryId: response.data.id,
+      defaultBranch: response.data.default_branch,
+    };
+  } catch (error: unknown) {
+    const status = getGitHubHttpStatus(error);
+    if (status === 404 || status === 403) {
+      return { ok: false, reason: "app_no_access" };
+    }
+    throw error;
+  }
 }
 
 /**

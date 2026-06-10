@@ -1,6 +1,6 @@
 "use client";
 
-import { GitMerge } from "lucide-react";
+import { Flame, GitMerge } from "lucide-react";
 import type { SessionWithUnread } from "@/hooks/use-sessions";
 
 interface SessionListProps {
@@ -64,6 +64,34 @@ function DiffStats({
       {removed !== null ? (
         <span className="text-red-400">-{removed}</span>
       ) : null}
+    </div>
+  );
+}
+
+function EvalScore({
+  score,
+  label,
+}: {
+  score: number | null;
+  label: string | null;
+}) {
+  if (score === null) return null;
+
+  const pct = Math.round(score * 100);
+  const tone =
+    score >= 0.8
+      ? "bg-emerald-500/20 text-emerald-400"
+      : score >= 0.5
+        ? "bg-amber-500/20 text-amber-400"
+        : "bg-red-500/20 text-red-400";
+
+  return (
+    <div
+      className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs ${tone}`}
+      title={label ? `Phoenix eval: ${label}` : "Phoenix eval score"}
+    >
+      <Flame className="h-3 w-3" />
+      <span>{pct}</span>
     </div>
   );
 }
@@ -148,6 +176,10 @@ export function SessionList({
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
+                    <EvalScore
+                      label={session.evalLabel}
+                      score={session.evalScore}
+                    />
                     <PrStatus status={session.prStatus} />
                     <DiffStats
                       added={session.linesAdded}

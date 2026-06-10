@@ -705,6 +705,15 @@ export async function runAgentWorkflow(options: Options) {
         currentBranch: runtime.currentBranch,
         environmentDetails: runtime.environmentDetails,
       },
+      // Phoenix trace correlation — sessionId/chatId always win so
+      // every AI SDK span maps back to /sessions/<id>. Callers (e.g.
+      // the BUFI dispatch route) may pre-set source/linearTaskId/repo.
+      telemetry: {
+        source: "web",
+        ...options.agentOptions?.telemetry,
+        sessionId: options.sessionId,
+        chatId: options.chatId,
+      },
       ...(runtime.skills.length > 0 ? { skills: runtime.skills } : {}),
     };
     sandboxState = runtime.sandboxState;

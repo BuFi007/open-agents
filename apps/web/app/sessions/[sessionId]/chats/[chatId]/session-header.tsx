@@ -2,6 +2,7 @@
 
 import {
   ExternalLink,
+  Flame,
   FolderGit2,
   GitMerge,
   GitPullRequest,
@@ -20,6 +21,11 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useGitPanel } from "./git-panel-context";
 import { useSessionLayout } from "@/app/sessions/[sessionId]/session-layout-context";
+
+const phoenixBaseUrl = process.env.NEXT_PUBLIC_PHOENIX_BASE_URL?.replace(
+  /\/$/,
+  "",
+);
 
 /**
  * Session header that uses only layout-level data (persists across chat switches).
@@ -196,6 +202,32 @@ export function SessionHeader() {
         <div className="flex items-center gap-1">
           {/* Portal target for dev server / code editor buttons (rendered from per-chat content) */}
           <div ref={headerActionsRef} className="flex items-center" />
+
+          {/* Arize Phoenix traces — every agent step in this session is
+              traced via OpenInference; deep observability lives there. */}
+          {phoenixBaseUrl && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                >
+                  <a
+                    href={`${phoenixBaseUrl}/projects`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Flame className="h-4 w-4 text-orange-400" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                View traces in Arize Phoenix
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>

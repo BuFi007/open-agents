@@ -1,3 +1,56 @@
+# BUFI Minions — Self-Improving Financial-Ops Agents
+
+> **Devpost: "Building Agents for Real-World Challenges" — Arize track submission.**
+> Gemini 3-powered background agents for BUFI (a stablecoin-first financial workspace for
+> global teams), with production-grade Arize Phoenix observability and a working
+> self-improvement loop: the agents read their own traces, recall curated fixes, and get
+> measurably better every morning.
+
+## The real-world challenge
+
+BUFI's ops team drowns in recurring engineering/back-office missions (reconciliation
+checks, incident triage, repo chores). This fork turns Vercel's open-agents into BUFI's
+autonomous "minion" workforce:
+
+```text
+Linear daily plan ──(cron 12:00)──► BUFI bridge ──► open-agents (Gemini 3 Pro)
+                                                        │  plan (todo) · subagents (task)
+                                                        │  human gate (ask_user_question)
+                                                        ▼
+                                            OpenInference traces ──► Arize Phoenix
+                                                        │   ▲
+                                   agent introspects ───┘   │ LLM-as-judge evals
+                                   (Phoenix MCP +           │ (gemini-3-flash)
+                                    recall/find_resolved_gap)
+                                                        ▼
+                    morning digest (cron 13:00) ──► Slack #bu-minions
+                    + promotes successes/fixes to Phoenix datasets ⟲ self-improvement
+```
+
+## Arize track requirements → where they live
+
+| Requirement | Implementation |
+|---|---|
+| Code-owned Gemini agent runtime | `packages/agent/open-agent.ts` — AI SDK v6 `ToolLoopAgent`, default `google/gemini-3-pro-preview` via AI Gateway |
+| OpenInference instrumentation → Phoenix | `packages/arize-phoenix/otel.ts` + `apps/web/instrumentation.ts` + `experimental_telemetry` (sessionId/chatId/source/linearTaskId/repo metadata) |
+| Phoenix MCP in the agent | `packages/agent/tools/phoenix-mcp.ts` — `@arizeai/phoenix-mcp` over stdio via `@ai-sdk/mcp`, 14 trace/span/session/dataset tools merged into the toolset (`PHOENIX_MCP_ENABLED`) |
+| Evals on traces | `scripts/phoenix-eval.ts` — Gemini LLM-as-judge → Phoenix span annotations + eval badges in the sessions UI |
+| Self-improvement loop | `packages/agent/tools/phoenix-introspection.ts` (`recall_similar_runs`, `find_resolved_gap`) + `app/api/bufi/digest/promote` (auto-curation to `bufi-recall` / `bufi-resolved-gaps` datasets) |
+| Multi-step + human-in-control | `todo_write` planning, `task` subagents, `ask_user_question` HITL, sessions UI |
+
+**Demo flow** (`scripts/demo-dispatch.ts` + `scripts/phoenix-seed-resolved-gap.ts`): a
+treasury-reconciliation mission fails on run 1 (missing script), an engineer curates the
+fix into the `bufi-resolved-gaps` dataset, and run 2 self-heals — the agent's
+`find_resolved_gap` call returns the curated fix and it completes the mission, citing its
+own trace history.
+
+Hosted at **https://open-agents-bay.vercel.app** · BUFI-side crons live in
+[BuFi007/desk-v1](https://github.com/BuFi007/desk-v1) (`apps/app/src/app/api/cron/daily-plan-coffee`,
+`coffee-digest`). Cloud Run-deployable (standard Next.js standalone build); hosted on
+Vercel for the demo.
+
+---
+
 # Open Agents
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?project-name=open-agents&repository-name=open-agents&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fopen-agents&demo-title=Open+Agents&demo-description=Open-source+reference+app+for+building+and+running+background+coding+agents+on+Vercel.&demo-url=https%3A%2F%2Fopen-agents.dev%2F&env=POSTGRES_URL%2CBETTER_AUTH_SECRET%2CNEXT_PUBLIC_VERCEL_APP_CLIENT_ID%2CVERCEL_APP_CLIENT_SECRET%2CNEXT_PUBLIC_GITHUB_CLIENT_ID%2CGITHUB_CLIENT_SECRET%2CGITHUB_APP_ID%2CGITHUB_APP_PRIVATE_KEY%2CNEXT_PUBLIC_GITHUB_APP_SLUG%2CGITHUB_WEBHOOK_SECRET&envDescription=Neon+can+provide+POSTGRES_URL+automatically.+Generate+BETTER_AUTH_SECRET+yourself%2C+then+add+your+Vercel+OAuth+and+GitHub+App+credentials+for+a+full+deployment.&products=%255B%257B%2522type%2522%253A%2522integration%2522%252C%2522protocol%2522%253A%2522storage%2522%252C%2522productSlug%2522%253A%2522neon%2522%252C%2522integrationSlug%2522%253A%2522neon%2522%257D%252C%257B%2522type%2522%253A%2522integration%2522%252C%2522protocol%2522%253A%2522storage%2522%252C%2522productSlug%2522%253A%2522upstash-kv%2522%252C%2522integrationSlug%2522%253A%2522upstash%2522%257D%255D&skippable-integrations=1)

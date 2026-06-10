@@ -19,6 +19,8 @@ export type SessionWithUnread = Pick<
   | "linesRemoved"
   | "prNumber"
   | "prStatus"
+  | "evalScore"
+  | "evalLabel"
   | "createdAt"
 > & {
   hasUnread: boolean;
@@ -78,6 +80,8 @@ function mergeSessionWithSummary(
     linesRemoved: updatedSession.linesRemoved,
     prNumber: updatedSession.prNumber,
     prStatus: updatedSession.prStatus,
+    evalScore: updatedSession.evalScore,
+    evalLabel: updatedSession.evalLabel,
     createdAt: updatedSession.createdAt,
     hasUnread: session.hasUnread,
     hasStreaming: session.hasStreaming,

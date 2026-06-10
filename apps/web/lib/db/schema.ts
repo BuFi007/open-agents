@@ -8,6 +8,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -153,6 +154,19 @@ export const sessions = pgTable(
     // Optional per-session override for auto PR creation after auto-commit.
     // null means "use the user's default preference".
     autoCreatePrOverride: boolean("auto_create_pr_override"),
+    // BUFI bridge: where to POST when this session reaches terminal state.
+    // Set only on sessions created via /api/bufi/dispatch with a callback
+    // field. A polling workflow (bufi-callback.ts) watches sessions with
+    // this column set and fires the POST when status flips to completed/
+    // failed/archived. firedAt prevents double-firing.
+    bufiCallbackUrl: text("bufi_callback_url"),
+    bufiCallbackSecret: text("bufi_callback_secret"),
+    bufiCallbackFiredAt: timestamp("bufi_callback_fired_at"),
+    // Arize Phoenix observability: latest LLM-as-judge eval over this
+    // session's traces (0..1), written by the eval pipeline. Rendered
+    // as a quality badge in the sessions list + header.
+    evalScore: real("eval_score"),
+    evalLabel: text("eval_label"),
     globalSkillRefs: jsonb("global_skill_refs")
       .$type<GlobalSkillRef[]>()
       .notNull()

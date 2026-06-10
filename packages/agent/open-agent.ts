@@ -14,9 +14,12 @@ import {
   askUserQuestionTool,
   bashTool,
   editFileTool,
+  findResolvedGapTool,
+  getPhoenixMcpToolsIfReady,
   globTool,
   grepTool,
   readFileTool,
+  recallSimilarRunsTool,
   skillTool,
   taskTool,
   todoWriteTool,
@@ -38,17 +41,32 @@ export interface AgentSandboxContext {
   environmentDetails?: string;
 }
 
+/**
+ * Telemetry context stamped onto AI SDK spans as
+ * `experimental_telemetry.metadata` so Phoenix traces correlate back
+ * to Open Agents sessions, chats, and dispatch origins.
+ */
+export interface AgentTelemetryContext {
+  sessionId?: string;
+  chatId?: string;
+  /** "web" (human UI) or "bufi-dispatch" (minion bridge). */
+  source?: string;
+  linearTaskId?: string;
+  repo?: string;
+}
+
 const callOptionsSchema = z.object({
   sandbox: z.custom<AgentSandboxContext>(),
   model: z.custom<OpenAgentModelInput>().optional(),
   subagentModel: z.custom<OpenAgentModelInput>().optional(),
   customInstructions: z.string().optional(),
   skills: z.custom<SkillMetadata[]>().optional(),
+  telemetry: z.custom<AgentTelemetryContext>().optional(),
 });
 
 export type OpenAgentCallOptions = z.infer<typeof callOptionsSchema>;
 
-export const defaultModelLabel = "anthropic/claude-opus-4.6" as const;
+export const defaultModelLabel = "google/gemini-3-pro-preview" as const;
 export const defaultModel = gateway(defaultModelLabel);
 
 function normalizeAgentModelSelection(
@@ -74,6 +92,8 @@ const tools = {
   ask_user_question: askUserQuestionTool,
   skill: skillTool,
   web_fetch: webFetchTool,
+  recall_similar_runs: recallSimilarRunsTool,
+  find_resolved_gap: findResolvedGapTool,
 } satisfies ToolSet;
 
 export const openAgent = new ToolLoopAgent({
@@ -124,14 +144,46 @@ export const openAgent = new ToolLoopAgent({
       modelId: mainSelection.id,
     });
 
+    // OpenInference tracing → Arize Phoenix. AI SDK spans only fire
+    // when a global tracer provider is registered (instrumentation.ts);
+    // without PHOENIX_API_KEY this resolves to the noop tracer.
+    const telemetryContext = options.telemetry;
+    const telemetryMetadata: Record<string, string> = {};
+    if (telemetryContext?.sessionId) {
+      telemetryMetadata.sessionId = telemetryContext.sessionId;
+    }
+    if (telemetryContext?.chatId) {
+      telemetryMetadata.chatId = telemetryContext.chatId;
+    }
+    if (telemetryContext?.source) {
+      telemetryMetadata.source = telemetryContext.source;
+    }
+    if (telemetryContext?.linearTaskId) {
+      telemetryMetadata.linearTaskId = telemetryContext.linearTaskId;
+    }
+    if (telemetryContext?.repo) {
+      telemetryMetadata.repo = telemetryContext.repo;
+    }
+
+    // Phoenix MCP tools (self-introspection over stdio). Non-blocking:
+    // empty while the client connects, merged in on later steps.
+    const phoenixMcpTools = getPhoenixMcpToolsIfReady();
+
     return {
       ...settings,
       model: callModel,
       tools: addCacheControl({
-        tools: settings.tools ?? tools,
+        tools: { ...(settings.tools ?? tools), ...phoenixMcpTools },
         model: callModel,
       }),
       instructions,
+      experimental_telemetry: {
+        isEnabled: Boolean(process.env.PHOENIX_API_KEY),
+        functionId: "open-agent",
+        recordInputs: true,
+        recordOutputs: true,
+        metadata: telemetryMetadata,
+      },
       experimental_context: {
         sandbox,
         skills,

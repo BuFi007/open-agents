@@ -188,3 +188,28 @@ export function getAppOctokit(): Octokit {
     },
   });
 }
+
+/**
+ * Return an Octokit authenticated as a specific GitHub App installation
+ * (scope = entire installation, not a single repo). Used by the BUFI
+ * bridge bot which needs to look up repo metadata before knowing the
+ * repository id (and so can't use `mintInstallationToken`, which requires
+ * a single pre-known repo id).
+ *
+ * Token is managed by octokit-auth-app — auto-refreshed, no manual
+ * revoke needed.
+ */
+export async function getInstallationOctokit(
+  installationId: number,
+): Promise<Octokit> {
+  const { appId, privateKey } = getGitHubAppConfig();
+
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth: {
+      appId,
+      privateKey,
+      installationId,
+    },
+  });
+}
