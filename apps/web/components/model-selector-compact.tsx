@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, ChevronDown } from "lucide-react";
+import { AlertTriangle, CheckIcon, ChevronDown } from "lucide-react";
+import {
+  type ChatHarnessId,
+  getChatHarnessLabel,
+  getPreferredModelProviderForHarness,
+  isPreferredModelProviderForHarness,
+} from "@/lib/chat-harnesses";
 import { type ModelOption, groupByProvider } from "@/lib/model-options";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
 import { cn } from "@/lib/utils";
@@ -22,17 +28,43 @@ import {
   ProviderIcon,
   getProviderDisplayName,
 } from "@/components/provider-icons";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ModelSelectorCompactProps {
   value: string;
+  harnessId: ChatHarnessId;
   modelOptions: ModelOption[];
   onChange: (modelId: string) => void;
   disabled?: boolean;
   onCloseAutoFocus?: () => void;
 }
 
+function ModelProviderWarning({ message }: { message: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="img"
+          aria-label={message}
+          className="inline-flex shrink-0 text-amber-600 dark:text-amber-400"
+        >
+          <AlertTriangle className="size-3.5" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={4}>
+        {message}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ModelSelectorCompact({
   value,
+  harnessId,
   modelOptions,
   onChange,
   disabled = false,
@@ -95,8 +127,20 @@ export function ModelSelectorCompact({
 
   const selectedOption = modelOptions.find((option) => option.id === value);
   const displayText = selectedOption?.shortLabel ?? value;
+  const preferredProvider = getPreferredModelProviderForHarness(harnessId);
+  const providerWarning = preferredProvider
+    ? `${getChatHarnessLabel(harnessId)} works best with ${getProviderDisplayName(preferredProvider)} models.`
+    : undefined;
+  const selectedProviderWarning =
+    selectedOption &&
+    !isPreferredModelProviderForHarness(harnessId, selectedOption.provider)
+      ? providerWarning
+      : undefined;
 
-  const groups = useMemo(() => groupByProvider(modelOptions), [modelOptions]);
+  const groups = useMemo(
+    () => groupByProvider(modelOptions, preferredProvider),
+    [modelOptions, preferredProvider],
+  );
 
   return (
     <Popover
@@ -124,6 +168,9 @@ export function ModelSelectorCompact({
             />
           )}
           <span className="max-w-[140px] truncate">{displayText}</span>
+          {selectedProviderWarning && (
+            <ModelProviderWarning message={selectedProviderWarning} />
+          )}
           <ChevronDown className="h-3 w-3" />
         </button>
       </PopoverTrigger>
@@ -153,38 +200,55 @@ export function ModelSelectorCompact({
                 key={group.provider}
                 heading={getProviderDisplayName(group.provider)}
               >
-                {group.options.map((option) => (
-                  <CommandItem
-                    key={option.id}
-                    value={`${option.label} ${option.id}`}
-                    onSelect={() => handleSelect(option.id)}
-                    className="flex items-center"
-                  >
-                    <ProviderIcon
-                      provider={option.provider}
-                      className="mr-1.5 size-3.5 shrink-0 opacity-70"
-                    />
-                    <span className="min-w-0 truncate">
-                      {option.shortLabel}
-                    </span>
-                    {option.isVariant && (
-                      <span className="ml-1.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-                        variant
+                {group.options.map((option) => {
+                  const optionProviderWarning =
+                    !isPreferredModelProviderForHarness(
+                      harnessId,
+                      option.provider,
+                    )
+                      ? providerWarning
+                      : undefined;
+
+                  return (
+                    <CommandItem
+                      key={option.id}
+                      value={`${option.label} ${option.id}`}
+                      onSelect={() => handleSelect(option.id)}
+                      className="flex items-center"
+                    >
+                      <ProviderIcon
+                        provider={option.provider}
+                        className="mr-1.5 size-3.5 shrink-0 opacity-70"
+                      />
+                      <span className="min-w-0 truncate">
+                        {option.shortLabel}
                       </span>
-                    )}
-                    {option.id === APP_DEFAULT_MODEL_ID && (
-                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                        default
-                      </span>
-                    )}
-                    <CheckIcon
-                      className={cn(
-                        "ml-auto size-4 shrink-0",
-                        value === option.id ? "opacity-100" : "opacity-0",
+                      {option.isVariant && (
+                        <span className="ml-1.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                          variant
+                        </span>
                       )}
-                    />
-                  </CommandItem>
-                ))}
+                      <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                        {option.id === APP_DEFAULT_MODEL_ID && (
+                          <span className="text-xs text-muted-foreground">
+                            default
+                          </span>
+                        )}
+                        {optionProviderWarning && (
+                          <ModelProviderWarning
+                            message={optionProviderWarning}
+                          />
+                        )}
+                        <CheckIcon
+                          className={cn(
+                            "size-4",
+                            value === option.id ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </span>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ))}
           </CommandList>

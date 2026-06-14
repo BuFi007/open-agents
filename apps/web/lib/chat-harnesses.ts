@@ -9,6 +9,15 @@ export type ChatHarnessId = (typeof CHAT_HARNESS_IDS)[number];
 
 export const DEFAULT_CHAT_HARNESS_ID: ChatHarnessId = "open-agent";
 
+export type HarnessPreferredModelProvider = "anthropic" | "openai";
+
+const CHAT_HARNESS_PREFERRED_MODEL_PROVIDERS: Partial<
+  Record<ChatHarnessId, HarnessPreferredModelProvider>
+> = {
+  codex: "openai",
+  "claude-code": "anthropic",
+};
+
 export type ChatHarnessOption = {
   id: ChatHarnessId;
   label: string;
@@ -45,6 +54,20 @@ export const CHAT_HARNESS_OPTIONS: ChatHarnessOption[] = [
 
 export function getChatHarnessLabel(id: ChatHarnessId): string {
   return CHAT_HARNESS_OPTIONS.find((option) => option.id === id)?.label ?? id;
+}
+
+export function getPreferredModelProviderForHarness(
+  id: ChatHarnessId,
+): HarnessPreferredModelProvider | undefined {
+  return CHAT_HARNESS_PREFERRED_MODEL_PROVIDERS[id];
+}
+
+export function isPreferredModelProviderForHarness(
+  id: ChatHarnessId,
+  provider: string,
+): boolean {
+  const preferredProvider = getPreferredModelProviderForHarness(id);
+  return preferredProvider === undefined || provider === preferredProvider;
 }
 
 export function isChatHarnessId(value: unknown): value is ChatHarnessId {

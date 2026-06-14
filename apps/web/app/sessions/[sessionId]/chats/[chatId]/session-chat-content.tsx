@@ -4216,6 +4216,7 @@ export function SessionChatContent({
                               >
                                 <ModelSelectorCompact
                                   value={chatInfo.modelId}
+                                  harnessId={chatInfo.harnessId}
                                   modelOptions={modelOptions}
                                   disabled={
                                     isChatInFlight ||
