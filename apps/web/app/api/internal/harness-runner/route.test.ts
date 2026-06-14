@@ -39,7 +39,7 @@ mock.module("@open-agents/sandbox", () => ({
 
 mock.module("@open-agents/harness-runner", () => ({
   isExternalHarnessId: (value: unknown) =>
-    value === "codex" || value === "claude-code",
+    value === "codex" || value === "claude-code" || value === "pi",
   runHarnessTurn: spies.runHarnessTurn,
 }));
 
@@ -121,6 +121,16 @@ describe("/api/internal/harness-runner", () => {
     await response.text();
     expect(spies.runHarnessTurn).toHaveBeenCalledWith(
       expect.objectContaining({ harnessId: "claude-code" }),
+    );
+  });
+
+  test("accepts the pi harness", async () => {
+    const response = await POST(createRequestWithHarnessId("pi"));
+
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(spies.runHarnessTurn).toHaveBeenCalledWith(
+      expect.objectContaining({ harnessId: "pi" }),
     );
   });
 

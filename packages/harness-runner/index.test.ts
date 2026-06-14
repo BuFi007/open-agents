@@ -5,12 +5,14 @@ import {
   OPEN_AGENT_HARNESS_TOOLS,
   assembleHarnessResponseMessage,
   buildHarnessPrompt,
+  createHarnessAdapter,
   createHarnessStepBoundaryStream,
   extractHarnessCostUsd,
   isExternalHarnessId,
   mapOpenAgentToolChunk,
   resolveClaudeCodeModelId,
   resolveCodexModelId,
+  resolvePiModelId,
 } from "./index";
 
 async function readChunks(
@@ -137,6 +139,22 @@ describe("resolveClaudeCodeModelId", () => {
 
   test("uses the Claude Code default for models from another provider", () => {
     expect(resolveClaudeCodeModelId("openai/gpt-5.4")).toBeUndefined();
+  });
+});
+
+describe("resolvePiModelId", () => {
+  test("preserves the full AI Gateway model id for Pi", () => {
+    expect(resolvePiModelId("anthropic/claude-opus-4.6")).toBe(
+      "anthropic/claude-opus-4.6",
+    );
+  });
+});
+
+describe("createHarnessAdapter", () => {
+  test("creates the Pi harness adapter", () => {
+    expect(
+      createHarnessAdapter("pi", "anthropic/claude-sonnet-4.6").harnessId,
+    ).toBe("pi");
   });
 });
 

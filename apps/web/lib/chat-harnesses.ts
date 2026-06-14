@@ -1,4 +1,9 @@
-export const CHAT_HARNESS_IDS = ["open-agent", "codex", "claude-code"] as const;
+export const CHAT_HARNESS_IDS = [
+  "open-agent",
+  "codex",
+  "claude-code",
+  "pi",
+] as const;
 
 export type ChatHarnessId = (typeof CHAT_HARNESS_IDS)[number];
 
@@ -28,6 +33,12 @@ export const CHAT_HARNESS_OPTIONS: ChatHarnessOption[] = [
     id: "claude-code",
     label: "Claude Code",
     description: "Claude Code native coding agent",
+    available: true,
+  },
+  {
+    id: "pi",
+    label: "Pi",
+    description: "Pi coding agent",
     available: true,
   },
 ];

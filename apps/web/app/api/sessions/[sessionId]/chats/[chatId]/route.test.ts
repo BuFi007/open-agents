@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+type TestHarnessId = "open-agent" | "codex" | "claude-code" | "pi";
+
 type AuthResult =
   | {
       ok: true;
@@ -18,7 +20,7 @@ type OwnedSessionChatResult =
         id: string;
         sessionId: string;
         modelId: string;
-        harnessId: "open-agent" | "codex" | "claude-code";
+        harnessId: TestHarnessId;
         activeStreamId: string | null;
       };
     }
@@ -37,7 +39,7 @@ type ChatRecord = {
   sessionId: string;
   title: string;
   modelId: string;
-  harnessId: "open-agent" | "codex" | "claude-code";
+  harnessId: TestHarnessId;
 };
 
 let authResult: AuthResult = { ok: true, userId: "user-1" };
@@ -82,7 +84,7 @@ const updateChatCalls: Array<{
   patch: {
     title?: string;
     modelId?: string;
-    harnessId?: "open-agent" | "codex" | "claude-code";
+    harnessId?: TestHarnessId;
   };
 }> = [];
 const updateEmptyChatCalls: Array<{
@@ -90,7 +92,7 @@ const updateEmptyChatCalls: Array<{
   patch: {
     title?: string;
     modelId?: string;
-    harnessId?: "open-agent" | "codex" | "claude-code";
+    harnessId?: TestHarnessId;
   };
 }> = [];
 let updatedEmptyChat: ChatRecord | null = null;
@@ -107,7 +109,7 @@ mock.module("@/lib/db/sessions", () => ({
     patch: {
       title?: string;
       modelId?: string;
-      harnessId?: "open-agent" | "codex" | "claude-code";
+      harnessId?: TestHarnessId;
     },
   ) => {
     updateChatCalls.push({ chatId, patch });
@@ -118,7 +120,7 @@ mock.module("@/lib/db/sessions", () => ({
     patch: {
       title?: string;
       modelId?: string;
-      harnessId?: "open-agent" | "codex" | "claude-code";
+      harnessId?: TestHarnessId;
     },
   ) => {
     updateEmptyChatCalls.push({ chatId, patch });
@@ -411,6 +413,41 @@ describe("/api/sessions/[sessionId]/chats/[chatId]", () => {
       },
     ]);
     expect(updateChatCalls).toHaveLength(0);
+  });
+
+  test("PATCH switches an empty chat to the pi harness", async () => {
+    ownedSessionChatResult = {
+      ok: true,
+      sessionRecord: { id: "session-1" },
+      chat: {
+        id: "chat-1",
+        sessionId: "session-1",
+        modelId: "model-1",
+        harnessId: "open-agent",
+        activeStreamId: null,
+      },
+    };
+    updatedEmptyChat = {
+      id: "chat-1",
+      sessionId: "session-1",
+      title: "Chat",
+      modelId: "model-1",
+      harnessId: "pi",
+    };
+    const { PATCH } = await routeModulePromise;
+
+    const response = await PATCH(
+      createPatchRequest({ harnessId: "pi" }),
+      createContext(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateEmptyChatCalls).toEqual([
+      {
+        chatId: "chat-1",
+        patch: { harnessId: "pi" },
+      },
+    ]);
   });
 
   test("PATCH updates an empty chat harness atomically with other fields", async () => {

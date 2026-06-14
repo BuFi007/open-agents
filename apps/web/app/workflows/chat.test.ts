@@ -548,6 +548,20 @@ describe("runAgentWorkflow", () => {
     );
   });
 
+  test("runs Pi through the isolated harness runner", async () => {
+    await runAgentWorkflow(makeOptions({ harnessId: "pi" }));
+
+    expect(spies.runHarnessTurn).toHaveBeenCalledTimes(1);
+    expect(spies.runHarnessTurn.mock.calls[0]?.[0]).toMatchObject({
+      harnessId: "pi",
+      sandboxState: {
+        type: "vercel",
+        sandboxName: "session_session-1",
+      },
+      workingDirectory: "/vercel/sandbox",
+    });
+  });
+
   test("surfaces Codex harness errors as visible assistant text", async () => {
     spies.runHarnessTurn.mockImplementationOnce(
       async (input: { messageId: string }) => ({

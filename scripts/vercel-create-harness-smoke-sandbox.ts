@@ -3,7 +3,7 @@
  *
  * When a prepared deployment template or explicit base snapshot is available,
  * creation uses it directly. Otherwise this script performs the combined
- * Codex and Claude Code runtime preparation once before returning.
+ * external harness runtime preparation once before returning.
  *
  * Usage:
  *   pnpm harness:smoke:sandbox:create
@@ -122,7 +122,7 @@ async function main() {
 
   try {
     if (shouldPrepareRuntimeProfile) {
-      console.log("Preparing Codex and Claude Code runtime profile.");
+      console.log("Preparing external harness runtime profile.");
       await prepareAgentHarnessSandboxRuntimeProfile(sandbox);
     }
 

@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     "@ai-sdk/harness",
     "@ai-sdk/harness-claude-code",
     "@ai-sdk/harness-codex",
+    "@ai-sdk/harness-pi",
     "@ai-sdk/sandbox-vercel",
   ],
   images: {

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+type TestHarnessId = "open-agent" | "codex" | "claude-code" | "pi";
+
 type AuthResult =
   | {
       ok: true;
@@ -19,7 +21,7 @@ type OwnedSessionChatResult =
         sessionId: string;
         title: string;
         modelId: string | null;
-        harnessId: "open-agent" | "codex" | "claude-code";
+        harnessId: TestHarnessId;
         activeStreamId: string | null;
       };
     }
@@ -33,7 +35,7 @@ type ChatRecord = {
   sessionId: string;
   title: string;
   modelId: string | null;
-  harnessId: "open-agent" | "codex" | "claude-code";
+  harnessId: TestHarnessId;
 };
 
 type ForkResult =
@@ -76,7 +78,7 @@ const forkCalls: Array<{
     sessionId: string;
     title: string;
     modelId: string | null;
-    harnessId: "open-agent" | "codex" | "claude-code";
+    harnessId: TestHarnessId;
   };
 }> = [];
 

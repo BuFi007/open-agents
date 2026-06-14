@@ -210,7 +210,7 @@ export const chats = pgTable(
     title: text("title").notNull(),
     modelId: text("model_id").default("anthropic/claude-haiku-4.5"),
     harnessId: text("harness_id", {
-      enum: ["open-agent", "codex", "claude-code"],
+      enum: ["open-agent", "codex", "claude-code", "pi"],
     })
       .notNull()
       .default("open-agent"),

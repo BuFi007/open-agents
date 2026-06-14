@@ -1,9 +1,10 @@
 import type { HarnessAgentAdapter } from "@ai-sdk/harness/agent";
 import { createCodex } from "@ai-sdk/harness-codex";
+import { createPi } from "@ai-sdk/harness-pi";
 
 import { createOpenAgentsClaudeCode } from "./claude-code-adapter.ts";
 
-export const EXTERNAL_HARNESS_IDS = ["codex", "claude-code"] as const;
+export const EXTERNAL_HARNESS_IDS = ["codex", "claude-code", "pi"] as const;
 
 export type ExternalHarnessId = (typeof EXTERNAL_HARNESS_IDS)[number];
 
@@ -28,6 +29,10 @@ export function resolveClaudeCodeModelId(modelId: string): string | undefined {
     : undefined;
 }
 
+export function resolvePiModelId(modelId: string): string {
+  return modelId;
+}
+
 export function createHarnessAdapter(
   harnessId: ExternalHarnessId,
   modelId: string,
@@ -39,6 +44,8 @@ export function createHarnessAdapter(
       return createOpenAgentsClaudeCode({
         model: resolveClaudeCodeModelId(modelId),
       });
+    case "pi":
+      return createPi({ model: resolvePiModelId(modelId) });
     default: {
       const exhausted: never = harnessId;
       throw new Error(`Unsupported harness: ${String(exhausted)}`);

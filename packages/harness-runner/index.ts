@@ -19,6 +19,7 @@ export {
   isExternalHarnessId,
   resolveClaudeCodeModelId,
   resolveCodexModelId,
+  resolvePiModelId,
 } from "./adapters.ts";
 export { HARNESS_INSTRUCTIONS } from "./instructions.ts";
 export { ensureGatewayApiKeyEnv, resolveGatewayApiKey } from "./auth.ts";
