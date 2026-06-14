@@ -1,6 +1,7 @@
 import type { HarnessAgentAdapter } from "@ai-sdk/harness/agent";
-import { createClaudeCode } from "@ai-sdk/harness-claude-code";
 import { createCodex } from "@ai-sdk/harness-codex";
+
+import { createOpenAgentsClaudeCode } from "./claude-code-adapter";
 
 export const EXTERNAL_HARNESS_IDS = ["codex", "claude-code"] as const;
 
@@ -35,7 +36,9 @@ export function createHarnessAdapter(
     case "codex":
       return createCodex({ model: resolveCodexModelId(modelId) });
     case "claude-code":
-      return createClaudeCode({ model: resolveClaudeCodeModelId(modelId) });
+      return createOpenAgentsClaudeCode({
+        model: resolveClaudeCodeModelId(modelId),
+      });
     default: {
       const exhausted: never = harnessId;
       throw new Error(`Unsupported harness: ${String(exhausted)}`);

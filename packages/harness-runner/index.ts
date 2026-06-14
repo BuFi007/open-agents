@@ -87,6 +87,8 @@ export const OPEN_AGENT_HARNESS_TOOLS = {
 
 Use this when the user asks you to ask questions, when requirements are ambiguous, or when the next step depends on a human choice.
 
+Always use this lower-case ask_user_question tool. Never use Claude Code's built-in AskUserQuestion tool.
+
 Users can select provided options or enter custom text.`,
     inputSchema: jsonSchema({
       type: "object",
