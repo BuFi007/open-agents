@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createOpenAgentsClaudeCode } from "./claude-code-adapter";
+import { createOpenAgentsClaudeCode } from "./claude-code-adapter.ts";
 
 describe("createOpenAgentsClaudeCode", () => {
   test("disables Claude Code's native AskUserQuestion tool", async () => {

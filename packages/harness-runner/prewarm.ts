@@ -2,7 +2,7 @@ import { prewarmHarness } from "@ai-sdk/harness/agent";
 import { createCodex } from "@ai-sdk/harness-codex";
 import type { SnapshotSandbox } from "@open-agents/sandbox/vercel";
 
-import { createOpenAgentsClaudeCode } from "./claude-code-adapter";
+import { createOpenAgentsClaudeCode } from "./claude-code-adapter.ts";
 
 export async function prepareHarnessSandboxRuntimeProfile(
   sandbox: SnapshotSandbox,

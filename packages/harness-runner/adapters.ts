@@ -1,7 +1,7 @@
 import type { HarnessAgentAdapter } from "@ai-sdk/harness/agent";
 import { createCodex } from "@ai-sdk/harness-codex";
 
-import { createOpenAgentsClaudeCode } from "./claude-code-adapter";
+import { createOpenAgentsClaudeCode } from "./claude-code-adapter.ts";
 
 export const EXTERNAL_HARNESS_IDS = ["codex", "claude-code"] as const;
 
