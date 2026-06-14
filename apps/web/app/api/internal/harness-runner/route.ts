@@ -98,6 +98,7 @@ export async function POST(request: Request) {
           });
           send({ type: "result", result });
         } catch (error) {
+          console.error("[harness-runner] Harness turn failed:", error);
           send({ type: "error", error: getErrorMessage(error) });
         } finally {
           try {

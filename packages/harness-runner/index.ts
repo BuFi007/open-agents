@@ -231,8 +231,28 @@ function createOpenAgentToolMappingStream(): TransformStream<
   HarnessUIMessageChunk,
   HarnessUIMessageChunk
 > {
+  const pausedQuestionToolCallIds = new Set<string>();
+
   return new TransformStream({
     transform(chunk, controller) {
+      if (
+        (chunk.type === "tool-input-start" ||
+          chunk.type === "tool-input-available" ||
+          chunk.type === "tool-input-error") &&
+        chunk.toolName === "ask_user_question" &&
+        typeof chunk.toolCallId === "string"
+      ) {
+        pausedQuestionToolCallIds.add(chunk.toolCallId);
+      }
+
+      if (
+        chunk.type === "tool-approval-request" &&
+        typeof chunk.toolCallId === "string" &&
+        pausedQuestionToolCallIds.has(chunk.toolCallId)
+      ) {
+        return;
+      }
+
       controller.enqueue(mapOpenAgentToolChunk(chunk));
     },
   });
@@ -481,6 +501,9 @@ export async function runHarnessTurn(
     instructions: HARNESS_INSTRUCTIONS[input.harnessId],
     tools: OPEN_AGENT_HARNESS_TOOLS,
     permissionMode: "allow-all",
+    toolApproval: {
+      ask_user_question: "user-approval",
+    },
     sandbox: input.sandboxProvider,
     onSandboxSession: async ({ session, sessionWorkDir, abortSignal }) => {
       await linkHarnessWorkingDirectory({

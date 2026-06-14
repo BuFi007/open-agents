@@ -256,6 +256,55 @@ describe("assembleHarnessResponseMessage", () => {
       },
     ]);
   });
+
+  test("keeps paused user questions available for client answers", async () => {
+    const responseMessage = await assembleHarnessResponseMessage(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-input-available",
+            toolCallId: "question-1",
+            toolName: "ask_user_question",
+            input: {
+              questions: [
+                {
+                  question: "Which direction?",
+                  header: "Direction",
+                  options: [],
+                },
+              ],
+            },
+            dynamic: true,
+          });
+          controller.enqueue({
+            type: "tool-approval-request",
+            toolCallId: "question-1",
+            approvalId: "approval-1",
+          });
+          controller.enqueue({ type: "finish-step" });
+          controller.close();
+        },
+      }),
+      "assistant-1",
+    );
+
+    expect(responseMessage.parts).toEqual([
+      expect.objectContaining({
+        type: "tool-ask_user_question",
+        toolCallId: "question-1",
+        state: "input-available",
+        input: {
+          questions: [
+            {
+              question: "Which direction?",
+              header: "Direction",
+              options: [],
+            },
+          ],
+        },
+      }),
+    ]);
+  });
 });
 
 describe("mapOpenAgentToolChunk", () => {

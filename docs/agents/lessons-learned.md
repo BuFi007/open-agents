@@ -33,6 +33,7 @@ Hard-won knowledge from building this codebase. When you make a mistake or disco
 
 ## Sandbox Lifecycle
 
+- AI SDK Harness custom tools are host-executed. A client-only tool without `execute()` leaves the runtime bridge waiting for a result. Configure interactive tools with `toolApproval: "user-approval"` to finish the turn, and hide the internal approval event when the product UI collects a richer tool result in the next request.
 - AI SDK `HarnessAgent` creates session work directories beneath the sandbox provider's `defaultWorkingDirectory`. When that directory is also the repository root, place the harness base elsewhere (for example `/tmp/open-agents-harness`) before symlinking to the repo, or Git will see the harness session symlink as an untracked workspace change.
 - Detached/background bash results may have `exitCode: null` for both successful starts and explicit tool failures; bash renderer error state must also honor `output.success === false` (not only numeric non-zero exit codes), and detached quick-failure probing should prefer a timer-vs-wait race branch over matching SDK-specific error names.
 - Creating a sandbox snapshot automatically shuts down that sandbox; lifecycle plans and implementations must treat snapshotting as a stop/hibernate transition, not a non-disruptive backup.
