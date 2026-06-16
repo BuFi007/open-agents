@@ -61,6 +61,10 @@ import type {
   WorkflowRunStepTiming,
 } from "@/lib/db/workflow-runs";
 import { resolveChatModelSelection } from "../api/chat/_lib/model-selection";
+import {
+  claimHarnessOwnership,
+  releaseHarnessOwnership,
+} from "./chat-harness-ownership";
 import { resolveChatSandboxRuntime } from "./chat-sandbox-runtime";
 
 type AuthSessionContext = Pick<AuthSession, "authProvider" | "user"> | null;
@@ -300,6 +304,10 @@ function getSetupErrorMessage(error: unknown): string {
 
   if (error.message === "Session is archived") {
     return "This session is archived. Unarchive it to continue.";
+  }
+
+  if (error.message === "External harness already active") {
+    return "Another external agent is already running in this workspace. Wait for it to finish, then try again.";
   }
 
   return "Workspace setup failed. Try again in a moment.";
@@ -671,11 +679,6 @@ export async function runAgentWorkflow(options: Options) {
     requestUrl: options.requestUrl,
     authSession: options.authSession,
   });
-  const runtimePromise = resolveChatSandboxRuntime({
-    userId: options.userId,
-    sessionId: options.sessionId,
-  });
-
   // Self-register this workflow's runId onto the chat as the very first step.
   // The HTTP POST handler also writes this (via compareAndSetChatActiveStreamId
   // after `start()` returns), but that write is best-effort and can be lost
@@ -695,7 +698,6 @@ export async function runAgentWorkflow(options: Options) {
     // Exit before emitting chunks or persisting messages so only the owning
     // workflow can mutate this chat.
     await Promise.allSettled([
-      runtimePromise,
       modelMessagesPromise,
       inputMessagesPersistPromise,
       modelRuntimePromise,
@@ -740,8 +742,24 @@ export async function runAgentWorkflow(options: Options) {
   let caughtError: unknown;
   let sandboxState: OpenAgentCallOptions["sandbox"]["state"] | undefined;
   let shouldRefreshCachedDiff = false;
+  let harnessOwnershipClaimed = false;
 
   try {
+    if (options.harnessId !== "open-agent") {
+      const ownership = await claimHarnessOwnership(
+        options.sessionId,
+        workflowRunId,
+      );
+      if (ownership === "conflict") {
+        throw new Error("External harness already active");
+      }
+      harnessOwnershipClaimed = true;
+    }
+
+    const runtimePromise = resolveChatSandboxRuntime({
+      userId: options.userId,
+      sessionId: options.sessionId,
+    });
     const [, runtime, modelRuntime, modelMessages] = await Promise.all([
       activeStreamClaimPromise,
       runtimePromise,
@@ -1076,6 +1094,9 @@ export async function runAgentWorkflow(options: Options) {
         ]);
       }
     } finally {
+      if (harnessOwnershipClaimed) {
+        await releaseHarnessOwnership(options.sessionId, workflowRunId);
+      }
       const runFinishedAt = new Date();
       await recordWorkflowUsage(
         options.userId,

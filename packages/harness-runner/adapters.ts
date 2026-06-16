@@ -2,7 +2,6 @@ import type { HarnessAgentAdapter } from "@ai-sdk/harness/agent";
 import { createCodex } from "@ai-sdk/harness-codex";
 import { createPi } from "@ai-sdk/harness-pi";
 
-import { withSandboxBridgePortLease } from "./bridge-port-lease.ts";
 import { createOpenAgentsClaudeCode } from "./claude-code-adapter.ts";
 
 export const EXTERNAL_HARNESS_IDS = ["codex", "claude-code", "pi"] as const;
@@ -40,15 +39,11 @@ export function createHarnessAdapter(
 ): HarnessAgentAdapter {
   switch (harnessId) {
     case "codex":
-      return withSandboxBridgePortLease(
-        createCodex({ model: resolveCodexModelId(modelId) }),
-      );
+      return createCodex({ model: resolveCodexModelId(modelId) });
     case "claude-code":
-      return withSandboxBridgePortLease(
-        createOpenAgentsClaudeCode({
-          model: resolveClaudeCodeModelId(modelId),
-        }),
-      );
+      return createOpenAgentsClaudeCode({
+        model: resolveClaudeCodeModelId(modelId),
+      });
     case "pi":
       return createPi({ model: resolvePiModelId(modelId) });
     default: {
