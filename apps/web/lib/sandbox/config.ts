@@ -46,14 +46,25 @@ export const SANDBOX_LIFECYCLE_MIN_SLEEP_MS = 5 * 1000;
  * - 3000: Next.js, Express, Remix
  * - 5173: Vite, SvelteKit
  * - 8000: code-server (built-in editor)
- * - 5001: external harness bridge
+ * - 5001-5008: external harness bridge pool
  */
 export const AGENT_HARNESS_BRIDGE_PORT = 5001;
+/**
+ * Number of concurrent external-harness sessions a single sandbox supports.
+ * Multiple chats in one session share the sandbox, so the AI SDK harness needs
+ * a pool of bridge ports to lease one per concurrent session.
+ */
+export const AGENT_HARNESS_BRIDGE_PORT_COUNT = 8;
+/** Pool of bridge ports the AI SDK harness leases from for concurrent sessions. */
+export const AGENT_HARNESS_BRIDGE_PORTS = Array.from(
+  { length: AGENT_HARNESS_BRIDGE_PORT_COUNT },
+  (_, index) => AGENT_HARNESS_BRIDGE_PORT + index,
+);
 export const DEFAULT_SANDBOX_PORTS = [
   3000,
   5173,
   8000,
-  AGENT_HARNESS_BRIDGE_PORT,
+  ...AGENT_HARNESS_BRIDGE_PORTS,
 ];
 export const CODE_SERVER_PORT = 8000;
 

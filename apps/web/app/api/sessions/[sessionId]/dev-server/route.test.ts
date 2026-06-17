@@ -265,7 +265,11 @@ describe("/api/sessions/[sessionId]/dev-server", () => {
     });
     expect(connectSandboxMock).toHaveBeenCalledWith(
       currentSessionRecord.sandboxState,
-      { ports: [3000, 5173, 8000, 5001] },
+      {
+        ports: [
+          3000, 5173, 8000, 5001, 5002, 5003, 5004, 5005, 5006, 5007, 5008,
+        ],
+      },
     );
     expect(execDetachedMock).toHaveBeenCalledTimes(1);
     expect(lastLaunchCwd).toBe("/vercel/sandbox/apps/web");

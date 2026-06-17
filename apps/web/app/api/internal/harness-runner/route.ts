@@ -15,7 +15,10 @@ import type {
   InternalHarnessRunEvent,
   InternalHarnessRunRequest,
 } from "@/lib/harness-runner/protocol";
-import { DEFAULT_SANDBOX_PORTS } from "@/lib/sandbox/config";
+import {
+  AGENT_HARNESS_BRIDGE_PORTS,
+  DEFAULT_SANDBOX_PORTS,
+} from "@/lib/sandbox/config";
 
 export const maxDuration = 800;
 
@@ -83,7 +86,9 @@ export async function POST(request: Request) {
 
           const result = await runHarnessTurn({
             harnessId: input.harnessId,
-            sandboxProvider: sandbox.toHarnessSandboxProvider([5001]),
+            sandboxProvider: sandbox.toHarnessSandboxProvider(
+              AGENT_HARNESS_BRIDGE_PORTS,
+            ),
             workingDirectory: input.workingDirectory,
             sessionId: input.sessionId,
             messageId: input.messageId,
