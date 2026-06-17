@@ -579,6 +579,19 @@ describe("runAgentWorkflow", () => {
     });
   });
 
+  test("keys the harness session to the chat, not the message", async () => {
+    await runAgentWorkflow(
+      makeOptions({ harnessId: "codex", chatId: "chat-1" }),
+    );
+
+    // Regression: the harness session id must be stable across messages within
+    // a chat. Including the message id here spun up a fresh Claude Code/Codex
+    // session every turn and orphaned the previous one.
+    expect(spies.runHarnessTurn.mock.calls[0]?.[0]).toMatchObject({
+      sessionId: "codex-chat-1",
+    });
+  });
+
   test("rejects a second external harness in the same sandbox", async () => {
     spies.claimHarnessOwnership.mockResolvedValueOnce("conflict");
 

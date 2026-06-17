@@ -1171,7 +1171,7 @@ const runHarnessAgentStep = async (
       harnessId,
       sandboxState,
       workingDirectory,
-      sessionId: `${harnessId}-${chatId}-${messageId}`.slice(0, 128),
+      sessionId: `${harnessId}-${chatId}`.slice(0, 128),
       messageId,
       messages: messages as HarnessUIMessage[],
       originalMessages: originalMessages as HarnessUIMessage[],
