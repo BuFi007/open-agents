@@ -79,10 +79,6 @@ const spies = {
   clearActiveStream: mock((_chatId?: unknown, _workflowRunId?: unknown) =>
     Promise.resolve(),
   ),
-  claimHarnessOwnership: mock(
-    (): Promise<"claimed" | "conflict"> => Promise.resolve("claimed"),
-  ),
-  releaseHarnessOwnership: mock(() => Promise.resolve()),
   sendFinish: mock(
     async (
       writable: WritableStream<UIMessageChunk>,
@@ -274,11 +270,6 @@ mock.module("workflow/api", () => ({
 }));
 
 mock.module("./chat-post-finish", () => spies);
-
-mock.module("./chat-harness-ownership", () => ({
-  claimHarnessOwnership: spies.claimHarnessOwnership,
-  releaseHarnessOwnership: spies.releaseHarnessOwnership,
-}));
 
 mock.module("@/app/config", () => ({
   webAgent: {
@@ -517,14 +508,6 @@ describe("runAgentWorkflow", () => {
   test("runs Claude Code through the isolated harness runner", async () => {
     await runAgentWorkflow(makeOptions({ harnessId: "claude-code" }));
 
-    expect(spies.claimHarnessOwnership).toHaveBeenCalledWith(
-      "session-1",
-      "wrun_test-123",
-    );
-    expect(spies.releaseHarnessOwnership).toHaveBeenCalledWith(
-      "session-1",
-      "wrun_test-123",
-    );
     expect(spies.runHarnessTurn).toHaveBeenCalledTimes(1);
     expect(spies.runHarnessTurn.mock.calls[0]?.[0]).toMatchObject({
       harnessId: "claude-code",
@@ -590,30 +573,6 @@ describe("runAgentWorkflow", () => {
     expect(spies.runHarnessTurn.mock.calls[0]?.[0]).toMatchObject({
       sessionId: "codex-chat-1",
     });
-  });
-
-  test("rejects a second external harness in the same sandbox", async () => {
-    spies.claimHarnessOwnership.mockResolvedValueOnce("conflict");
-
-    await expect(
-      runAgentWorkflow(makeOptions({ harnessId: "codex" })),
-    ).rejects.toThrow("External harness already active");
-
-    expect(spies.runHarnessTurn).not.toHaveBeenCalled();
-    expect(spies.releaseHarnessOwnership).not.toHaveBeenCalled();
-    expect(writtenChunks).toContainEqual({
-      type: "text-delta",
-      id: "setup-error",
-      delta:
-        "Another external agent is already running in this workspace. Wait for it to finish, then try again.",
-    });
-  });
-
-  test("does not claim harness ownership for the built-in agent", async () => {
-    await runAgentWorkflow(makeOptions());
-
-    expect(spies.claimHarnessOwnership).not.toHaveBeenCalled();
-    expect(spies.releaseHarnessOwnership).not.toHaveBeenCalled();
   });
 
   test("surfaces Codex harness errors as visible assistant text", async () => {

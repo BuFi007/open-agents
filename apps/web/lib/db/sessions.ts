@@ -405,46 +405,6 @@ export async function clearSessionSandboxProvisioningRunIdIfOwned(
   return Boolean(updated);
 }
 
-/**
- * Atomically claims exclusive external-harness ownership for a session.
- * Reclaiming with the same workflow run ID is idempotent.
- */
-export async function claimSessionActiveHarnessRunId(
-  sessionId: string,
-  runId: string,
-) {
-  const [updated] = await db
-    .update(sessions)
-    .set({ activeHarnessRunId: runId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(sessions.id, sessionId),
-        or(
-          isNull(sessions.activeHarnessRunId),
-          eq(sessions.activeHarnessRunId, runId),
-        ),
-      ),
-    )
-    .returning({ id: sessions.id });
-
-  return Boolean(updated);
-}
-
-export async function clearSessionActiveHarnessRunIdIfOwned(
-  sessionId: string,
-  runId: string,
-) {
-  const [updated] = await db
-    .update(sessions)
-    .set({ activeHarnessRunId: null, updatedAt: new Date() })
-    .where(
-      and(eq(sessions.id, sessionId), eq(sessions.activeHarnessRunId, runId)),
-    )
-    .returning({ id: sessions.id });
-
-  return Boolean(updated);
-}
-
 export async function deleteSession(sessionId: string) {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
