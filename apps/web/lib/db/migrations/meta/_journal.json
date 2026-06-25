@@ -267,6 +267,13 @@
       "when": 1781109288022,
       "tag": "0037_fuzzy_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1781109288023,
+      "tag": "0038_faulty_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
