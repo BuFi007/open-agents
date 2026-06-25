@@ -31,6 +31,7 @@ import {
 import { parseChatRequestBody, requireChatIdentifiers } from "./_lib/request";
 import { runAgentWorkflow } from "@/app/workflows/chat";
 import { persistAssistantMessagesWithToolResults } from "./_lib/persist-tool-results";
+import { isAvailableChatHarnessId } from "@/lib/chat-harnesses";
 
 type WebAgentUIMessageChunk = InferUIMessageChunk<WebAgentUIMessage>;
 
@@ -90,6 +91,13 @@ export async function POST(req: Request) {
     return Response.json({ error: "Session is archived" }, { status: 400 });
   }
 
+  if (!isAvailableChatHarnessId(chat.harnessId)) {
+    return Response.json(
+      { error: "Harness is not available yet" },
+      { status: 400 },
+    );
+  }
+
   if (isManagedTemplateTrialUser(session, req.url)) {
     const latestUserMessage = getLatestUserMessage(messages);
     if (latestUserMessage) {
@@ -143,6 +151,7 @@ export async function POST(req: Request) {
     {
       messages,
       chatId,
+      harnessId: chat.harnessId,
       sessionId,
       userId,
       requestUrl: req.url,

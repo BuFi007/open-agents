@@ -5,8 +5,8 @@
  * so the new image stays clone-ready (see `@open-agents/sandbox` snapshot-refresh).
  *
  * Usage:
- *   bun run scripts/vercel-refresh-base-snapshot.ts --command "apt-get update"
- *   bun run scripts/vercel-refresh-base-snapshot.ts --from snap_123 --command "apt-get install -y ripgrep"
+ *   pnpm sandbox:snapshot-base -- --command "apt-get update"
+ *   pnpm sandbox:snapshot-base -- --from snap_123 --command "apt-get install -y ripgrep"
  */
 
 import {
@@ -17,9 +17,8 @@ import {
   DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
   DEFAULT_SANDBOX_PORTS,
   DEFAULT_SANDBOX_TIMEOUT_MS,
-} from "../apps/web/lib/sandbox/config";
-
-const SANDBOX_BASE_SNAPSHOT_CONFIG_PATH = "apps/web/lib/sandbox/config.ts";
+} from "../apps/web/lib/sandbox/config.ts";
+import { prepareAgentHarnessSandboxRuntimeProfile } from "./agent-harness-sandbox-profile.ts";
 
 interface CliOptions {
   baseSnapshotId?: string;
@@ -34,8 +33,8 @@ interface HelpResult {
 
 function printUsage() {
   console.log(`Usage:
-  bun run sandbox:snapshot-base -- --command "apt-get update"
-  bun run sandbox:snapshot-base -- --from snap_123 --command "apt-get install -y ripgrep"
+  pnpm sandbox:snapshot-base -- --command "apt-get update"
+  pnpm sandbox:snapshot-base -- --from snap_123 --command "apt-get install -y ripgrep"
 
 Options:
   --from <snapshot-id>         Override the starting snapshot id
@@ -78,6 +77,10 @@ function parseArgs(argv: string[]): CliOptions | HelpResult {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+
+    if (arg === "--") {
+      continue;
+    }
 
     if (arg === "--help" || arg === "-h") {
       return { help: true };
@@ -131,12 +134,21 @@ async function main() {
     return;
   }
 
+  const baseSnapshotId =
+    parsed.baseSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID;
+  if (!baseSnapshotId) {
+    throw new Error(
+      "Pass --from <snapshot-id> or configure VERCEL_SANDBOX_BASE_SNAPSHOT_ID.",
+    );
+  }
+
   const result = await refreshBaseSnapshot({
-    baseSnapshotId: parsed.baseSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
+    baseSnapshotId,
     commands: parsed.commands,
     sandboxTimeoutMs: parsed.sandboxTimeoutMs ?? DEFAULT_SANDBOX_TIMEOUT_MS,
     commandTimeoutMs: parsed.commandTimeoutMs,
     ports: DEFAULT_SANDBOX_PORTS,
+    prepare: prepareAgentHarnessSandboxRuntimeProfile,
     log: (message) => console.log(message),
   });
 
@@ -144,7 +156,7 @@ async function main() {
   console.log(`New snapshot id: ${result.snapshotId}`);
   console.log(`Started from snapshot: ${result.sourceSnapshotId}`);
   console.log(
-    `Update ${SANDBOX_BASE_SNAPSHOT_CONFIG_PATH} to use: "${result.snapshotId}"`,
+    `Set VERCEL_SANDBOX_BASE_SNAPSHOT_ID=${result.snapshotId} to use it as an explicit override.`,
   );
 }
 

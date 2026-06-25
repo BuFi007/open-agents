@@ -62,21 +62,19 @@ export function toDisplayPath(
 }
 
 /**
- * Get sandbox from experimental context with null safety.
+ * Get sandbox from tool context with null safety.
  * Throws a descriptive error if sandbox is not initialized.
  *
- * @param experimental_context - The context passed to tool execute functions
+ * @param toolContext - The context passed to tool execute functions
  * @param toolName - Optional tool name for better error messages
  * @returns The sandbox instance
  * @throws Error if sandbox is not available in context
  */
 export async function getSandbox(
-  experimental_context: unknown,
+  toolContext: unknown,
   toolName?: string,
 ): Promise<Sandbox> {
-  const context = isAgentContext(experimental_context)
-    ? experimental_context
-    : undefined;
+  const context = isAgentContext(toolContext) ? toolContext : undefined;
   if (!context?.sandbox) {
     const toolInfo = toolName ? ` (tool: ${toolName})` : "";
     const contextInfo = context
@@ -84,7 +82,7 @@ export async function getSandbox(
       : "Context is undefined or null";
     throw new Error(
       `Sandbox not initialized in context${toolInfo}. ${contextInfo}. ` +
-        "Ensure the agent's prepareCall sets experimental_context: { sandbox, ... }",
+        "Ensure the agent's prepareCall sets toolsContext for this tool.",
     );
   }
 
@@ -92,21 +90,19 @@ export async function getSandbox(
 }
 
 /**
- * Get sandbox + working directory from experimental_context for approval checks.
+ * Get sandbox + working directory from tool context for approval checks.
  *
- * @param experimental_context - The context passed to needsApproval functions
+ * @param toolContext - The context passed to needsApproval functions
  * @param toolName - Optional tool name for better error messages
  */
 export function getSandboxContext(
-  experimental_context: unknown,
+  toolContext: unknown,
   toolName?: string,
 ): {
   sandbox: AgentContext["sandbox"];
   workingDirectory: string;
 } {
-  const context = isAgentContext(experimental_context)
-    ? experimental_context
-    : undefined;
+  const context = isAgentContext(toolContext) ? toolContext : undefined;
   if (!context?.sandbox) {
     const toolInfo = toolName ? ` (tool: ${toolName})` : "";
     const contextInfo = context
@@ -114,7 +110,7 @@ export function getSandboxContext(
       : "Context is undefined or null";
     throw new Error(
       `Sandbox context not initialized${toolInfo}. ${contextInfo}. ` +
-        "Ensure the agent's prepareCall sets experimental_context: { sandbox, ... }",
+        "Ensure the agent's prepareCall sets toolsContext for this tool.",
     );
   }
 
@@ -125,16 +121,14 @@ export function getSandboxContext(
 }
 
 /**
- * Get model from experimental context with null safety.
+ * Get model from tool context with null safety.
  * Throws a descriptive error if model is not initialized.
  */
 export function getModel(
-  experimental_context: unknown,
+  toolContext: unknown,
   toolName?: string,
 ): LanguageModel {
-  const context = isAgentContext(experimental_context)
-    ? experimental_context
-    : undefined;
+  const context = isAgentContext(toolContext) ? toolContext : undefined;
   if (!context?.model) {
     const toolInfo = toolName ? ` (tool: ${toolName})` : "";
     const contextInfo = context
@@ -142,28 +136,26 @@ export function getModel(
       : "Context is undefined or null";
     throw new Error(
       `Model not initialized in context${toolInfo}. ${contextInfo}. ` +
-        "Ensure the agent's prepareCall sets experimental_context: { model, ... }",
+        "Ensure the agent's prepareCall sets toolsContext for this tool.",
     );
   }
   return context.model;
 }
 
 /**
- * Get subagent model from experimental context, falling back to the main model.
+ * Get subagent model from tool context, falling back to the main model.
  * Returns the dedicated subagent model if configured, otherwise the main agent model.
  */
 export function getSubagentModel(
-  experimental_context: unknown,
+  toolContext: unknown,
   toolName?: string,
 ): LanguageModel {
-  const context = isAgentContext(experimental_context)
-    ? experimental_context
-    : undefined;
+  const context = isAgentContext(toolContext) ? toolContext : undefined;
   if (!context?.model) {
     const toolInfo = toolName ? ` (tool: ${toolName})` : "";
     throw new Error(
       `Model not initialized in context${toolInfo}. ` +
-        "Ensure the agent's prepareCall sets experimental_context: { model, ... }",
+        "Ensure the agent's prepareCall sets toolsContext for this tool.",
     );
   }
   return context.subagentModel ?? context.model;
@@ -191,11 +183,6 @@ export type ToolNeedsApprovalFunction<INPUT> = (
      */
     messages: ModelMessage[];
 
-    /**
-     * Additional context.
-     *
-     * Experimental (can break in patch releases).
-     */
-    experimental_context?: unknown;
+    context: AgentContext;
   },
 ) => boolean | PromiseLike<boolean>;

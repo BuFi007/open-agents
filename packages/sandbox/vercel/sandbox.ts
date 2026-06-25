@@ -1,3 +1,4 @@
+import { createVercelSandbox } from "@ai-sdk/sandbox-vercel";
 import { Sandbox as VercelSandboxSDK } from "@vercel/sandbox";
 import type { Dirent } from "fs";
 import type {
@@ -6,10 +7,13 @@ import type {
   SandboxHooks,
   SandboxStats,
   SnapshotResult,
-} from "../interface";
-import type { SandboxStatus } from "../types";
-import type { VercelSandboxConfig, VercelSandboxConnectConfig } from "./config";
-import type { VercelState } from "./state";
+} from "../interface.ts";
+import type { SandboxStatus } from "../types.ts";
+import type {
+  VercelSandboxConfig,
+  VercelSandboxConnectConfig,
+} from "./config.ts";
+import type { VercelState } from "./state.ts";
 
 const MAX_OUTPUT_LENGTH = 50_000;
 const DEFAULT_WORKING_DIRECTORY = "/vercel/sandbox";
@@ -18,6 +22,25 @@ const MAX_SDK_TIMEOUT_MS = 18_000_000; // Vercel API limit: 5 hours
 const MAX_PROACTIVE_TIMEOUT_MS = MAX_SDK_TIMEOUT_MS - TIMEOUT_BUFFER_MS;
 const DEFAULT_RECONNECT_TIMEOUT_MS = 300_000; // 5 minutes default timeout for reconnected sandboxes
 const DETACHED_QUICK_FAILURE_WINDOW_MS = 2_000;
+const HARNESS_WORKING_DIRECTORY = "/tmp/open-agents-harness";
+
+export type AiSdkHarnessSandboxProvider = ReturnType<
+  typeof createVercelSandbox
+>;
+type AiSdkHarnessSandboxSession = Awaited<
+  ReturnType<AiSdkHarnessSandboxProvider["createSession"]>
+>;
+
+function withHarnessWorkingDirectory(
+  session: AiSdkHarnessSandboxSession,
+): AiSdkHarnessSandboxSession {
+  return Object.create(session, {
+    defaultWorkingDirectory: {
+      value: HARNESS_WORKING_DIRECTORY,
+      enumerable: true,
+    },
+  }) as AiSdkHarnessSandboxSession;
+}
 
 interface SandboxRouteLike {
   port: number;
@@ -35,17 +58,39 @@ interface SandboxNetworkPolicy {
   allow: Record<string, SandboxNetworkRule[]>;
 }
 
-const DEFAULT_NETWORK_POLICY: SandboxNetworkPolicy = {
-  allow: {
-    "*": [],
-  },
-};
+function getAiGatewayApiKey(): string | undefined {
+  return process.env.AI_GATEWAY_API_KEY || process.env.AI_GATEWAY_TOKEN;
+}
 
-function buildGitHubCredentialBrokeringPolicy(
-  token?: string,
-): SandboxNetworkPolicy {
+function buildDefaultCredentialBrokeringPolicy(): SandboxNetworkPolicy {
+  const aiGatewayApiKey = getAiGatewayApiKey();
+  return {
+    allow: {
+      ...(aiGatewayApiKey
+        ? {
+            "ai-gateway.vercel.sh": [
+              {
+                transform: [
+                  {
+                    headers: {
+                      Authorization: `Bearer ${aiGatewayApiKey}`,
+                    },
+                  },
+                ],
+              },
+            ],
+          }
+        : {}),
+      "*": [],
+    },
+  };
+}
+
+function buildCredentialBrokeringPolicy(token?: string): SandboxNetworkPolicy {
+  const policy = buildDefaultCredentialBrokeringPolicy();
+
   if (!token) {
-    return DEFAULT_NETWORK_POLICY;
+    return policy;
   }
 
   const basicAuthToken = Buffer.from(
@@ -55,6 +100,7 @@ function buildGitHubCredentialBrokeringPolicy(
 
   return {
     allow: {
+      ...policy.allow,
       "api.github.com": [
         {
           transform: [{ headers: { Authorization: `Bearer ${token}` } }],
@@ -101,10 +147,7 @@ async function syncGitHubCredentialBrokering(
     return;
   }
 
-  await updateNetworkPolicy.call(
-    sdk,
-    buildGitHubCredentialBrokeringPolicy(token),
-  );
+  await updateNetworkPolicy.call(sdk, buildCredentialBrokeringPolicy(token));
 }
 
 async function clearGitHubCredentialBrokering(
@@ -541,7 +584,7 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
       timeout: sdkTimeout,
       runtime,
       persistent,
-      networkPolicy: buildGitHubCredentialBrokeringPolicy(githubToken),
+      networkPolicy: buildCredentialBrokeringPolicy(githubToken),
       ...(ports && { ports }),
       ...(snapshotExpiration !== undefined && { snapshotExpiration }),
     };
@@ -1016,6 +1059,34 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
    */
   domain(port: number): string {
     return this.session.domain(port);
+  }
+
+  /**
+   * Adapt this caller-owned sandbox for AI SDK harnesses. The returned
+   * provider never stops or deletes the underlying VM.
+   */
+  toHarnessSandboxProvider(
+    bridgePorts: ReadonlyArray<number> = [],
+  ): AiSdkHarnessSandboxProvider {
+    const provider = createVercelSandbox({
+      sandbox: this.sdk,
+      ...(bridgePorts.length > 0 ? { bridgePorts } : {}),
+    });
+    const resumeSession = provider.resumeSession;
+
+    return {
+      specificationVersion: provider.specificationVersion,
+      providerId: provider.providerId,
+      bridgePorts: provider.bridgePorts,
+      createSession: async (options) =>
+        withHarnessWorkingDirectory(await provider.createSession(options)),
+      ...(resumeSession
+        ? {
+            resumeSession: async (options) =>
+              withHarnessWorkingDirectory(await resumeSession(options)),
+          }
+        : {}),
+    };
   }
 
   async setGitHubAuthToken(token?: string): Promise<void> {

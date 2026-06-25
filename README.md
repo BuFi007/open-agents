@@ -99,7 +99,7 @@ A few details that matter for understanding the current implementation:
 - Chat requests start a workflow run instead of executing the agent inline.
 - Each agent turn can continue across many persisted workflow steps.
 - Active runs can be resumed by reconnecting to the stream for the existing workflow.
-- Sandboxes expose ports `3000`, `5173`, `4321`, and `8000`, can optionally use a configured base snapshot, and hibernate after inactivity.
+- Sandboxes expose ports `3000`, `5173`, `4321`, `8000`, and `5001`, use a build-prewarmed deployment template on Vercel, and hibernate after inactivity.
 - Auto-commit and auto-PR are supported, but they are preference-driven features, not always-on behavior.
 
 ## Environment variables
@@ -146,7 +146,7 @@ ELEVENLABS_API_KEY=
 - `REDIS_URL` / `KV_URL`: optional skills metadata cache (falls back to in-memory when not configured).
 - `OPEN_AGENTS_RESOURCE_PROFILE`: optional deployment resource profile. Set to `hobby` to use Hobby-compatible defaults for chat and sandbox resources; leave unset for standard behavior.
 - `VERCEL_PROJECT_PRODUCTION_URL` / `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL`: canonical production URL for metadata and some callback behavior.
-- `VERCEL_SANDBOX_BASE_SNAPSHOT_ID`: optional base snapshot for fresh sandboxes. If unset, sandboxes start from Vercel's standard Sandbox runtime. Use a snapshot created in/accessible to your own Vercel scope.
+- `VERCEL_SANDBOX_BASE_SNAPSHOT_ID`: optional explicit base snapshot override for fresh sandboxes. Vercel deployments normally resolve their automatically prewarmed named template without this value. Outside a Vercel deployment, leaving it unset starts from the standard Sandbox runtime.
 - `ELEVENLABS_API_KEY`: voice transcription.
 
 ## Deploy your own copy on Vercel
@@ -191,14 +191,15 @@ ELEVENLABS_API_KEY=
    - make the app public if you want org installs to work cleanly
 
 9. Add the GitHub App env vars and redeploy.
-10. Optionally add Redis/KV, `OPEN_AGENTS_RESOURCE_PROFILE=hobby` for Hobby-compatible resource defaults, the canonical production URL vars, and your own `VERCEL_SANDBOX_BASE_SNAPSHOT_ID` if you want fresh sandboxes to start from a preconfigured image.
+10. Optionally add Redis/KV, `OPEN_AGENTS_RESOURCE_PROFILE=hobby` for Hobby-compatible resource defaults, the canonical production URL vars, and `VERCEL_SANDBOX_BASE_SNAPSHOT_ID` only if you need to override the automatically prewarmed sandbox template.
 
 ## Local setup
 
 1. Install dependencies:
 
    ```bash
-   bun install
+   corepack enable
+   pnpm install
    ```
 
 2. Create your local env file:
@@ -211,7 +212,7 @@ ELEVENLABS_API_KEY=
 4. Start the app:
 
    ```bash
-   bun run web
+   pnpm web
    ```
 
 If you already have a linked Vercel project, you can pull env vars locally with `vc env pull`.
@@ -270,12 +271,14 @@ GITHUB_WEBHOOK_SECRET=...
 ## Useful commands
 
 ```bash
-bun run web                # run dev server
-bun run check              # lint + format check
-bun run fix                # lint + format fix
-bun run typecheck          # typecheck all packages
-bun run ci                 # full CI: check, typecheck, tests, migration check
-bun run sandbox:snapshot-base  # refresh sandbox base snapshot
+pnpm web                    # run dev server
+pnpm check                  # lint + format check
+pnpm fix                    # lint + format fix
+pnpm typecheck              # typecheck all packages
+pnpm run ci                 # full CI: check, typecheck, tests, migration check
+pnpm harness:smoke:sandbox:create # create a caller-owned sandbox for harness smoke tests
+pnpm harness:smoke:codex    # run one Codex turn against an existing sandbox
+pnpm sandbox:snapshot-base  # manually layer a new sandbox snapshot from an existing snapshot
 ```
 
 ## Repo layout

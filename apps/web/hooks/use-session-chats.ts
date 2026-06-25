@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import type { Chat } from "@/lib/db/schema";
+import { DEFAULT_CHAT_HARNESS_ID } from "@/lib/chat-harnesses";
 import { fetcherNoStore } from "@/lib/swr";
 
 export type SessionChatListItem = Chat & {
@@ -497,6 +498,7 @@ export function useSessionChats(
       sessionId,
       title: "New chat",
       modelId: data?.defaultModelId ?? null,
+      harnessId: DEFAULT_CHAT_HARNESS_ID,
       activeStreamId: null,
       lastAssistantMessageAt: null,
       createdAt: now,
@@ -589,6 +591,7 @@ export function useSessionChats(
       sessionId,
       title: `Fork of ${sourceChat.title}`,
       modelId: sourceChat.modelId,
+      harnessId: sourceChat.harnessId,
       activeStreamId: null,
       lastAssistantMessageAt: null,
       createdAt: now,

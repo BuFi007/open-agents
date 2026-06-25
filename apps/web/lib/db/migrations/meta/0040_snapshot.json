@@ -1,6 +1,6 @@
 {
-  "id": "43c6497a-ed2b-472e-8eb9-ffa907c2b669",
-  "prevId": "658fc007-9ce5-461d-86a6-0d256e413d2d",
+  "id": "4c5b1f0c-e5e4-49cd-9c43-7f1853bb9a5b",
+  "prevId": "54701862-be4a-4233-95f4-e2a212886109",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -355,6 +355,13 @@
           "notNull": false,
           "default": "'anthropic/claude-haiku-4.5'"
         },
+        "harness_id": {
+          "name": "harness_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open-agent'"
+        },
         "active_stream_id": {
           "name": "active_stream_id",
           "type": "text",
@@ -686,6 +693,12 @@
         },
         "sandbox_provisioning_run_id": {
           "name": "sandbox_provisioning_run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active_harness_run_id": {
+          "name": "active_harness_run_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

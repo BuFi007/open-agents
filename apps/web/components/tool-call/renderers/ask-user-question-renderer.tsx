@@ -2,15 +2,15 @@
 
 import { MessageCircleQuestion } from "lucide-react";
 import type { ToolRendererProps } from "@/app/lib/render-tool";
+import { normalizeAskUserQuestionInput } from "@/lib/chat/normalize-ask-user-question";
 import { ToolLayout } from "../tool-layout";
 
 export function AskUserQuestionRenderer({
   part,
   state,
 }: ToolRendererProps<"tool-ask_user_question">) {
-  const input = part.input;
   const output = part.state === "output-available" ? part.output : undefined;
-  const questions = input?.questions ?? [];
+  const questions = normalizeAskUserQuestionInput(part.input);
 
   const isWaitingForInput = part.state === "input-available";
   const isStreaming = part.state === "input-streaming";

@@ -16,12 +16,14 @@ export const todoItemSchema = z.object({
 });
 export type TodoItem = z.infer<typeof todoItemSchema>;
 
-export interface AgentContext {
+export type AgentContext = {
   sandbox: AgentSandboxContext;
   skills?: SkillMetadata[];
   model: LanguageModel;
   subagentModel?: LanguageModel;
-}
+};
+
+export const agentContextSchema = z.custom<AgentContext>();
 
 export interface SandboxExecutionContext {
   sandbox: AgentSandboxContext;

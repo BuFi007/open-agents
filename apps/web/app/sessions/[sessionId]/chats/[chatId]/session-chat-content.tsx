@@ -45,6 +45,7 @@ import {
 import { createPortal } from "react-dom";
 import useSWR from "swr";
 import type { ChatRefreshResponse } from "@/app/api/sessions/[sessionId]/chats/[chatId]/route";
+import { normalizeAskUserQuestionInput } from "@/lib/chat/normalize-ask-user-question";
 import type { MergePullRequestResult } from "@/lib/github/actions/pr";
 import {
   getDeploymentUrl,
@@ -66,6 +67,7 @@ import {
 import { FileSuggestionsDropdown } from "@/components/file-suggestions-dropdown";
 import { ImageAttachmentsPreview } from "@/components/image-attachments-preview";
 import { TextAttachmentsPreview } from "@/components/text-attachments-preview";
+import { HarnessSelectorCompact } from "@/components/harness-selector-compact";
 import { ModelSelectorCompact } from "@/components/model-selector-compact";
 import { useInlineQuestion } from "@/components/inline-question-input";
 import { SlashCommandDropdown } from "@/components/slash-command-dropdown";
@@ -133,6 +135,7 @@ import {
 } from "./session-chat-context";
 import { useStreamRecovery } from "./hooks/use-stream-recovery";
 import { useAutoCommitStatus } from "./hooks/use-auto-commit-status";
+import { useChatHarnessSelection } from "./hooks/use-chat-harness-selection";
 import { useCodeEditor } from "./hooks/use-code-editor";
 import { useDevServer } from "./hooks/use-dev-server";
 import { useGitPanel } from "./git-panel-context";
@@ -445,8 +448,13 @@ type MessageUsageTotals = {
 };
 
 function getCachedInputTokens(usage: LanguageModelUsage | undefined): number {
+  const legacyCachedInputTokens = (
+    usage as unknown as Record<string, unknown> | undefined
+  )?.cachedInputTokens;
+
   return (
-    usage?.inputTokenDetails?.cacheReadTokens ?? usage?.cachedInputTokens ?? 0
+    usage?.inputTokenDetails?.cacheReadTokens ??
+    (typeof legacyCachedInputTokens === "number" ? legacyCachedInputTokens : 0)
   );
 }
 
@@ -1180,6 +1188,7 @@ export function SessionChatContent({
     setSandboxInfo,
     archiveSession,
     unarchiveSession: _unarchiveSession,
+    updateChatHarness,
     updateChatModel,
     updateSessionTitle,
     preferredSandboxType,
@@ -1267,6 +1276,11 @@ export function SessionChatContent({
     addToolApprovalResponse,
     addToolOutput,
   } = chat;
+  const { handleHarnessChange, isUpdatingHarness } = useChatHarnessSelection({
+    harnessId: chatInfo.harnessId,
+    updateChatHarness,
+  });
+  const isHarnessLocked = hadInitialMessages || messages.length > 0;
   const {
     chats,
     markChatRead,
@@ -2600,17 +2614,18 @@ export function SessionChatContent({
     }
   }, [questionToolCallId, addToolOutput]);
 
-  // Stable empty array so the hook doesn't reset on every render when there's no question
-  const emptyQuestions = useMemo(
-    () => [] as AskUserQuestionInput["questions"],
-    [],
+  // Stable array identity so the hook doesn't reset on every render. Harness
+  // tool inputs are untyped JSON, so coerce instead of trusting the cast.
+  const pendingQuestions = useMemo(
+    () =>
+      hasPendingQuestion && pendingQuestionPart
+        ? normalizeAskUserQuestionInput(pendingQuestionPart.input)
+        : ([] as AskUserQuestionInput["questions"]),
+    [hasPendingQuestion, pendingQuestionPart],
   );
 
   const inlineQuestion = useInlineQuestion({
-    questions:
-      hasPendingQuestion && pendingQuestionPart
-        ? pendingQuestionPart.input.questions
-        : emptyQuestions,
+    questions: pendingQuestions,
     onSubmit: handleQuestionSubmit,
     onCancel: handleQuestionCancel,
     textareaValue: input,
@@ -4150,6 +4165,50 @@ export function SessionChatContent({
                             >
                               <Paperclip className="h-4 w-4" />
                             </Button>
+                            <div
+                              className={
+                                isChatInFlight ||
+                                isHarnessLocked ||
+                                isUpdatingHarness
+                                  ? "pointer-events-none opacity-60"
+                                  : undefined
+                              }
+                            >
+                              <HarnessSelectorCompact
+                                value={chatInfo.harnessId}
+                                disabled={
+                                  isChatInFlight ||
+                                  isHarnessLocked ||
+                                  isUpdatingHarness
+                                }
+                                disabledReason={
+                                  isHarnessLocked
+                                    ? "Harness is locked after the first message"
+                                    : undefined
+                                }
+                                onCloseAutoFocus={() => {
+                                  window.requestAnimationFrame(() => {
+                                    const textarea = inputRef.current;
+                                    if (!textarea) {
+                                      return;
+                                    }
+
+                                    textarea.focus();
+                                    const nextCursorPosition = Math.min(
+                                      cursorPosition,
+                                      textarea.value.length,
+                                    );
+                                    textarea.setSelectionRange(
+                                      nextCursorPosition,
+                                      nextCursorPosition,
+                                    );
+                                  });
+                                }}
+                                onChange={(harnessId) => {
+                                  void handleHarnessChange(harnessId);
+                                }}
+                              />
+                            </div>
                             {chatInfo.modelId && (
                               <div
                                 className={
@@ -4162,6 +4221,7 @@ export function SessionChatContent({
                               >
                                 <ModelSelectorCompact
                                   value={chatInfo.modelId}
+                                  harnessId={chatInfo.harnessId}
                                   modelOptions={modelOptions}
                                   disabled={
                                     isChatInFlight ||

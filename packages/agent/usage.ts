@@ -53,14 +53,6 @@ export function addLanguageModelUsage(
       ),
     },
     totalTokens: addTokenCounts(usage1.totalTokens, usage2.totalTokens),
-    reasoningTokens: addTokenCounts(
-      usage1.reasoningTokens,
-      usage2.reasoningTokens,
-    ),
-    cachedInputTokens: addTokenCounts(
-      usage1.cachedInputTokens,
-      usage2.cachedInputTokens,
-    ),
   };
 }
 
@@ -96,9 +88,7 @@ function isLanguageModelUsage(value: unknown): value is LanguageModelUsage {
     isRecord(outputTokenDetails) ||
     isNumber(value.inputTokens) ||
     isNumber(value.outputTokens) ||
-    isNumber(value.totalTokens) ||
-    isNumber(value.cachedInputTokens) ||
-    isNumber(value.reasoningTokens)
+    isNumber(value.totalTokens)
   );
 }
 

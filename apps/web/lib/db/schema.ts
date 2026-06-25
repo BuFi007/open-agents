@@ -191,6 +191,7 @@ export const sessions = pgTable(
     hibernateAfter: timestamp("hibernate_after"),
     lifecycleRunId: text("lifecycle_run_id"),
     sandboxProvisioningRunId: text("sandbox_provisioning_run_id"),
+    activeHarnessRunId: text("active_harness_run_id"),
     lifecycleError: text("lifecycle_error"),
     // Git stats (for display in session list)
     linesAdded: integer("lines_added").default(0),
@@ -223,6 +224,11 @@ export const chats = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     modelId: text("model_id").default("anthropic/claude-haiku-4.5"),
+    harnessId: text("harness_id", {
+      enum: ["open-agent", "codex", "claude-code", "pi"],
+    })
+      .notNull()
+      .default("open-agent"),
     activeStreamId: text("active_stream_id"),
     lastAssistantMessageAt: timestamp("last_assistant_message_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

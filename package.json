@@ -1,40 +1,43 @@
 {
   "name": "open-agents",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "apps/*",
-      "packages/*"
-    ],
-    "catalog": {
-      "ai": "^6.0.165",
-      "@ai-sdk/anthropic": "^3.0.70",
-      "@ai-sdk/openai": "^3.0.53",
-      "@ai-sdk/react": "^3.0.167",
-      "zod": "^4.3.6"
-    }
-  },
+  "type": "module",
   "scripts": {
-    "web": "cd apps/web/ && bun run dev",
+    "web": "pnpm --dir apps/web dev",
     "dev": "turbo dev",
     "build": "turbo build",
-    "sandbox:snapshot-base": "bun run scripts/vercel-refresh-base-snapshot.ts",
+    "harness:smoke:sandbox:create": "node --env-file-if-exists=.env.local scripts/vercel-create-harness-smoke-sandbox.ts",
+    "harness:smoke:codex": "node --env-file-if-exists=.env.local scripts/codex-harness-smoke.ts",
+    "sandbox:snapshot-base": "node scripts/vercel-refresh-base-snapshot.ts",
     "typecheck": "turbo typecheck",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "ci": "bun run check && bun run typecheck && bun run test:isolated && bun run --cwd apps/web db:check",
-    "test:isolated": "bun run scripts/test-isolated.ts",
+    "ci": "pnpm check && pnpm typecheck && pnpm test:isolated && pnpm --dir apps/web db:check",
+    "test:isolated": "node scripts/test-isolated.ts",
     "test:verbose": "bun test --reporter=junit --reporter-outfile /dev/stdout"
   },
   "devDependencies": {
+    "@open-agents/harness-runner": "workspace:*",
+    "@open-agents/sandbox": "workspace:*",
     "oxfmt": "^0.43.0",
     "oxlint": "1.57.0",
     "turbo": "^2.5.4",
     "typescript": "^5",
     "ultracite": "7.4.0"
   },
-  "overrides": {
-    "zod": "^4.3.6"
+  "engines": {
+    "node": "24.x"
   },
-  "packageManager": "bun@1.2.14"
+  "packageManager": "bun@1.2.14",
+  "overrides": {
+    "kysely": "0.28.17",
+    "zod": "^4.3.6",
+    "@earendil-works/pi-coding-agent": "0.78.1",
+    "ai": "7.0.0-canary.174",
+    "@ai-sdk/react": "4.0.0-canary.178"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

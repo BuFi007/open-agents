@@ -11,14 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "catalog:",
+    "@ai-sdk/anthropic": "4.0.0-canary.66",
     "@ai-sdk/mcp": "^1.0.46",
-    "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/openai": "4.0.0-canary.73",
     "@arizeai/phoenix-mcp": "^4.0.13",
     "@open-agents/arize-phoenix": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
-    "ai": "catalog:",
-    "zod": "catalog:"
+    "ai": "7.0.0-canary.174",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@ai-sdk/devtools": "^0.0.15",

@@ -1,12 +1,12 @@
 import type { LanguageModel } from "ai";
-import { gateway, stepCountIs, ToolLoopAgent } from "ai";
+import { gateway, isStepCount, ToolLoopAgent } from "ai";
 import { z } from "zod";
 import { bashTool } from "../tools/bash";
 import { globTool } from "../tools/glob";
 import { grepTool } from "../tools/grep";
 import { readFileTool } from "../tools/read";
 import { editFileTool, writeFileTool } from "../tools/write";
-import type { SandboxExecutionContext } from "../types";
+import type { AgentContext, SandboxExecutionContext } from "../types";
 import {
   SUBAGENT_BASH_RULES,
   SUBAGENT_COMPLETE_TASK_RULES,
@@ -88,6 +88,8 @@ const callOptionsSchema = z.object({
 
 export type DesignCallOptions = z.infer<typeof callOptionsSchema>;
 
+const initialAgentContext = {} as AgentContext;
+
 export const designSubagent = new ToolLoopAgent({
   model: gateway("anthropic/claude-opus-4.6"),
   instructions: DESIGN_SYSTEM_PROMPT,
@@ -99,7 +101,15 @@ export const designSubagent = new ToolLoopAgent({
     glob: globTool(),
     bash: bashTool(),
   },
-  stopWhen: stepCountIs(SUBAGENT_STEP_LIMIT),
+  toolsContext: {
+    read: initialAgentContext,
+    write: initialAgentContext,
+    edit: initialAgentContext,
+    grep: initialAgentContext,
+    glob: initialAgentContext,
+    bash: initialAgentContext,
+  },
+  stopWhen: isStepCount(SUBAGENT_STEP_LIMIT),
   callOptionsSchema,
   prepareCall: ({ options, ...settings }) => {
     if (!options) {
@@ -108,6 +118,7 @@ export const designSubagent = new ToolLoopAgent({
 
     const sandbox = options.sandbox;
     const model = options.model ?? settings.model;
+    const agentContext = { sandbox, model };
     return {
       ...settings,
       model,
@@ -122,9 +133,13 @@ ${options.task}
 ${options.instructions}
 
 ${SUBAGENT_REMINDER}`,
-      experimental_context: {
-        sandbox,
-        model,
+      toolsContext: {
+        read: agentContext,
+        write: agentContext,
+        edit: agentContext,
+        grep: agentContext,
+        glob: agentContext,
+        bash: agentContext,
       },
     };
   },

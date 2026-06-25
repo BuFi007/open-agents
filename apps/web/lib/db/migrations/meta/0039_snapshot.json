@@ -1,6 +1,6 @@
 {
-  "id": "5ddbe875-f96d-4140-9d08-38c82f5d837f",
-  "prevId": "658fc007-9ce5-461d-86a6-0d256e413d2d",
+  "id": "54701862-be4a-4233-95f4-e2a212886109",
+  "prevId": "43c6497a-ed2b-472e-8eb9-ffa907c2b669",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -355,6 +355,13 @@
           "notNull": false,
           "default": "'anthropic/claude-haiku-4.5'"
         },
+        "harness_id": {
+          "name": "harness_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open-agent'"
+        },
         "active_stream_id": {
           "name": "active_stream_id",
           "type": "text",
@@ -634,36 +641,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "bufi_callback_url": {
-          "name": "bufi_callback_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bufi_callback_secret": {
-          "name": "bufi_callback_secret",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bufi_callback_fired_at": {
-          "name": "bufi_callback_fired_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eval_score": {
-          "name": "eval_score",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eval_label": {
-          "name": "eval_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "global_skill_refs": {
           "name": "global_skill_refs",
           "type": "jsonb",
@@ -710,6 +687,12 @@
         },
         "lifecycle_run_id": {
           "name": "lifecycle_run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sandbox_provisioning_run_id": {
+          "name": "sandbox_provisioning_run_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

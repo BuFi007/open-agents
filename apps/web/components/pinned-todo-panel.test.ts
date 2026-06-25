@@ -71,4 +71,28 @@ describe("getLatestTodos", () => {
 
     expect(latestTodos).toEqual(updatedTodos);
   });
+
+  test("normalizes malformed bridge payloads instead of crashing", () => {
+    const latestTodos = getLatestTodos([
+      createMessage([
+        {
+          type: "tool-todo_write",
+          state: "input-available",
+          input: {
+            todos: JSON.stringify([
+              { content: "Inspect the failure", status: "in_progress" },
+            ]),
+          },
+        },
+      ]),
+    ]);
+
+    expect(latestTodos).toEqual([
+      {
+        id: "todo-0",
+        content: "Inspect the failure",
+        status: "in_progress",
+      },
+    ]);
+  });
 });

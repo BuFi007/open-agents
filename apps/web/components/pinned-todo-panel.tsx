@@ -2,15 +2,13 @@
 
 import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import type { TodoItem } from "@open-agents/agent";
 import { cn } from "@/lib/utils";
+import { normalizeTodoInput } from "@/lib/chat/normalize-todo-input";
 import { isToolUIPart } from "ai";
 import type { WebAgentUIMessage } from "@/app/types";
 
-export type TodoItem = {
-  id?: string;
-  content?: string;
-  status?: string;
-};
+export type { TodoItem } from "@open-agents/agent";
 
 /**
  * Extract the latest committed todo list from the conversation.
@@ -30,9 +28,8 @@ export function getLatestTodos(messages: WebAgentUIMessage[]): TodoItem[] {
         continue;
       }
 
-      const input = part.input as { todos?: TodoItem[] } | undefined;
-      const todos = input?.todos;
-      if (Array.isArray(todos) && todos.length > 0) {
+      const todos = normalizeTodoInput(part.input);
+      if (todos.length > 0) {
         latestTodos = todos;
       }
     }
@@ -158,10 +155,9 @@ export function PinnedTodoPanel({ todos }: PinnedTodoPanelProps) {
         <div className="max-h-48 overflow-y-auto border-t border-border/40 px-3 py-2">
           <div className="space-y-1">
             {todos.map((todo, index) => {
-              if (!todo) return null;
               return (
                 <div
-                  key={`pinned-todo-${todo.id ?? index}`}
+                  key={`pinned-todo-${todo.id || index}`}
                   className="flex items-center gap-2.5"
                 >
                   <span className="shrink-0">

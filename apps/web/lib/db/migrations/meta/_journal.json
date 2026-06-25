@@ -274,6 +274,20 @@
       "when": 1781109288023,
       "tag": "0038_faulty_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1780557724714,
+      "tag": "0039_classy_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1781591975650,
+      "tag": "0040_salty_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

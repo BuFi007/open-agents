@@ -9,6 +9,11 @@ import {
   type UIMessageChunk,
 } from "ai";
 import type { OpenAgentCallOptions } from "@open-agents/agent";
+import type {
+  ExternalHarnessId,
+  HarnessUIMessage,
+  HarnessUsage,
+} from "@open-agents/harness-runner";
 import { getWorkflowMetadata, getWritable } from "workflow";
 import { getRun } from "workflow/api";
 import { assistantFileLinkPrompt } from "@/lib/assistant-file-links";
@@ -49,6 +54,7 @@ import {
 } from "@/lib/model-access";
 import { getAllVariants } from "@/lib/model-variants";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
+import { type ChatHarnessId, getChatHarnessLabel } from "@/lib/chat-harnesses";
 import type { Session as AuthSession } from "@/lib/session/types";
 import type {
   WorkflowRunStatus,
@@ -62,6 +68,7 @@ type AuthSessionContext = Pick<AuthSession, "authProvider" | "user"> | null;
 type Options = {
   messages: WebAgentUIMessage[];
   chatId: string;
+  harnessId: ChatHarnessId;
   sessionId: string;
   userId: string;
   requestUrl: string;
@@ -102,12 +109,18 @@ const DIFF_REFRESHING_TOOL_TYPES = new Set([
 function shouldRefreshDiffCacheForParts(
   parts: WebAgentUIMessage["parts"],
 ): boolean {
-  return parts.some(
-    (part) =>
-      isToolUIPart(part) &&
-      DIFF_REFRESHING_TOOL_TYPES.has(part.type) &&
-      (part.state === "output-available" || part.state === "output-error"),
-  );
+  return parts.some((part) => {
+    if (!isToolUIPart(part)) {
+      return false;
+    }
+
+    const toolType =
+      part.type === "dynamic-tool" ? `tool-${part.toolName}` : part.type;
+    return (
+      DIFF_REFRESHING_TOOL_TYPES.has(toolType) &&
+      (part.state === "output-available" || part.state === "output-error")
+    );
+  });
 }
 
 const convertMessages = async (
@@ -290,6 +303,43 @@ function getSetupErrorMessage(error: unknown): string {
   }
 
   return "Workspace setup failed. Try again in a moment.";
+}
+
+function getHarnessErrorMessage(
+  harnessLabel: string,
+  rawFinishReason: string | undefined,
+  hasPartialResponse = false,
+): string {
+  const timing = hasPartialResponse
+    ? "after producing a partial response"
+    : "before it could respond";
+
+  if (!rawFinishReason) {
+    return `${harnessLabel} failed ${timing}. Try again in a moment.`;
+  }
+
+  if (rawFinishReason.includes("Cannot find package 'ws'")) {
+    return `${harnessLabel} failed ${timing} because this sandbox is missing the prepared harness runtime. Recreate the sandbox and try again.`;
+  }
+
+  if (
+    rawFinishReason.includes("Authentication failed") &&
+    rawFinishReason.includes("AI_GATEWAY_API_KEY")
+  ) {
+    return `${harnessLabel} failed ${timing} because AI Gateway rejected the configured credentials. Check AI_GATEWAY_API_KEY or Vercel OIDC for this deployment and try again.`;
+  }
+
+  if (
+    rawFinishReason.includes("Bridge process exited without becoming ready")
+  ) {
+    return `${harnessLabel} failed ${timing} because the sandbox bridge did not start. Recreate the sandbox and try again.`;
+  }
+
+  const reason =
+    rawFinishReason.length > 500
+      ? `${rawFinishReason.slice(0, 500)}...`
+      : rawFinishReason;
+  return `${harnessLabel} failed ${timing}: ${reason}`;
 }
 
 function isStepTimingError(
@@ -607,7 +657,10 @@ export async function runAgentWorkflow(options: Options) {
       ? latestMessage.id
       : (options.assistantId ?? generateIdAi());
 
-  const modelMessagesPromise = convertMessages(options.messages);
+  const modelMessagesPromise =
+    options.harnessId === "open-agent"
+      ? convertMessages(options.messages)
+      : Promise.resolve<ModelMessage[]>([]);
   const inputMessagesPersistPromise = options.inputMessagesPersisted
     ? Promise.resolve()
     : persistInputMessages(options.chatId, options.messages);
@@ -618,11 +671,6 @@ export async function runAgentWorkflow(options: Options) {
     requestUrl: options.requestUrl,
     authSession: options.authSession,
   });
-  const runtimePromise = resolveChatSandboxRuntime({
-    userId: options.userId,
-    sessionId: options.sessionId,
-  });
-
   // Self-register this workflow's runId onto the chat as the very first step.
   // The HTTP POST handler also writes this (via compareAndSetChatActiveStreamId
   // after `start()` returns), but that write is best-effort and can be lost
@@ -642,7 +690,6 @@ export async function runAgentWorkflow(options: Options) {
     // Exit before emitting chunks or persisting messages so only the owning
     // workflow can mutate this chat.
     await Promise.allSettled([
-      runtimePromise,
       modelMessagesPromise,
       inputMessagesPersistPromise,
       modelRuntimePromise,
@@ -689,6 +736,10 @@ export async function runAgentWorkflow(options: Options) {
   let shouldRefreshCachedDiff = false;
 
   try {
+    const runtimePromise = resolveChatSandboxRuntime({
+      userId: options.userId,
+      sessionId: options.sessionId,
+    });
     const [, runtime, modelRuntime, modelMessages] = await Promise.all([
       activeStreamClaimPromise,
       runtimePromise,
@@ -737,19 +788,37 @@ export async function runAgentWorkflow(options: Options) {
       let result: Awaited<ReturnType<typeof runAgentStep>>;
 
       try {
-        result = await runAgentStep(
-          modelMessages,
-          originalMessagesForStep,
-          assistantId,
-          writable,
-          workflowRunId,
-          options.chatId,
-          options.sessionId,
-          selectedModelId,
-          modelId,
-          agentOptions,
-          step + 1,
-        );
+        result =
+          options.harnessId === "open-agent"
+            ? await runAgentStep(
+                modelMessages,
+                originalMessagesForStep,
+                assistantId,
+                writable,
+                workflowRunId,
+                options.chatId,
+                options.sessionId,
+                selectedModelId,
+                modelId,
+                agentOptions,
+                step + 1,
+              )
+            : await runHarnessAgentStep(
+                options.harnessId,
+                options.messages,
+                originalMessagesForStep,
+                assistantId,
+                writable,
+                workflowRunId,
+                options.chatId,
+                options.sessionId,
+                selectedModelId,
+                modelId,
+                runtime.sandboxState,
+                runtime.workingDirectory,
+                options.requestUrl,
+                step + 1,
+              );
       } catch (error) {
         if (isStepTimingError(error)) {
           stepTimings.push(error.stepTiming);
@@ -760,6 +829,32 @@ export async function runAgentWorkflow(options: Options) {
       stepTimings.push(result.stepTiming);
       pendingAssistantResponse =
         result.responseMessage ?? pendingAssistantResponse;
+      if (
+        options.harnessId !== "open-agent" &&
+        result.finishReason === "error"
+      ) {
+        const hasPartialResponse = pendingAssistantResponse.parts.length > 0;
+        const errorText = getHarnessErrorMessage(
+          getChatHarnessLabel(options.harnessId),
+          result.rawFinishReason,
+          hasPartialResponse,
+        );
+        const errorPartText = hasPartialResponse
+          ? `\n\n${errorText}`
+          : errorText;
+        pendingAssistantResponse = {
+          ...pendingAssistantResponse,
+          parts: [
+            ...pendingAssistantResponse.parts,
+            { type: "text", text: errorPartText },
+          ],
+        };
+        await sendTextMessage(
+          writable,
+          `${assistantId}:harness-error`,
+          errorPartText,
+        );
+      }
       shouldRefreshCachedDiff =
         shouldRefreshCachedDiff ||
         shouldRefreshDiffCacheForParts(pendingAssistantResponse.parts);
@@ -775,6 +870,7 @@ export async function runAgentWorkflow(options: Options) {
       }
 
       const shouldContinue =
+        options.harnessId === "open-agent" &&
         result.finishReason === "tool-calls" &&
         !shouldPauseForToolInteraction(
           result.responseMessage?.parts ?? pendingAssistantResponse.parts,
@@ -945,7 +1041,10 @@ export async function runAgentWorkflow(options: Options) {
 
     await Promise.all([
       clearActiveStream(options.chatId, workflowRunId),
-      sendFinish(writable).then(() => closeStream(writable)),
+      sendFinish(
+        writable,
+        finalFinishReason === "error" ? "error" : "stop",
+      ).then(() => closeStream(writable)),
       ...(sandboxState && shouldRefreshCachedDiff
         ? [refreshDiffCache(options.sessionId, sandboxState)]
         : []),
@@ -954,7 +1053,7 @@ export async function runAgentWorkflow(options: Options) {
 
     workflowStatus = wasAborted
       ? "aborted"
-      : exhaustedMaxSteps
+      : exhaustedMaxSteps || finalFinishReason === "error"
         ? "failed"
         : "completed";
   } catch (error) {
@@ -977,7 +1076,10 @@ export async function runAgentWorkflow(options: Options) {
       if (!streamClosed) {
         await Promise.all([
           clearActiveStream(options.chatId, workflowRunId),
-          sendFinish(writable).then(() => closeStream(writable)),
+          sendFinish(
+            writable,
+            workflowStatus === "failed" ? "error" : "stop",
+          ).then(() => closeStream(writable)),
         ]);
       }
     } finally {
@@ -1006,6 +1108,129 @@ export async function runAgentWorkflow(options: Options) {
     throw caughtError;
   }
 }
+
+function toLanguageModelUsage(
+  usage: HarnessUsage | undefined,
+): LanguageModelUsage {
+  return {
+    inputTokens: usage?.inputTokens,
+    inputTokenDetails: {
+      noCacheTokens: usage?.inputTokenDetails?.noCacheTokens,
+      cacheReadTokens: usage?.inputTokenDetails?.cacheReadTokens,
+      cacheWriteTokens: usage?.inputTokenDetails?.cacheWriteTokens,
+    },
+    outputTokens: usage?.outputTokens,
+    outputTokenDetails: {
+      textTokens: usage?.outputTokenDetails?.textTokens,
+      reasoningTokens: usage?.outputTokenDetails?.reasoningTokens,
+    },
+    totalTokens: usage?.totalTokens,
+  };
+}
+
+const runHarnessAgentStep = async (
+  harnessId: ExternalHarnessId,
+  messages: WebAgentUIMessage[],
+  originalMessages: WebAgentUIMessage[],
+  messageId: string,
+  writable: Writable,
+  workflowRunId: string,
+  chatId: string,
+  sessionId: string,
+  selectedModelId: string,
+  modelId: string,
+  sandboxState: OpenAgentCallOptions["sandbox"]["state"],
+  workingDirectory: string,
+  requestUrl: string,
+  stepNumber: number,
+) => {
+  "use step";
+
+  const stepStartedAt = new Date();
+  const abortController = new AbortController();
+  const stopMonitor = startStopMonitor(workflowRunId, abortController);
+
+  try {
+    const { runHarnessTurnViaApi } =
+      await import("@/lib/harness-runner/client");
+    const result = await runHarnessTurnViaApi({
+      harnessId,
+      sandboxState,
+      workingDirectory,
+      sessionId: `${harnessId}-${chatId}`.slice(0, 128),
+      messageId,
+      messages: messages as HarnessUIMessage[],
+      originalMessages: originalMessages as HarnessUIMessage[],
+      selectedModelId,
+      modelId,
+      requestUrl,
+      abortSignal: abortController.signal,
+      onChunk: async (chunk) => {
+        const writer = writable.getWriter();
+        try {
+          await writer.write(chunk as UIMessageChunk);
+        } finally {
+          writer.releaseLock();
+        }
+      },
+    });
+    const stepUsage = toLanguageModelUsage(result.usage);
+    const stepFinishedAt = new Date();
+
+    return {
+      responseMessage: result.responseMessage as WebAgentUIMessage,
+      responseMessages: [],
+      finishReason: result.finishReason as FinishReason,
+      rawFinishReason: result.rawFinishReason,
+      stepUsage,
+      stepCost: result.usage?.costUsd,
+      stepWasAborted: false,
+      stepTiming: buildStepTiming(
+        stepNumber,
+        stepStartedAt,
+        stepFinishedAt,
+        result.finishReason,
+        result.rawFinishReason,
+      ),
+    };
+  } catch (error) {
+    const stepFinishedAt = new Date();
+
+    if (isAbortError(error)) {
+      const abortedFinishReason: FinishReason = "stop";
+      return {
+        responseMessage: undefined,
+        responseMessages: [],
+        finishReason: abortedFinishReason,
+        rawFinishReason: undefined,
+        stepUsage: undefined,
+        stepCost: undefined,
+        stepWasAborted: true,
+        stepTiming: buildStepTiming(
+          stepNumber,
+          stepStartedAt,
+          stepFinishedAt,
+          abortedFinishReason,
+        ),
+      };
+    }
+
+    const errorWithStepTiming =
+      error instanceof Error ? error : new Error(String(error));
+    Object.assign(errorWithStepTiming, {
+      stepTiming: buildStepTiming(
+        stepNumber,
+        stepStartedAt,
+        stepFinishedAt,
+        "error",
+        errorWithStepTiming.name,
+      ),
+    });
+    throw errorWithStepTiming;
+  } finally {
+    stopMonitor.stop();
+  }
+};
 
 const runAgentStep = async (
   messages: ModelMessage[],
