@@ -11,7 +11,14 @@ export async function ensureGatewayApiKeyEnv(
 ): Promise<string | undefined> {
   const existing = resolveGatewayApiKey(env);
   if (existing) {
-    env.AI_GATEWAY_API_KEY ??= existing;
+    // Truthiness check, not `??=`: prod sets AI_GATEWAY_API_KEY to an EMPTY
+    // string (gateway auth flows via OIDC), and `??=` leaves "" in place — which
+    // makes the Codex adapter's `if (env.AI_GATEWAY_API_KEY)` fall through to
+    // OpenAI-direct (api.openai.com) with no key → 401. Replacing the empty
+    // string with the resolved OIDC token routes Codex through the AI Gateway.
+    if (!env.AI_GATEWAY_API_KEY) {
+      env.AI_GATEWAY_API_KEY = existing;
+    }
     return existing;
   }
 

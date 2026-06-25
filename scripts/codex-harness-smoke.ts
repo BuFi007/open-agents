@@ -127,7 +127,7 @@ async function main() {
   const chunks: Array<{ type: string; [key: string]: unknown }> = [];
   const modelId = parsed.model
     ? `openai/${parsed.model.replace(/^openai\//, "")}`
-    : "openai/gpt-5.4";
+    : "openai/gpt-5-codex";
   const result = await runHarnessTurn({
     harnessId: "codex",
     sandboxProvider: sandbox.toHarnessSandboxProvider([5001]),
@@ -146,6 +146,9 @@ async function main() {
     modelId,
     onChunk: (chunk) => {
       chunks.push(chunk);
+      if (typeof chunk.type === "string" && chunk.type.includes("error")) {
+        console.error("ERROR CHUNK:", JSON.stringify(chunk, null, 2));
+      }
     },
   });
   const text = result.responseMessage.parts
@@ -177,6 +180,19 @@ main()
   .then(() => process.exit(0))
   .catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(message);
+    console.error("MESSAGE:", message);
+    if (error instanceof Error && error.stack) {
+      console.error("STACK:", error.stack);
+    }
+    let cause = (error as { cause?: unknown })?.cause;
+    let depth = 0;
+    while (cause && depth < 6) {
+      console.error(
+        `CAUSE[${depth}]:`,
+        cause instanceof Error ? (cause.stack ?? cause.message) : cause,
+      );
+      cause = (cause as { cause?: unknown })?.cause;
+      depth += 1;
+    }
     process.exit(1);
   });

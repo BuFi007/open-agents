@@ -554,6 +554,24 @@ export async function runHarnessTurn(
         generateMessageId: () => input.messageId,
         sendStart: false,
         sendFinish: false,
+        // Without onError, AI SDK masks every stream error as the literal
+        // "An error occurred." — which hides 401s/bridge failures and defeats
+        // summarizeHarnessFailure's classification in the chat workflow. Log the
+        // full detail server-side; surface the concise message (not the stack)
+        // so the workflow can classify it without leaking internals to clients.
+        onError: (error) => {
+          const detail =
+            error instanceof Error
+              ? (error.stack ?? error.message)
+              : typeof error === "string"
+                ? error
+                : JSON.stringify(error);
+          console.error("[harness-runner] stream error:", detail);
+          if (error instanceof Error) {
+            return error.message;
+          }
+          return typeof error === "string" ? error : "Harness stream error";
+        },
       })
       .pipeThrough(createOpenAgentToolMappingStream())
       .pipeThrough(createHarnessStepBoundaryStream())
