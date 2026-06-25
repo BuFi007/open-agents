@@ -1,0 +1,6 @@
+[install]
+# Match upstream pnpm behavior: don't auto-install unmet peer deps. The actual
+# dedupe is forced by the root package.json `overrides.ai` pin — that collapses
+# @workflow/ai's `ai@^6` peer onto the root ai@7 the harnesses use, so its
+# UIMessage type stops diverging. This flag keeps the install lean alongside it.
+peer = false
