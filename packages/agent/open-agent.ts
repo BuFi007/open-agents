@@ -15,12 +15,9 @@ import {
   askUserQuestionTool,
   bashTool,
   editFileTool,
-  findResolvedGapTool,
-  getPhoenixMcpToolsIfReady,
   globTool,
   grepTool,
   readFileTool,
-  recallSimilarRunsTool,
   skillTool,
   taskTool,
   todoWriteTool,
@@ -44,7 +41,7 @@ export interface AgentSandboxContext {
 
 /**
  * Telemetry context stamped onto AI SDK spans as
- * `experimental_telemetry.metadata` so Phoenix traces correlate back
+ * `experimental_telemetry.metadata` so exported spans correlate back
  * to Open Agents sessions, chats, and dispatch origins.
  */
 export interface AgentTelemetryContext {
@@ -93,8 +90,6 @@ const tools = {
   ask_user_question: askUserQuestionTool,
   skill: skillTool,
   web_fetch: webFetchTool,
-  recall_similar_runs: recallSimilarRunsTool,
-  find_resolved_gap: findResolvedGapTool,
 } satisfies ToolSet;
 
 // AI SDK 7 requires contextual tools to have an initial context map. Every
@@ -166,9 +161,8 @@ export const openAgent = new ToolLoopAgent({
       modelId: mainSelection.id,
     });
 
-    // OpenInference tracing → Arize Phoenix. AI SDK spans only fire
-    // when a global tracer provider is registered (instrumentation.ts);
-    // without PHOENIX_API_KEY this resolves to the noop tracer.
+    // AI SDK telemetry metadata — spans only fire when a global tracer
+    // provider is registered; noop until native/eve tracing is wired.
     const telemetryContext = options.telemetry;
     const telemetryMetadata: Record<string, string> = {};
     if (telemetryContext?.sessionId) {
@@ -187,21 +181,17 @@ export const openAgent = new ToolLoopAgent({
       telemetryMetadata.repo = telemetryContext.repo;
     }
 
-    // Phoenix MCP tools (self-introspection over stdio). Non-blocking:
-    // empty while the client connects, merged in on later steps.
-    const phoenixMcpTools = getPhoenixMcpToolsIfReady();
-
     return {
       ...settings,
       model: callModel,
       tools: addCacheControl({
-        tools: { ...(settings.tools ?? tools), ...phoenixMcpTools },
+        tools: settings.tools ?? tools,
         model: callModel,
       }),
       instructions,
-      // BUFI: keep Phoenix observability telemetry (AI SDK 7 still supports it).
+      // BUFI: AI SDK telemetry stays plumbed for native/eve tracing.
       experimental_telemetry: {
-        isEnabled: Boolean(process.env.PHOENIX_API_KEY),
+        isEnabled: process.env.AGENT_TELEMETRY_ENABLED === "1",
         functionId: "open-agent",
         recordInputs: true,
         recordOutputs: true,

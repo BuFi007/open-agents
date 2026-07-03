@@ -22,7 +22,6 @@
     "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "@open-agents/agent": "workspace:*",
-    "@open-agents/arize-phoenix": "workspace:*",
     "@open-agents/harness-runner": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
     "@open-agents/shared": "workspace:*",

@@ -3,9 +3,9 @@ import { db } from "./client";
 import { sessions } from "./schema";
 
 /**
- * Write an LLM-as-judge verdict onto a session row. Used by the
- * Phoenix eval pipeline (scripts/phoenix-eval.ts); rendered as a
- * quality badge in the sessions UI.
+ * Write an LLM-as-judge verdict onto a session row; rendered as a
+ * quality badge in the sessions UI. Native session traces are the
+ * observability source of truth.
  */
 export async function writeSessionEval(params: {
   sessionId: string;
