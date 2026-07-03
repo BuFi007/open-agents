@@ -1,10 +1,9 @@
 # BUFI Minions — Self-Improving Financial-Ops Agents
 
-> **Devpost: "Building Agents for Real-World Challenges" — Arize track submission.**
-> Gemini 3-powered background agents for BUFI (a stablecoin-first financial workspace for
-> global teams), with production-grade Arize Phoenix observability and a working
-> self-improvement loop: the agents read their own traces, recall curated fixes, and get
-> measurably better every morning.
+> Gemini 3-powered background agents for BUFI (a stablecoin-first financial workspace
+> for global teams). Observability is native: every agent step lands in the open-agents
+> session store (traces + eval badges), which eve and `@bufinance/intelligence` consume
+> directly — one brain, one trace surface.
 
 ## The real-world challenge
 
@@ -17,37 +16,23 @@ Linear daily plan ──(cron 12:00)──► BUFI bridge ──► open-agents 
                                                         │  plan (todo) · subagents (task)
                                                         │  human gate (ask_user_question)
                                                         ▼
-                                            OpenInference traces ──► Arize Phoenix
-                                                        │   ▲
-                                   agent introspects ───┘   │ LLM-as-judge evals
-                                   (Phoenix MCP +           │ (gemini-3-flash)
-                                    recall/find_resolved_gap)
+                                      native session traces (Postgres / drizzle)
+                                                        │            ▲
+                             eve + @bufinance/intelligence introspect│ LLM-as-judge evals
                                                         ▼
                     morning digest (cron 13:00) ──► Slack #bu-minions
-                    + promotes successes/fixes to Phoenix datasets ⟲ self-improvement
 ```
 
-## Arize track requirements → where they live
-
-| Requirement | Implementation |
+| Piece | Implementation |
 |---|---|
 | Code-owned Gemini agent runtime | `packages/agent/open-agent.ts` — AI SDK v6 `ToolLoopAgent`, default `google/gemini-3-pro-preview` via AI Gateway |
-| OpenInference instrumentation → Phoenix | `packages/arize-phoenix/otel.ts` + `apps/web/instrumentation.ts` + `experimental_telemetry` (sessionId/chatId/source/linearTaskId/repo metadata) |
-| Phoenix MCP in the agent | `packages/agent/tools/phoenix-mcp.ts` — `@arizeai/phoenix-mcp` over stdio via `@ai-sdk/mcp`, 14 trace/span/session/dataset tools merged into the toolset (`PHOENIX_MCP_ENABLED`) |
-| Evals on traces | `scripts/phoenix-eval.ts` — Gemini LLM-as-judge → Phoenix span annotations + eval badges in the sessions UI |
-| Self-improvement loop | `packages/agent/tools/phoenix-introspection.ts` (`recall_similar_runs`, `find_resolved_gap`) + `app/api/bufi/digest/promote` (auto-curation to `bufi-recall` / `bufi-resolved-gaps` datasets) |
+| Native traces | session/chat rows in Postgres (`apps/web/lib/db/schema.ts`) — every step persisted. `experimental_telemetry` metadata (sessionId/chatId/source/linearTaskId/repo) stays plumbed for a future OTel exporter (`AGENT_TELEMETRY_ENABLED=1`) |
+| Evals | LLM-as-judge verdicts written onto session rows (`apps/web/lib/db/eval-writeback.ts`) + eval badges in the sessions UI |
 | Multi-step + human-in-control | `todo_write` planning, `task` subagents, `ask_user_question` HITL, sessions UI |
-
-**Demo flow** (`scripts/demo-dispatch.ts` + `scripts/phoenix-seed-resolved-gap.ts`): a
-treasury-reconciliation mission fails on run 1 (missing script), an engineer curates the
-fix into the `bufi-resolved-gaps` dataset, and run 2 self-heals — the agent's
-`find_resolved_gap` call returns the curated fix and it completes the mission, citing its
-own trace history.
 
 Hosted at **https://open-agents-bay.vercel.app** · BUFI-side crons live in
 [BuFi007/desk-v1](https://github.com/BuFi007/desk-v1) (`apps/app/src/app/api/cron/daily-plan-coffee`,
-`coffee-digest`). Cloud Run-deployable (standard Next.js standalone build); hosted on
-Vercel for the demo.
+`coffee-digest`). Cloud Run-deployable (standard Next.js standalone build).
 
 ---
 

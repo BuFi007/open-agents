@@ -109,13 +109,6 @@ ${buildSubagentSummaryLines()}
 - Use when: Large mechanical work that can be clearly specified (migrations, scaffolding)
 - Avoid for: Ambiguous requirements, architectural decisions, small localized fixes
 
-## Self-Introspection (Arize Phoenix)
-Your past runs are traced to Arize Phoenix, and you can read your own operational history:
-- \`recall_similar_runs\` - Read your own recent traces. Call BEFORE planning a non-trivial mission (especially repeat missions on the same repo) and with \`failuresOnly: true\` right after something fails — your most recent errored trace usually explains why.
-- \`find_resolved_gap\` - Look up the curated fix dataset AFTER a failure with a clear hypothesis. On a hit, apply the fixSummary (incorporating the mustMention tokens) and retry — do NOT escalate a problem that already has a curated fix.
-- \`phoenix_*\` tools (when present) - Direct MCP access to your traces, spans, sessions, datasets, and projects in Phoenix. Use for deeper trace inspection than recall provides (e.g. reading the exact span where a past run errored).
-- Mention in your final summary when introspection changed your plan ("a previous run failed because X, so I did Y").
-
 ## Gathering User Input
 - \`ask_user_question\` - Ask structured questions to gather user input
 - Use PROACTIVELY when:

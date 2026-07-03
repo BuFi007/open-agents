@@ -295,7 +295,7 @@ export async function POST(req: NextRequest) {
         authSession: null,
         autoCommitEnabled: true,
         autoCreatePrEnabled: true,
-        // Phoenix trace correlation — sessionId/chatId are stamped by
+        // Trace correlation — sessionId/chatId are stamped by
         // the workflow; the dispatch origin + Linear task id ride here.
         agentOptions: {
           telemetry: {

@@ -162,7 +162,7 @@ export const sessions = pgTable(
     bufiCallbackUrl: text("bufi_callback_url"),
     bufiCallbackSecret: text("bufi_callback_secret"),
     bufiCallbackFiredAt: timestamp("bufi_callback_fired_at"),
-    // Arize Phoenix observability: latest LLM-as-judge eval over this
+    // Observability: latest LLM-as-judge eval over this
     // session's traces (0..1), written by the eval pipeline. Rendered
     // as a quality badge in the sessions list + header.
     evalScore: real("eval_score"),

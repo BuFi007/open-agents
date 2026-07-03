@@ -4,7 +4,7 @@
  *
  * Mission: investigate the reconcile-wallet-balances 404 in fx-bento.
  * Run 1 hits the missing script → agent reports a knowledge gap.
- * After seeding (phoenix-seed-resolved-gap.ts), run 2 self-heals via
+ * Run 2 self-heals via
  * find_resolved_gap.
  *
  * Run from apps/open-agents:
