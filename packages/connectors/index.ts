@@ -14,3 +14,9 @@ export {
   type SignedConnectorEventInput,
   verifySignedConnectorEvent,
 } from "./signed-event";
+export {
+  type SourceArtifact,
+  type SourceArtifactInput,
+  createSourceArtifact,
+  sourceArtifactStageOperationId,
+} from "./source-artifact";
