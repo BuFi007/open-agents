@@ -4,9 +4,14 @@
   "private": true,
   "type": "module",
   "main": "./index.ts",
-  "exports": { ".": "./index.ts" },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
+    "@open-agents/agent-wallet": "workspace:*",
     "@open-agents/command-center": "workspace:*",
     "@open-agents/connectors": "workspace:*",
     "@open-agents/effects": "workspace:*",
@@ -16,5 +21,9 @@
     "@open-agents/traces": "workspace:*",
     "@open-agents/workflow": "workspace:*"
   },
-  "devDependencies": { "@open-agents/tsconfig": "workspace:*", "@types/bun": "1.3.12", "typescript": "^5" }
+  "devDependencies": {
+    "@open-agents/tsconfig": "workspace:*",
+    "@types/bun": "1.3.12",
+    "typescript": "^5"
+  }
 }
