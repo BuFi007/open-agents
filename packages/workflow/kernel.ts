@@ -36,7 +36,7 @@ export type WorkflowStore = {
   save(run: WorkflowRun): Promise<void>;
 };
 
-function validate(definition: WorkflowDefinition): void {
+function validate<T>(definition: WorkflowDefinition<T>): void {
   if (!definition.id || !definition.workspaceId || definition.budgetMs <= 0) throw new Error("Invalid workflow definition");
   const ids = new Set<string>();
   for (const step of definition.steps) {
