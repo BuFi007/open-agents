@@ -6,6 +6,19 @@ export type {
   OpenAgentModelInput,
 } from "./open-agent";
 export { defaultModel, defaultModelLabel, openAgent } from "./open-agent";
+export {
+  BUFI_AGENT_ROSTER,
+  getBufiAgent,
+  listBufiAgents,
+  planBufiAgentWorkflow,
+} from "./roster";
+export type {
+  AgentWorkflowInput,
+  AgentWorkflowPlan,
+  AgentWorkflowStep,
+  FilesystemAgentDefinition,
+  FilesystemAgentWorkflow,
+} from "./agents/types";
 // Skills exports
 export { discoverSkills, parseSkillFrontmatter } from "./skills/discovery";
 export { extractSkillBody, substituteArguments } from "./skills/loader";
