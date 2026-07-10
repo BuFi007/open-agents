@@ -13,6 +13,7 @@
   "dependencies": {
     "@open-agents/agent-wallet": "workspace:*",
     "@open-agents/harness-runner": "workspace:*",
+    "@open-agents/operating-packs": "workspace:*",
     "@open-agents/traces": "workspace:*"
   },
   "devDependencies": {
