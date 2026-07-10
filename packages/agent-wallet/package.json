@@ -1,0 +1,17 @@
+{
+  "name": "@open-agents/agent-wallet",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@open-agents/tsconfig": "workspace:*",
+    "@types/bun": "^1.2.21",
+    "typescript": "^5"
+  }
+}

@@ -24,6 +24,15 @@ export {
 export { HARNESS_INSTRUCTIONS } from "./instructions.ts";
 export { ensureGatewayApiKeyEnv, resolveGatewayApiKey } from "./auth.ts";
 export { prepareHarnessSandboxRuntimeProfile } from "./prewarm.ts";
+export {
+  type HarnessConnectionState,
+  type HarnessMcpCapability,
+  type HarnessMcpInvocationEvent,
+  type WorkspaceHarness,
+  type WorkspaceHarnessKind,
+  createMcpInvocationEvent,
+  createWorkspaceHarness,
+} from "./workspace-harness.ts";
 
 export type HarnessUIMessage = {
   id: string;

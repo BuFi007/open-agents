@@ -20,25 +20,22 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.2.14"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Lint and format check
-        run: pnpm check
+        run: bun run check
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: bun run typecheck
 
       - name: Test
-        run: pnpm test:isolated
+        run: bun run test:isolated
 
       - name: DB Check
-        run: pnpm --dir apps/web db:check
+        run: bun run --cwd apps/web db:check

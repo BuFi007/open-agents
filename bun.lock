@@ -105,6 +105,71 @@
         "typescript": "^5",
       },
     },
+    "packages/agent-wallet": {
+      "name": "@open-agents/agent-wallet",
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "^1.2.21",
+        "typescript": "^5",
+      },
+    },
+    "packages/certification": {
+      "name": "@open-agents/certification",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-agents/agent-wallet": "workspace:*",
+        "@open-agents/command-center": "workspace:*",
+        "@open-agents/connectors": "workspace:*",
+        "@open-agents/effects": "workspace:*",
+        "@open-agents/harness-runner": "workspace:*",
+        "@open-agents/knowledge": "workspace:*",
+        "@open-agents/queues": "workspace:*",
+        "@open-agents/traces": "workspace:*",
+        "@open-agents/workflow": "workspace:*",
+      },
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
+    "packages/command-center": {
+      "name": "@open-agents/command-center",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-agents/harness-runner": "workspace:*",
+        "@open-agents/traces": "workspace:*",
+      },
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
+    "packages/connectors": {
+      "name": "@open-agents/connectors",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-agents/queues": "workspace:*",
+      },
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
+    "packages/effects": {
+      "name": "@open-agents/effects",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-agents/connectors": "workspace:*",
+      },
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
     "packages/harness-runner": {
       "name": "@open-agents/harness-runner",
       "version": "0.0.0",
@@ -123,6 +188,24 @@
         "@types/node": "^22",
       },
       "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/knowledge": {
+      "name": "@open-agents/knowledge",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
+    "packages/queues": {
+      "name": "@open-agents/queues",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
         "typescript": "^5",
       },
     },
@@ -158,9 +241,27 @@
         "typescript": "^5",
       },
     },
+    "packages/traces": {
+      "name": "@open-agents/traces",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
+    },
     "packages/tsconfig": {
       "name": "@open-agents/tsconfig",
       "version": "0.0.0",
+    },
+    "packages/workflow": {
+      "name": "@open-agents/workflow",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
+        "typescript": "^5",
+      },
     },
   },
   "overrides": {
@@ -619,13 +720,31 @@
 
     "@open-agents/agent": ["@open-agents/agent@workspace:packages/agent"],
 
+    "@open-agents/agent-wallet": ["@open-agents/agent-wallet@workspace:packages/agent-wallet"],
+
+    "@open-agents/certification": ["@open-agents/certification@workspace:packages/certification"],
+
+    "@open-agents/command-center": ["@open-agents/command-center@workspace:packages/command-center"],
+
+    "@open-agents/connectors": ["@open-agents/connectors@workspace:packages/connectors"],
+
+    "@open-agents/effects": ["@open-agents/effects@workspace:packages/effects"],
+
     "@open-agents/harness-runner": ["@open-agents/harness-runner@workspace:packages/harness-runner"],
+
+    "@open-agents/knowledge": ["@open-agents/knowledge@workspace:packages/knowledge"],
+
+    "@open-agents/queues": ["@open-agents/queues@workspace:packages/queues"],
 
     "@open-agents/sandbox": ["@open-agents/sandbox@workspace:packages/sandbox"],
 
     "@open-agents/shared": ["@open-agents/shared@workspace:packages/shared"],
 
+    "@open-agents/traces": ["@open-agents/traces@workspace:packages/traces"],
+
     "@open-agents/tsconfig": ["@open-agents/tsconfig@workspace:packages/tsconfig"],
+
+    "@open-agents/workflow": ["@open-agents/workflow@workspace:packages/workflow"],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
