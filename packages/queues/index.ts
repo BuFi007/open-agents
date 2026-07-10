@@ -1,4 +1,9 @@
-export { createQueuePlan, type QueueJob, type QueuePlan, type QueueProfile } from "./topology";
+export {
+  createQueuePlan,
+  type QueueJob,
+  type QueuePlan,
+  type QueueProfile,
+} from "./topology";
 export {
   type DlqEntry,
   type JobFailureClass,

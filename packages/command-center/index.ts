@@ -1,5 +1,6 @@
 export {
   type AgentCard,
+  type AgentWalletToolView,
   type ApprovalItem,
   type CommandCenterInput,
   type DeskCommandCenter,

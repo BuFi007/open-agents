@@ -33,7 +33,8 @@ const HASH = /^sha256:[a-f0-9]{64}$/;
 const MIME = /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i;
 
 function requireId(name: string, value: string | undefined): string {
-  if (!value || !ID.test(value)) throw new Error(`invalid source artifact ${name}`);
+  if (!value || !ID.test(value))
+    throw new Error(`invalid source artifact ${name}`);
   return value;
 }
 
@@ -48,7 +49,9 @@ function providerIdentity(input: SourceArtifactInput): string {
   ].join(":");
 }
 
-export function createSourceArtifact(input: SourceArtifactInput): SourceArtifact {
+export function createSourceArtifact(
+  input: SourceArtifactInput,
+): SourceArtifact {
   requireId("workspaceId", input.workspaceId);
   requireId("connectorId", input.connectorId);
   requireId("safeStorageRef", input.safeStorageRef);
@@ -56,11 +59,27 @@ export function createSourceArtifact(input: SourceArtifactInput): SourceArtifact
   requireId("normalizerVersion", input.normalizerVersion);
   requireId("correlationId", input.correlationId);
   if (input.causationId) requireId("causationId", input.causationId);
-  if (!HASH.test(input.contentHash)) throw new Error("source artifact content hash must be sha256-prefixed");
-  if (!MIME.test(input.mimeType)) throw new Error("invalid source artifact MIME type");
-  if (!Number.isInteger(input.sizeBytes) || input.sizeBytes < 0 || input.sizeBytes > 250 * 1024 * 1024) throw new Error("source artifact size is out of bounds");
-  if (!Number.isInteger(input.receivedAtMs) || !Number.isInteger(input.observedAtMs) || input.receivedAtMs <= 0 || input.observedAtMs <= 0) throw new Error("source artifact timestamps are required");
-  if (input.receivedAtMs > input.observedAtMs + 60_000) throw new Error("source artifact received time cannot be materially after observation");
+  if (!HASH.test(input.contentHash))
+    throw new Error("source artifact content hash must be sha256-prefixed");
+  if (!MIME.test(input.mimeType))
+    throw new Error("invalid source artifact MIME type");
+  if (
+    !Number.isInteger(input.sizeBytes) ||
+    input.sizeBytes < 0 ||
+    input.sizeBytes > 250 * 1024 * 1024
+  )
+    throw new Error("source artifact size is out of bounds");
+  if (
+    !Number.isInteger(input.receivedAtMs) ||
+    !Number.isInteger(input.observedAtMs) ||
+    input.receivedAtMs <= 0 ||
+    input.observedAtMs <= 0
+  )
+    throw new Error("source artifact timestamps are required");
+  if (input.receivedAtMs > input.observedAtMs + 60_000)
+    throw new Error(
+      "source artifact received time cannot be materially after observation",
+    );
   const artifactKey = `${input.workspaceId}:${input.connectorId}:${providerIdentity(input)}`;
   return {
     ...input,
@@ -69,6 +88,9 @@ export function createSourceArtifact(input: SourceArtifactInput): SourceArtifact
   };
 }
 
-export function sourceArtifactStageOperationId(artifact: SourceArtifact, stage: ConnectorStage): string {
+export function sourceArtifactStageOperationId(
+  artifact: SourceArtifact,
+  stage: ConnectorStage,
+): string {
   return `${artifact.artifactKey}:${artifact.sourceRevision}:${stage}`;
 }

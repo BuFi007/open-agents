@@ -1,1 +1,6 @@
-export { createTrace, redactTraceData, type TraceEvent, type TraceSink } from "./trace";
+export {
+  createTrace,
+  redactTraceData,
+  type TraceEvent,
+  type TraceSink,
+} from "./trace";

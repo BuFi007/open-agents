@@ -262,6 +262,13 @@ describe("Agentic Workspaces contract E2E", () => {
           requiresApproval: false,
           allowedOperations: ["quote"],
         },
+        {
+          name: "circle_get_balance",
+          server: "bufi-hyper",
+          scopes: ["wallet.read"],
+          requiresApproval: false,
+          allowedOperations: ["read"],
+        },
       ],
     });
     expect(
@@ -318,6 +325,11 @@ describe("Agentic Workspaces contract E2E", () => {
       savedQueries: [{ id: "query_1", label: "Evidence" }],
     });
     expect(desk.console).toHaveLength(1);
+    expect(
+      desk.agentWallet.tools.find((tool) => tool.name === "circle_get_balance")
+        ?.available,
+    ).toBe(true);
+    expect(desk.agentWallet.workflow).toHaveLength(7);
     expect(
       buildExpoWorkflowInbox({
         workspaceId: "ws_1",

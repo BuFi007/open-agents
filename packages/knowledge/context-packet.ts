@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 
 export type ContextPacketReference = {
   id: string;
-  kind: "entity" | "activity" | "relationship" | "source-artifact" | "enrichment-fact";
+  kind:
+    | "entity"
+    | "activity"
+    | "relationship"
+    | "source-artifact"
+    | "enrichment-fact";
   sourceId: string;
   observedAtMs: number;
   confidence: number;
@@ -30,7 +35,11 @@ export type ContextPacketInput = {
   ontologyVersion: string;
   query: string;
   intent: string;
-  budgets: { maxReferences: number; maxSnippetChars: number; maxRestrictedReferences: number };
+  budgets: {
+    maxReferences: number;
+    maxSnippetChars: number;
+    maxRestrictedReferences: number;
+  };
   rankFusionVersion: string;
   embedding: { provider: string; model: string; inputVersion: string };
   workflowRunId: string;
@@ -54,13 +63,17 @@ function requireId(name: string, value: string): void {
 }
 
 function boundedScore(name: string, value: number): void {
-  if (!Number.isFinite(value) || value < 0 || value > 1) throw new Error(`invalid context packet score ${name}`);
+  if (!Number.isFinite(value) || value < 0 || value > 1)
+    throw new Error(`invalid context packet score ${name}`);
 }
 
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
   if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${stable(entry)}`).join(",")}}`;
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stable(entry)}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -76,21 +89,36 @@ export function buildContextPacket(input: ContextPacketInput): ContextPacket {
     workflowRunId: input.workflowRunId,
     agentRunId: input.agentRunId,
     traceId: input.traceId,
-  })) requireId(name, String(value));
-  if (input.generatedAtMs <= 0 || input.expiresAtMs <= input.generatedAtMs) throw new Error("invalid context packet time window");
-  if (input.budgets.maxReferences < 1 || input.budgets.maxReferences > 200) throw new Error("invalid context packet reference budget");
-  if (input.budgets.maxSnippetChars < 16 || input.budgets.maxSnippetChars > 4000) throw new Error("invalid context packet snippet budget");
-  if (input.budgets.maxRestrictedReferences < 0 || input.budgets.maxRestrictedReferences > input.budgets.maxReferences) throw new Error("invalid restricted reference budget");
+  }))
+    requireId(name, String(value));
+  if (input.generatedAtMs <= 0 || input.expiresAtMs <= input.generatedAtMs)
+    throw new Error("invalid context packet time window");
+  if (input.budgets.maxReferences < 1 || input.budgets.maxReferences > 200)
+    throw new Error("invalid context packet reference budget");
+  if (
+    input.budgets.maxSnippetChars < 16 ||
+    input.budgets.maxSnippetChars > 4000
+  )
+    throw new Error("invalid context packet snippet budget");
+  if (
+    input.budgets.maxRestrictedReferences < 0 ||
+    input.budgets.maxRestrictedReferences > input.budgets.maxReferences
+  )
+    throw new Error("invalid restricted reference budget");
 
-  const ranked = [...input.references].sort((a, b) => a.rank - b.rank).slice(0, input.budgets.maxReferences);
+  const ranked = [...input.references]
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, input.budgets.maxReferences);
   let restricted = 0;
   const references = ranked.map((reference, index) => {
     requireId("referenceId", reference.id);
     requireId("sourceId", reference.sourceId);
     boundedScore("confidence", reference.confidence);
-    for (const [name, value] of Object.entries(reference.scores)) boundedScore(name, value);
+    for (const [name, value] of Object.entries(reference.scores))
+      boundedScore(name, value);
     if (reference.redaction === "restricted") restricted += 1;
-    if (restricted > input.budgets.maxRestrictedReferences) throw new Error("restricted context reference budget exceeded");
+    if (restricted > input.budgets.maxRestrictedReferences)
+      throw new Error("restricted context reference budget exceeded");
     return {
       ...reference,
       rank: index + 1,

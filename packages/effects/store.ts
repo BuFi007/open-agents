@@ -1,7 +1,15 @@
 import type { SourceArtifact } from "@open-agents/connectors";
-import { normalizeAccountingProvider, type AccountingProvider } from "./providers";
+import {
+  normalizeAccountingProvider,
+  type AccountingProvider,
+} from "./providers";
 
-export type DurableEffectStatus = "pending" | "claimed" | "ambiguous" | "confirmed" | "failed";
+export type DurableEffectStatus =
+  | "pending"
+  | "claimed"
+  | "ambiguous"
+  | "confirmed"
+  | "failed";
 
 export type EffectAttempt = {
   attempt: number;
@@ -30,21 +38,30 @@ export type DurableEffectCommand = {
 };
 
 export type EffectStore = {
-  upsert(command: Omit<DurableEffectCommand, "attempts" | "status">): Promise<DurableEffectCommand>;
+  upsert(
+    command: Omit<DurableEffectCommand, "attempts" | "status">,
+  ): Promise<DurableEffectCommand>;
   claim(commandId: string, atMs: number): Promise<DurableEffectCommand>;
-  record(commandId: string, attempt: Omit<EffectAttempt, "attempt">): Promise<DurableEffectCommand>;
+  record(
+    commandId: string,
+    attempt: Omit<EffectAttempt, "attempt">,
+  ): Promise<DurableEffectCommand>;
   get(commandId: string): Promise<DurableEffectCommand | undefined>;
 };
 
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9:_./-]{1,191}$/;
 
 function requireId(name: string, value: string | undefined): string {
-  if (!value || !ID.test(value)) throw new Error(`invalid effect command ${name}`);
+  if (!value || !ID.test(value))
+    throw new Error(`invalid effect command ${name}`);
   return value;
 }
 
 function clone(command: DurableEffectCommand): DurableEffectCommand {
-  return { ...command, attempts: command.attempts.map(attempt => ({ ...attempt })) };
+  return {
+    ...command,
+    attempts: command.attempts.map((attempt) => ({ ...attempt })),
+  };
 }
 
 export function createEffectStore(): EffectStore {
@@ -55,19 +72,38 @@ export function createEffectStore(): EffectStore {
       requireId("workspaceId", input.workspaceId);
       requireId("commandId", input.commandId);
       requireId("idempotencyKey", input.idempotencyKey);
-      const existingId = idempotency.get(`${input.workspaceId}:${input.idempotencyKey}`);
+      const existingId = idempotency.get(
+        `${input.workspaceId}:${input.idempotencyKey}`,
+      );
       if (existingId) return clone(commands.get(existingId)!);
       const command = { ...input, status: "pending" as const, attempts: [] };
       commands.set(command.commandId, command);
-      idempotency.set(`${command.workspaceId}:${command.idempotencyKey}`, command.commandId);
+      idempotency.set(
+        `${command.workspaceId}:${command.idempotencyKey}`,
+        command.commandId,
+      );
       return clone(command);
     },
     async claim(commandId, atMs) {
       const command = commands.get(requireId("commandId", commandId));
       if (!command) throw new Error("effect command not found");
       if (command.status === "confirmed") return clone(command);
-      if (command.status === "ambiguous") throw new Error("ambiguous effect command requires reconciliation before retry");
-      const next = { ...command, status: "claimed" as const, attempts: [...command.attempts, { attempt: command.attempts.length + 1, atMs, status: "claimed" as const }] };
+      if (command.status === "ambiguous")
+        throw new Error(
+          "ambiguous effect command requires reconciliation before retry",
+        );
+      const next = {
+        ...command,
+        status: "claimed" as const,
+        attempts: [
+          ...command.attempts,
+          {
+            attempt: command.attempts.length + 1,
+            atMs,
+            status: "claimed" as const,
+          },
+        ],
+      };
       commands.set(commandId, next);
       return clone(next);
     },
@@ -75,7 +111,13 @@ export function createEffectStore(): EffectStore {
       const command = commands.get(requireId("commandId", commandId));
       if (!command) throw new Error("effect command not found");
       const nextAttempt = { ...attempt, attempt: command.attempts.length + 1 };
-      const next = { ...command, status: attempt.status, reconciliationCursor: command.reconciliationCursor ?? attempt.providerReference, attempts: [...command.attempts, nextAttempt] };
+      const next = {
+        ...command,
+        status: attempt.status,
+        reconciliationCursor:
+          command.reconciliationCursor ?? attempt.providerReference,
+        attempts: [...command.attempts, nextAttempt],
+      };
       commands.set(commandId, next);
       return clone(next);
     },
@@ -86,7 +128,10 @@ export function createEffectStore(): EffectStore {
   };
 }
 
-export function createPayableFromArtifactCommand(artifact: SourceArtifact, version = 1): Omit<DurableEffectCommand, "attempts" | "status"> {
+export function createPayableFromArtifactCommand(
+  artifact: SourceArtifact,
+  version = 1,
+): Omit<DurableEffectCommand, "attempts" | "status"> {
   return {
     commandId: `${artifact.workspaceId}:payable:${artifact.artifactKey}:v${version}`,
     workspaceId: artifact.workspaceId,
@@ -97,7 +142,13 @@ export function createPayableFromArtifactCommand(artifact: SourceArtifact, versi
   };
 }
 
-export function createExportPayableCommand(input: { workspaceId: string; billId: string; provider: string; providerTenantId: string; version?: number }): Omit<DurableEffectCommand, "attempts" | "status"> {
+export function createExportPayableCommand(input: {
+  workspaceId: string;
+  billId: string;
+  provider: string;
+  providerTenantId: string;
+  version?: number;
+}): Omit<DurableEffectCommand, "attempts" | "status"> {
   const provider = normalizeAccountingProvider(input.provider);
   const version = input.version ?? 1;
   requireId("workspaceId", input.workspaceId);

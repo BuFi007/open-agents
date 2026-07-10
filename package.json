@@ -1,9 +1,13 @@
 {
   "name": "open-agents",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
-    "web": "pnpm --dir apps/web dev",
+    "web": "bun run --cwd apps/web dev",
     "dev": "turbo dev",
     "build": "turbo build",
     "harness:smoke:sandbox:create": "node --env-file-if-exists=.env.local scripts/vercel-create-harness-smoke-sandbox.ts",
@@ -12,7 +16,7 @@
     "typecheck": "turbo typecheck",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "ci": "pnpm check && pnpm typecheck && pnpm test:isolated && pnpm --dir apps/web db:check",
+    "ci": "bun run check && bun run typecheck && bun run test:isolated && bun run --cwd apps/web db:check",
     "test:isolated": "node scripts/test-isolated.ts",
     "test:verbose": "bun test --reporter=junit --reporter-outfile /dev/stdout"
   },
@@ -25,19 +29,15 @@
     "typescript": "^5",
     "ultracite": "7.4.0"
   },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": "0.78.1",
+    "@opentelemetry/semantic-conventions": "1.41.1",
+    "ai": "7.0.0-canary.174",
+    "kysely": "0.28.17",
+    "zod": "^4.3.6"
+  },
   "engines": {
     "node": "24.x"
   },
-  "packageManager": "bun@1.2.14",
-  "overrides": {
-    "kysely": "0.28.17",
-    "zod": "^4.3.6",
-    "@earendil-works/pi-coding-agent": "0.78.1",
-    "ai": "7.0.0-canary.174",
-    "@opentelemetry/semantic-conventions": "1.41.1"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "packageManager": "bun@1.2.14"
 }
