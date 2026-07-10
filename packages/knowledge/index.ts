@@ -10,3 +10,11 @@ export {
   type ContextPacketReference,
   buildContextPacket,
 } from "./context-packet";
+export {
+  type KnowledgeChange,
+  type KnowledgeChangeSet,
+  type StewardDecision,
+  type TrustTier,
+  applyStewardDecision,
+  createKnowledgeChangeSet,
+} from "./steward";
