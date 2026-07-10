@@ -8,3 +8,9 @@ export {
   type WorkflowNode,
   buildDeskCommandCenter,
 } from "./desk";
+export {
+  type ExpoApprovalAction,
+  type ExpoWorkflowInbox,
+  type ExpoWorkflowStatusCard,
+  buildExpoWorkflowInbox,
+} from "./mobile";
