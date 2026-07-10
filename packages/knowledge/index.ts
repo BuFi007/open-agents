@@ -18,3 +18,12 @@ export {
   applyStewardDecision,
   createKnowledgeChangeSet,
 } from "./steward";
+export {
+  type OntologyDefinition,
+  type OntologyField,
+  type OntologyGeneratedContracts,
+  type OntologyRelation,
+  buildGrantOntology,
+  publishOntology,
+  validateOntologyDraft,
+} from "./ontology";
