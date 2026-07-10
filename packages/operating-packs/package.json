@@ -1,5 +1,5 @@
 {
-  "name": "@open-agents/certification",
+  "name": "@open-agents/operating-packs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,16 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-agents/agent-wallet": "workspace:*",
-    "@open-agents/command-center": "workspace:*",
-    "@open-agents/connectors": "workspace:*",
-    "@open-agents/effects": "workspace:*",
     "@open-agents/harness-runner": "workspace:*",
     "@open-agents/knowledge": "workspace:*",
-    "@open-agents/operating-packs": "workspace:*",
-    "@open-agents/queues": "workspace:*",
     "@open-agents/traces": "workspace:*",
-    "@open-agents/workflow": "workspace:*"
+    "@open-agents/workflow": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@open-agents/tsconfig": "workspace:*",
