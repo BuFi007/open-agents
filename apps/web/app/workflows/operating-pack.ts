@@ -264,7 +264,9 @@ async function runAgentStep(input: {
     type: string;
     toolName: string;
     toolCallId: string | null;
+    packetHash?: string;
   }> = [];
+  const toolNames = new Map<string, string>();
   const messageId = `${workflow.executionId}:${agent.agentId}`;
   const result = await runHarnessTurnViaApi({
     harnessId: workflow.harnessId,
@@ -301,15 +303,34 @@ async function runAgentStep(input: {
     onChunk: (chunk: HarnessUIMessageChunk) => {
       if (String(chunk.type).startsWith("tool-")) {
         toolEvents += 1;
-        if (
-          toolTraceEvents.length < 100 &&
+        const toolCallId =
+          typeof chunk.toolCallId === "string" ? chunk.toolCallId : null;
+        if (toolCallId && typeof chunk.toolName === "string")
+          toolNames.set(toolCallId, chunk.toolName);
+        const toolName =
           typeof chunk.toolName === "string"
-        ) {
+            ? chunk.toolName
+            : toolCallId
+              ? toolNames.get(toolCallId)
+              : undefined;
+        if (toolTraceEvents.length < 100 && toolName) {
+          const output =
+            chunk.output &&
+            typeof chunk.output === "object" &&
+            !Array.isArray(chunk.output)
+              ? (chunk.output as Record<string, unknown>)
+              : undefined;
+          const packetHash =
+            toolName === "knowledge_read" &&
+            typeof output?.packetHash === "string" &&
+            /^sha256:[a-f0-9]{64}$/.test(output.packetHash)
+              ? output.packetHash
+              : undefined;
           toolTraceEvents.push({
             type: String(chunk.type),
-            toolName: chunk.toolName,
-            toolCallId:
-              typeof chunk.toolCallId === "string" ? chunk.toolCallId : null,
+            toolName,
+            toolCallId,
+            ...(packetHash ? { packetHash } : {}),
           });
         }
       }

@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 65.0%.** The repository has strong contracts and a growing
+**Production parity: 65.4%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -17,12 +17,12 @@ provider, rendered client, production worker, or live evidence path.
 | Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
-| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 78% | 7.8 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Native client citations and larger load/freshness repair remain open. |
+| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 82% | 8.2 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Brokered agent reads now require run-bound hash-valid packets and trace their hashes. Native client citations and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 52% | 6.8 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads and a live concrete Neon→BullMQ processor pipeline pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **65.0%** |  |
+| **Total** | **100** |  | **65.4%** |  |
 
 ## Newly proven in this pass
 
@@ -92,6 +92,10 @@ provider, rendered client, production worker, or live evidence path.
   access is invisible, and watermark/reference diffs are deterministic. Live
   Neon passed 8 tests and 46 assertions. Query/evidence budgets, duplicate
   references, evidence revisions and observed times fail closed.
+- The operating-pack `knowledge_read` boundary no longer trusts arbitrary broker
+  JSON: it revalidates the packet hash and requires workspace + workflow-run
+  binding before the harness sees evidence. Tool trace events correlate the
+  validated packet hash with the agent/run without copying snippets or payloads.
 
 ## Must-have gaps before 100%
 
@@ -114,9 +118,10 @@ provider, rendered client, production worker, or live evidence path.
    Accessibility + Screen Recording so the complete harness matrix can pass.
 8. Attach a real BUFI internal operating-week report with three durable
    workflows, five evidence-backed KPIs, traces and no autonomous spend.
-9. Construct one persisted ContextPacket per actual agent step and render its
-   citation handles/diffs identically in Desk and Expo; current evidence covers
-   the immutable store and validation contract, not runtime/client consumption.
+9. Make bufi-hyper construct/persist a ContextPacket for every brokered agent
+   read and render its citation handles/diffs identically in Desk and Expo;
+   Open Agents now rejects unbound/tampered broker packets and traces accepted
+   hashes, but the external producer and client consumption remain uncertified.
 
 ## Bucket verdict
 

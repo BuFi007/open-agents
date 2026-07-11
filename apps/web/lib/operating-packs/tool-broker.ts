@@ -1,4 +1,8 @@
 import { createHmac } from "node:crypto";
+import {
+  type ContextPacket,
+  validateContextPacket,
+} from "@open-agents/knowledge";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 
@@ -79,6 +83,26 @@ async function callBroker(
   return payload.result;
 }
 
+function validateKnowledgePacket(
+  value: unknown,
+  context: OperatingPackBrokerContext,
+): ContextPacket {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("BUFI knowledge broker returned an invalid context packet");
+  let packet: ContextPacket;
+  try {
+    packet = validateContextPacket(value as ContextPacket);
+  } catch {
+    throw new Error("BUFI knowledge broker returned an invalid context packet");
+  }
+  if (
+    packet.workspaceId !== context.workspaceId ||
+    packet.workflowRunId !== context.executionId
+  )
+    throw new Error("BUFI knowledge packet is not bound to this agent run");
+  return packet;
+}
+
 export function createOperatingPackBrokerTools(
   context: OperatingPackBrokerContext,
   options: {
@@ -97,7 +121,11 @@ export function createOperatingPackBrokerTools(
         query: z.string().trim().min(1).max(4000),
         limit: z.number().int().min(1).max(50).default(12),
       }),
-      execute: (args) => callBroker(context, "knowledge_read", args, options),
+      execute: async (args) =>
+        validateKnowledgePacket(
+          await callBroker(context, "knowledge_read", args, options),
+          context,
+        ),
     });
   }
   if (allowed.has("circle_get_balance")) {

@@ -68,6 +68,9 @@ authorized provider sandboxes are production certified.
   assertions prove immutable hash-verified replay, forced-RLS isolation and
   cross-tenant invisibility. Pure tests cover deterministic diffs and rejection
   of tampering, duplicate evidence, unbounded queries and invalid revisions.
+- Operating-pack evidence boundary: broker tests prove `knowledge_read` accepts
+  only a hash-valid ContextPacket bound to the current workspace/execution. Eve
+  tool facts retain the accepted packet hash, never the evidence snippets.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -103,7 +106,7 @@ authorized provider sandboxes are production certified.
    outbox reads were removed after the audit identified rolling-migration risk.
 4. **Applaud Humility — pass.** The result remains `YES_WITH_FOLLOWUPS`; local
    Typesense and isolated Redis are not represented as hosted production
-   certification, and 65.0% is not represented as full parity.
+   certification, and 65.4% is not represented as full parity.
 
 ### Section results
 
