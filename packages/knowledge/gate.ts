@@ -7,6 +7,9 @@ export type GateEvidence = {
   outboxP95Ms: number;
   recallAtK: number;
   chaosPassed: boolean;
+  mixedWorkloadPassed: boolean;
+  outboxChaosPassed: boolean;
+  prioritySloProtected: boolean;
 };
 export type GateResult = { passed: boolean; failures: readonly string[] };
 
@@ -24,5 +27,11 @@ export function evaluateProductionGate(evidence: GateEvidence): GateResult {
     failures.push("outbox-to-index p95 exceeds 5s");
   if (evidence.recallAtK < 0.8) failures.push("retrieval recall below 0.8");
   if (!evidence.chaosPassed) failures.push("chaos harness failed");
+  if (!evidence.mixedWorkloadPassed)
+    failures.push("mixed workload certification failed");
+  if (!evidence.outboxChaosPassed)
+    failures.push("outbox chaos certification failed");
+  if (!evidence.prioritySloProtected)
+    failures.push("priority business SLO protection failed");
   return { passed: failures.length === 0, failures };
 }

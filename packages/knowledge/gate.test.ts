@@ -13,6 +13,9 @@ describe("KG production gate", () => {
         outboxP95Ms: 1000,
         recallAtK: 0.9,
         chaosPassed: true,
+        mixedWorkloadPassed: true,
+        outboxChaosPassed: true,
+        prioritySloProtected: true,
       }),
     ).toEqual({ passed: true, failures: [] });
   });
@@ -26,8 +29,11 @@ describe("KG production gate", () => {
       outboxP95Ms: 6000,
       recallAtK: 0.7,
       chaosPassed: false,
+      mixedWorkloadPassed: false,
+      outboxChaosPassed: false,
+      prioritySloProtected: false,
     });
     expect(result.passed).toBe(false);
-    expect(result.failures).toHaveLength(8);
+    expect(result.failures).toHaveLength(11);
   });
 });

@@ -43,7 +43,7 @@ const HASH = /^sha256:[a-f0-9]{64}$/;
 export const workerProfiles: readonly WorkerProfile[] = [
   {
     name: "source-connectors",
-    allowedQueues: ["connector-page", "source-event"],
+    allowedQueues: ["connector-page", "source-event", "canonical-write"],
     maxReplicas: 4,
     concurrencyPerReplica: 8,
     workspaceConcurrency: 4,
@@ -63,7 +63,7 @@ export const workerProfiles: readonly WorkerProfile[] = [
   },
   {
     name: "knowledge-ai",
-    allowedQueues: ["enrichment", "embedding", "projection"],
+    allowedQueues: ["enrichment", "embedding", "projection", "repair"],
     maxReplicas: 4,
     concurrencyPerReplica: 6,
     workspaceConcurrency: 3,
@@ -73,7 +73,7 @@ export const workerProfiles: readonly WorkerProfile[] = [
   },
   {
     name: "business-notifications",
-    allowedQueues: ["invoice", "payable", "notification"],
+    allowedQueues: ["invoice", "payable", "notification", "report"],
     maxReplicas: 4,
     concurrencyPerReplica: 10,
     workspaceConcurrency: 6,

@@ -12,4 +12,13 @@ export {
   classifyJobFailure,
   createDlqEntry,
   evaluateWorkerAdmission,
+  workerProfiles,
 } from "./worker-profiles";
+export {
+  type MixedWorkloadCertification,
+  type MixedWorkloadJob,
+  type OutboxChaosCertification,
+  type WorkloadMetric,
+  certifyMixedWorkload,
+  certifyOutboxChaos,
+} from "./certification";
