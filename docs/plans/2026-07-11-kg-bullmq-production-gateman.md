@@ -60,6 +60,9 @@ authorized provider sandboxes are production certified.
   one receipt.
 - Official local Typesense 30.2: real HTTP upsert replay and tenant-filtered
   retrieval passed with one result and no API key in the provider result.
+- Payload-free queue telemetry: 3 tests and 6 assertions cover bounded state,
+  p95 queue/processing latency, retry/DLQ/throttle/in-flight counters, alert
+  thresholds, and omission of workspace, trace and error details from snapshots.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -68,8 +71,8 @@ authorized provider sandboxes are production certified.
    the live suite under provider latency and connection limits.
 2. Deploy the outbox relay and concrete workers, then execute DB/Redis kill and
    redrive chaos against the hosted Typesense/provider constraints.
-3. Add lag/age/CPU/memory/DB/provider metrics and alert thresholds to the
-   deployed workers.
+3. Wire the queue telemetry sink into the deployed workers and BUFI trace
+   cockpit; add lag/age/CPU/memory/DB/provider metrics and alert delivery.
 4. Repeat Typesense certification against the hosted provider, then run a larger
    retrieval recall/latency corpus and scheduled freshness repair under load.
 5. Run authorized Pipedream, Magic Inbox and accounting/ERP sandbox events
@@ -112,8 +115,10 @@ authorized provider sandboxes are production certified.
   projections are rebuildable from canonical source artifacts.
 - **Failure modes:** pass; bounded BullMQ retry/backoff/DLQ, version checks,
   idempotent provider document IDs and a crash-after-effect repair test.
-- **Observability:** pass with follow-up; safe queue facts carry trace/workspace/job
-  identity, but deployed provider-duration metrics and alerts remain absent.
+- **Observability:** pass with follow-up; safe queue facts feed bounded,
+  payload-free p95 latency/retry/DLQ/throttle/in-flight metrics and structured
+  SLO alerts, but deployed export, provider-duration metrics and alert delivery
+  remain absent.
 - **AI verification:** pass; imports and APIs were grepped, all changed files were
   re-read, 165 isolated test files passed, migration 0049 ran on Neon, and the
   official Typesense version/flags were checked against current documentation.
@@ -133,9 +138,10 @@ authorized provider sandboxes are production certified.
 | Security | 9 | Forced RLS, scoped roles, authority binding, HTTPS and secret-safe results. |
 | AI verification | 9 | Claims were verified against code, live services, current docs and full CI. |
 
-Highest-leverage improvement bucket: **P3 — Structured observability**, followed
-by deployed P4 chaos. Add worker/provider duration, lag, redrive and saturation
-metrics before raising this slice to a production claim.
+Highest-leverage improvement bucket: **P3 — Deployed observability**, followed
+by deployed P4 chaos. Connect the new queue metric/SLO contract to the worker
+deployment and cockpit, then add provider duration, lag, redrive and saturation
+signals before raising this slice to a production claim.
 
 **Risk:** MEDIUM
 

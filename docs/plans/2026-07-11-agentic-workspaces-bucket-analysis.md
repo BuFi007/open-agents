@@ -82,6 +82,11 @@ provider, rendered client, production worker, or live evidence path.
   one receipt and one embedding remained after retry.
 - Official Typesense 30.2 ran locally in Docker; the real provider upserted the
   same document twice and tenant-filtered retrieval returned exactly one result.
+- A bounded, payload-free queue telemetry sink now aggregates p95 queue wait and
+  processing latency, retries, dead letters, throttling and in-flight work by
+  profile/queue. Configurable SLO evaluation emits structured alerts without
+  exposing workspace, trace, job payload or error detail. It is library evidence
+  only until a deployed worker exports the snapshots to the BUFI trace cockpit.
 
 ## Must-have gaps before 100%
 
@@ -89,7 +94,8 @@ provider, rendered client, production worker, or live evidence path.
    mixed workload against that production target. A local isolated Redis pass is
    evidence for the runtime, not the hosted provider.
 2. Deploy the outbox relay and concrete workers, then repeat crash-after-effect
-   against the hosted alternate-index provider and deployed worker topology.
+   against the hosted alternate-index provider and deployed worker topology;
+   export the new queue SLO snapshots to the trace cockpit and alert channel.
 3. Run clean migration replay, multi-tenant load, larger combined-recall and
    latency benchmarks, scheduled freshness repair and Redis/worker kill-restart
    certification.

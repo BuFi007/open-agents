@@ -30,6 +30,14 @@ export {
   type QueueTraceFact,
 } from "./bullmq";
 export {
+  createQueueTelemetry,
+  type QueueTelemetry,
+  type QueueTelemetryAlert,
+  type QueueTelemetryMetric,
+  type QueueTelemetryPolicy,
+  type QueueTelemetrySnapshot,
+} from "./observability";
+export {
   relayKnowledgeOutbox,
   type KnowledgeOutboxRelayResult,
 } from "./outbox-relay";
