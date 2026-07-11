@@ -14,10 +14,12 @@ import {
   buildScorecard,
   admitPackWorkflowExecution,
   compileOperatingPacks,
+  compileFilesystemRoster,
   createBusinessArchitectureGraph,
   createMetricRun,
   evaluateEffectivePolicy,
   parseOperatingPackManifest,
+  materializeFilesystemRoster,
   removeOperatingPack,
   replayDrift,
   resolveSharedEntity,
@@ -122,6 +124,69 @@ describe("Horizontal AI ERP operating packs", () => {
     expect(FUTURE_TAX_PACK_REFERENCE.taxImplementation).toBe(false);
   });
 
+  it("compiles every installed role into an Eve-style filesystem roster", () => {
+    const compiled = compileOperatingPacks({
+      graph,
+      harness,
+      manifests: STARTER_OPERATING_PACKS,
+    });
+    const roster = compileFilesystemRoster(compiled);
+    expect(roster).toHaveLength(compiled.agents.length);
+    for (const agent of roster) {
+      expect(agent.root).toBe(`agents/${agent.packId}/${agent.agentId}`);
+      expect(agent.files.map((file) => file.path)).toContain("agent.ts");
+      expect(agent.files.map((file) => file.path)).toContain("instructions.md");
+      expect(agent.files.map((file) => file.path)).toContain("tools/index.ts");
+      expect(
+        agent.files.some((file) => file.path.startsWith("workflows/")),
+      ).toBe(true);
+    }
+    const cfo = roster.find(
+      (agent) => agent.packId === "finance_ops" && agent.agentId === "cfo",
+    );
+    expect(cfo?.workflowIds).toContain("weekly_finance_review");
+    expect(cfo?.workflowIds).toContain("customer_signal_to_revenue");
+    expect(
+      cfo?.files.find((file) => file.path === "agent.ts")?.content,
+    ).toContain("defineFilesystemAgent");
+  });
+
+  it("materializes the compiled roster inside a sandbox-safe root", async () => {
+    const compiled = compileOperatingPacks({
+      graph,
+      harness,
+      manifests: STARTER_OPERATING_PACKS,
+    });
+    const files = new Map<string, string>();
+    const written = await materializeFilesystemRoster({
+      writer: {
+        workingDirectory: "/sandbox/repo",
+        async mkdir() {},
+        async writeFile(path, content) {
+          files.set(path, content);
+        },
+      },
+      roster: compileFilesystemRoster(compiled),
+    });
+    expect(written.length).toBe(files.size);
+    expect(
+      files.has(
+        "/sandbox/repo/.open-agents/agents/finance_ops/cfo/instructions.md",
+      ),
+    ).toBe(true);
+    await expect(
+      materializeFilesystemRoster({
+        writer: {
+          workingDirectory: "/sandbox/repo",
+          async mkdir() {},
+          async writeFile() {},
+        },
+        roster: [],
+        root: "../escape",
+      }),
+    ).rejects.toThrow("safe relative path");
+  });
+
   it("fails closed for undeclared harness tools and reserved pack fields", () => {
     const badTool = structuredClone(FINANCE_OPS_PACK);
     badTool.toolGrants.push({
@@ -138,6 +203,57 @@ describe("Horizontal AI ERP operating packs", () => {
     expect(() =>
       compileOperatingPacks({ graph, harness, manifests: [badPrimitive] }),
     ).toThrow("reserved primitive");
+
+    const ungrantedAgentTool = structuredClone(FINANCE_OPS_PACK);
+    ungrantedAgentTool.agents[0]?.tools.push("secret_admin");
+    expect(() =>
+      compileOperatingPacks({
+        graph,
+        harness,
+        manifests: [ungrantedAgentTool],
+      }),
+    ).toThrow("agent tool is not granted");
+
+    const unknownWorkflowAgent = structuredClone(FINANCE_OPS_PACK);
+    unknownWorkflowAgent.workflows[0]?.agentIds.push("ghost");
+    expect(() =>
+      compileOperatingPacks({
+        graph,
+        harness,
+        manifests: [unknownWorkflowAgent],
+      }),
+    ).toThrow("non-cross-pack workflow references external agent");
+
+    const invalidOperation = structuredClone(FINANCE_OPS_PACK);
+    invalidOperation.toolGrants[0]?.operations.push("delete");
+    expect(() =>
+      compileOperatingPacks({
+        graph,
+        harness,
+        manifests: [invalidOperation],
+      }),
+    ).toThrow("undeclared harness operation");
+  });
+
+  it("orders dependencies and rejects cyclic pack installation", () => {
+    const compiled = compileOperatingPacks({
+      graph,
+      harness,
+      manifests: [SALES_OPS_PACK, PRODUCT_OPS_PACK, FINANCE_OPS_PACK],
+    });
+    expect(compiled.manifests.map((manifest) => manifest.id)).toEqual([
+      "product_ops",
+      "finance_ops",
+      "sales_ops",
+    ]);
+
+    const finance = structuredClone(FINANCE_OPS_PACK);
+    const grants = structuredClone(GRANT_OPS_PACK);
+    finance.dependencies = ["grant_ops"];
+    grants.dependencies = ["finance_ops"];
+    expect(() =>
+      compileOperatingPacks({ graph, harness, manifests: [finance, grants] }),
+    ).toThrow("dependency cycle");
   });
 
   it("computes deterministic deny-first policy, approvals, budgets, and kill switches", () => {

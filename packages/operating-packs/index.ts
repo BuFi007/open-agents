@@ -12,6 +12,16 @@ export {
 } from "./business-graph";
 export { type CompiledOperatingPacks, compileOperatingPacks } from "./compiler";
 export {
+  type CompiledFilesystemAgent,
+  type FilesystemAgentDefinition,
+  FilesystemAgentDefinitionSchema,
+  type FilesystemAgentFile,
+  type FilesystemRosterWriter,
+  compileFilesystemRoster,
+  defineFilesystemAgent,
+  materializeFilesystemRoster,
+} from "./filesystem-roster";
+export {
   type PackGovernanceDecision,
   type PackInstallation,
   type PackLifecycleState,

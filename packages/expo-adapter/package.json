@@ -1,0 +1,36 @@
+{
+  "name": "@open-agents/expo-adapter",
+  "version": "0.1.0",
+  "description": "React Native-safe adapter contracts for Open Agents Expo workflow inboxes",
+  "license": "MIT",
+  "files": [
+    "index.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./index.ts",
+  "module": "./index.ts",
+  "types": "./index.ts",
+  "react-native": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "react-native": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "bun test ./index.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@open-agents/command-center": "workspace:*",
+    "@open-agents/tsconfig": "workspace:*",
+    "@types/bun": "1.3.12",
+    "typescript": "^5"
+  }
+}
