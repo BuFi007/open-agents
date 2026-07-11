@@ -8,7 +8,7 @@ import {
 } from "./runtime";
 
 describe("operating-pack runtime contract", () => {
-  test("publishes only non-tax packs and their executable workflows", () => {
+  test("publishes the external-engine tax pack alongside the horizontal packs", () => {
     const catalog = listOperatingPackCatalog();
     expect(catalog.map((pack) => pack.id)).toEqual([
       "finance_ops",
@@ -16,8 +16,17 @@ describe("operating-pack runtime contract", () => {
       "product_ops",
       "sales_ops",
       "bufi_internal_ops",
+      "tax_automation",
     ]);
-    expect(catalog.some((pack) => pack.id.includes("tax"))).toBe(false);
+    expect(
+      catalog.find((pack) => pack.id === "tax_automation")?.workflows,
+    ).toEqual([
+      expect.objectContaining({
+        id: "ai_invoice_to_factura_e",
+        risk: "high",
+        executionMode: "structured_external_state",
+      }),
+    ]);
     expect(catalog.every((pack) => pack.workflows.length > 0)).toBe(true);
   });
 
@@ -40,9 +49,9 @@ describe("operating-pack runtime contract", () => {
         workflowId: "feedback_to_release",
       }),
     ).toThrow("Unknown operating-pack workflow");
-    expect(() => resolveOperatingPackInstallation("tax_ops")).toThrow(
-      "Unsupported operating pack",
-    );
+    expect(
+      resolveOperatingPackInstallation("tax_automation").map((pack) => pack.id),
+    ).toEqual(["finance_ops", "tax_automation"]);
   });
 
   test("strictly validates starts and approval decisions", () => {

@@ -66,4 +66,5 @@ export {
   PRODUCT_OPS_PACK,
   SALES_OPS_PACK,
   STARTER_OPERATING_PACKS,
+  TAX_AUTOMATION_PACK,
 } from "./starter-packs";

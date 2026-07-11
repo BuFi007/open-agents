@@ -82,7 +82,9 @@ export const OperatingPackManifestSchema = z.strictObject({
   ),
   traceViews: z.array(id),
   setupChecklist: z.array(z.string().min(2).max(160)),
-  taxImplementation: z.literal(false).optional(),
+  taxImplementation: z
+    .union([z.literal(false), z.literal("external-engine-v1")])
+    .optional(),
 });
 
 export type OperatingPackManifest = z.infer<typeof OperatingPackManifestSchema>;

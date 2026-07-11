@@ -27,6 +27,7 @@
         "@open-agents/operating-packs": "workspace:*",
         "@open-agents/sandbox": "workspace:*",
         "@open-agents/shared": "workspace:*",
+        "@open-agents/tax-automation": "workspace:*",
         "@open-agents/traces": "workspace:*",
         "@pierre/diffs": "^1.0.10",
         "@pierre/trees": "^1.0.0-beta.3",
@@ -269,6 +270,17 @@
         "@types/react": "19.2.7",
       },
       "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/tax-automation": {
+      "name": "@open-agents/tax-automation",
+      "dependencies": {
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@open-agents/tsconfig": "workspace:*",
+        "@types/bun": "1.3.12",
         "typescript": "^5",
       },
     },
@@ -774,6 +786,8 @@
     "@open-agents/sandbox": ["@open-agents/sandbox@workspace:packages/sandbox"],
 
     "@open-agents/shared": ["@open-agents/shared@workspace:packages/shared"],
+
+    "@open-agents/tax-automation": ["@open-agents/tax-automation@workspace:packages/tax-automation"],
 
     "@open-agents/traces": ["@open-agents/traces@workspace:packages/traces"],
 

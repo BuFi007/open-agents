@@ -4,6 +4,7 @@ import {
   GRANT_OPS_PACK,
   PRODUCT_OPS_PACK,
   SALES_OPS_PACK,
+  TAX_AUTOMATION_PACK,
   type OperatingPackManifest,
 } from "@open-agents/operating-packs";
 import { z } from "zod";
@@ -47,6 +48,7 @@ const packRegistry = new Map<string, OperatingPackManifest>(
     PRODUCT_OPS_PACK,
     SALES_OPS_PACK,
     BUFI_INTERNAL_OPS_PACK,
+    TAX_AUTOMATION_PACK,
   ].map((pack) => [pack.id, pack]),
 );
 
@@ -98,6 +100,11 @@ export function listOperatingPackCatalog() {
       risk: workflow.risk,
       requiredApproval: workflow.requiredApproval,
       agentIds: workflow.agentIds,
+      executionMode:
+        pack.id === "tax_automation" &&
+        workflow.id === "ai_invoice_to_factura_e"
+          ? ("structured_external_state" as const)
+          : ("harness_agents" as const),
     })),
   }));
 }

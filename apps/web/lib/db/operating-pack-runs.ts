@@ -46,6 +46,18 @@ export async function getOperatingPackRun(runId: string) {
   });
 }
 
+export async function getOperatingPackRunByIdempotency(
+  workspaceId: string,
+  idempotencyKey: string,
+) {
+  return db.query.operatingPackRuns.findFirst({
+    where: and(
+      eq(operatingPackRuns.workspaceId, workspaceId),
+      eq(operatingPackRuns.idempotencyKey, idempotencyKey),
+    ),
+  });
+}
+
 export async function getOwnedOperatingPackRun(runId: string, userId: string) {
   return db.query.operatingPackRuns.findFirst({
     where: and(

@@ -26,6 +26,7 @@
     "@open-agents/operating-packs": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
     "@open-agents/shared": "workspace:*",
+    "@open-agents/tax-automation": "workspace:*",
     "@open-agents/traces": "workspace:*",
     "@pierre/diffs": "^1.0.10",
     "@pierre/trees": "^1.0.0-beta.3",

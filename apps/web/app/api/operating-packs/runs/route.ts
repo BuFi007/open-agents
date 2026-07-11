@@ -78,6 +78,17 @@ export async function POST(request: Request) {
       { status: 404 },
     );
   }
+  if (
+    input.packId === "tax_automation" &&
+    input.workflowId === "ai_invoice_to_factura_e"
+  )
+    return Response.json(
+      {
+        error: "Tax invoice workflow requires the structured BUFI ingress",
+        code: "STRUCTURED_TAX_INVOICE_INGRESS_REQUIRED",
+      },
+      { status: 422 },
+    );
 
   const scopedWorkspaceId = input.workspaceId;
   const requestHash = createHash("sha256")

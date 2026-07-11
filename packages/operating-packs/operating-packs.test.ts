@@ -11,6 +11,7 @@ import {
   PRODUCT_OPS_PACK,
   SALES_OPS_PACK,
   STARTER_OPERATING_PACKS,
+  TAX_AUTOMATION_PACK,
   buildScorecard,
   admitPackWorkflowExecution,
   compileOperatingPacks,
@@ -121,7 +122,51 @@ describe("Horizontal AI ERP operating packs", () => {
       true,
     );
     expect(compiled.expoCards.every((card) => Boolean(card.packId))).toBe(true);
-    expect(FUTURE_TAX_PACK_REFERENCE.taxImplementation).toBe(false);
+    expect(FUTURE_TAX_PACK_REFERENCE.taxImplementation).toBe(
+      "external-engine-v1",
+    );
+  });
+
+  it("compiles the tax pack only when the external engine capabilities are explicit", () => {
+    const taxHarness = createWorkspaceHarness({
+      ...harness,
+      capabilities: [
+        ...harness.capabilities,
+        {
+          name: "tax_invoice_prepare",
+          server: "custom",
+          scopes: ["tax.prepare"],
+          requiresApproval: false,
+          allowedOperations: ["prepare"],
+        },
+        {
+          name: "tax_invoice_case_read",
+          server: "custom",
+          scopes: ["tax.read"],
+          requiresApproval: false,
+          allowedOperations: ["read"],
+        },
+      ],
+    });
+    const compiled = compileOperatingPacks({
+      graph,
+      harness: taxHarness,
+      manifests: [FINANCE_OPS_PACK, TAX_AUTOMATION_PACK],
+    });
+    expect(compiled.manifests.map((manifest) => manifest.id)).toEqual([
+      "finance_ops",
+      "tax_automation",
+    ]);
+    expect(compiled.workflows).toContainEqual(
+      expect.objectContaining({ id: "ai_invoice_to_factura_e", risk: "high" }),
+    );
+    expect(() =>
+      compileOperatingPacks({
+        graph,
+        harness,
+        manifests: [FINANCE_OPS_PACK, TAX_AUTOMATION_PACK],
+      }),
+    ).toThrow("undeclared harness capability");
   });
 
   it("compiles every installed role into an Eve-style filesystem roster", () => {
