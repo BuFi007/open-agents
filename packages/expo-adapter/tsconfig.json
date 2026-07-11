@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["bun"]
   },
-  "include": ["index.ts", "index.test.ts"]
+  "include": ["index.ts", "index.test.ts", "tsup.config.ts"]
 }
