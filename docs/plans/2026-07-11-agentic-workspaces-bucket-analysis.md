@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 66.8%.** The repository has strong contracts and a growing
+**Production parity: 67.8%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -19,10 +19,10 @@ provider, rendered client, production worker, or live evidence path.
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 92% | 9.2 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Desk emits the exact run-bound packet contract, Open Agents validates it, and a tenant-safe integrity-checking citation resolver API exists. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
-| Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
+| Desk command center and pack composer | 10 | 30% | 3.0 | Open Agents now has a concrete authenticated operations surface over owner-scoped run/trace/approval/cancel APIs, with an encrypted one-use Desk grant vault and local SSR evidence. Desk embedding/SSO, pack composer and authenticated browser interaction remain uncertified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **66.8%** |  |
+| **Total** | **100** |  | **67.8%** |  |
 
 ## Newly proven in this pass
 
@@ -108,6 +108,19 @@ provider, rendered client, production worker, or live evidence path.
   workspace/storage binding and requested `cN` handles before returning evidence.
   Four adapter tests and three route tests pass; unknown handles, tampering and
   cross-tenant access fail closed.
+- The authenticated Open Agents `/operations` command center now lists recent
+  owner-scoped runs, launches non-tax harness workflows, polls durable state and
+  traces, shows the specialist roster and ContextPacket hashes, and exposes
+  approval/rejection/cancellation controls. Its Desk workspace grant is accepted
+  only at launch, encrypted with AES-256-GCM in a private run-bound table, opened
+  just in time for broker calls, and deleted on completion, failure, rejection
+  or cancellation. Workflow input and approval hooks no longer persist the raw
+  grant or hook token. Migration 0051 is live and PUBLIC table privileges are
+  revoked. Full CI passes 167 isolated files and 17 package typechecks.
+- The command center's unauthenticated guard and full SSR layout were exercised
+  locally. The macOS Computer Use pipe was unavailable, and the temporary
+  headless client did not establish an authenticated hydrated session; therefore
+  this evidence raises the bucket only to 30%, not to a rendered Desk E2E claim.
 
 ## Must-have gaps before 100%
 
@@ -122,8 +135,10 @@ provider, rendered client, production worker, or live evidence path.
    certification.
 4. Connect real Pipedream, Magic Inbox, QuickBooks/Xero/Conta Azul and at least
    one authorized ERP sandbox through the shared artifact/effect path.
-5. Implement and browser-test concrete Desk command center, pack composer and
-   team cockpit surfaces against the shared APIs.
+5. Embed/SSO the operations command center in Desk, implement the pack composer,
+   and browser-test launch, approval/rejection, cancellation, traces and citation
+   resolution with a real signed Desk grant. The Open Agents surface and APIs
+   exist, but authenticated cross-product E2E evidence does not.
 6. Implement and device-test concrete Expo/Cleo inbox, approvals, deep links and
    notifications against the same APIs.
 7. Fund/configure Claude Code or its Vercel AI Gateway key, and grant macOS
