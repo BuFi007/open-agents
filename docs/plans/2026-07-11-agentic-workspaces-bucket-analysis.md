@@ -19,7 +19,7 @@ provider, rendered client, production worker, or live evidence path.
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
-| Desk command center and pack composer | 10 | 82% | 8.2 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets and a Team Cockpit projection. Focused suites and Vercel previews pass; authenticated browser E2E is still uncertified. |
+| Desk command center and pack composer | 10 | 82% | 8.2 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets and a Team Cockpit projection. Focused suites and a forced real Vercel preview build pass; authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 78% | 5.5 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge and push notifications. Expo web export passes; authenticated device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
 | **Total** | **100** |  | **78.9%** |  |
@@ -125,9 +125,14 @@ provider, rendered client, production worker, or live evidence path.
   including persisted run/trace/approval controls, a workflow timeline, explicit
   agent/human ownership, active blockers derived only from persisted facts,
   ontology/entity evidence facets and deterministic asynchronous handoffs.
-  Twelve focused command-center/API tests and all Vercel previews pass. GitHub's
-  Validate job did not start on an organization runner, so this is not counted as
-  an authenticated browser certification.
+  Twelve focused command-center/API tests pass. The Git-triggered Vercel status
+  was initially a false positive because an ignored-build rule cancelled the
+  app deployment; a forced deployment then built all ten dependent tasks, 299
+  static pages, 26 workflow steps, four workflows and three classes and reached
+  `READY`. Its unauthenticated workspace route redirects to login with a bounded
+  return path, while an unscoped operations request fails 400. GitHub's Validate
+  job did not start on an organization runner, and no authenticated session was
+  available, so this is not counted as authenticated browser certification.
 - Desk PR #544 now supplies a concrete Expo/Cleo workflow inbox, strict
   workspace-bound deep links, non-authoritative approval/edit intents for server
   revalidation, trace summaries, Shiva bridge and push registration/notification

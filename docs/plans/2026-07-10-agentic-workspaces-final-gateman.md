@@ -100,8 +100,10 @@ Pass with follow-ups.
 - Client policy duplication is avoided at the contract boundary.
 
 Follow-up: exercise the already-implemented surfaces through an authenticated
-signed Desk browser journey and a physical Expo device journey. Vercel previews,
-focused tests and Expo web export pass; those are not device/browser E2E.
+signed Desk browser journey and a physical Expo device journey. A forced Desk
+preview build is `READY`, its unauthenticated login and invalid-scope boundaries
+pass, focused tests and Expo web export pass; those are not authenticated or
+physical-device E2E.
 
 ## 7. Known blockers outside this certification
 
