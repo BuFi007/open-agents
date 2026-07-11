@@ -71,6 +71,12 @@ authorized provider sandboxes are production certified.
 - Operating-pack evidence boundary: broker tests prove `knowledge_read` accepts
   only a hash-valid ContextPacket bound to the current workspace/execution. Eve
   tool facts retain the accepted packet hash, never the evidence snippets.
+- Cross-repository broker contract: Desk PR #541 emits/persists schema-v2 packets
+  bound to workspace, workflow, specialist agent and trace. The Desk-produced
+  value was accepted by Open Agents' actual `validateContextPacket`; changing the
+  specialist changes the packet hash. Ten focused Desk tests pass and
+  `@bu/intelligence` typechecks. The Desk full API shard still exposes unrelated
+  pre-existing type debt, so this is not represented as a green Desk build.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -106,7 +112,7 @@ authorized provider sandboxes are production certified.
    outbox reads were removed after the audit identified rolling-migration risk.
 4. **Applaud Humility — pass.** The result remains `YES_WITH_FOLLOWUPS`; local
    Typesense and isolated Redis are not represented as hosted production
-   certification, and 65.4% is not represented as full parity.
+   certification, and 66.4% is not represented as full parity.
 
 ### Section results
 
