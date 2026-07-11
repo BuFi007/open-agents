@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/operating-pack-runs";
 import { requireAuthenticatedUser } from "@/app/api/chat/_lib/chat-context";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
+import { deleteOperatingPackWorkspaceGrant } from "@/lib/operating-packs/credential-vault";
 
 export async function POST(
   _request: Request,
@@ -47,6 +48,7 @@ export async function POST(
       type: "run.cancelled",
       summary: "Workflow cancelled by its owner",
     }),
+    deleteOperatingPackWorkspaceGrant(run.id),
   ]);
   return Response.json({ ok: true, status: "cancelled" });
 }

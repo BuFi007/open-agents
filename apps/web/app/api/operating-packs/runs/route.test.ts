@@ -7,6 +7,9 @@ let startError = false;
 let claimMode: "created" | "same" | "conflict" = "created";
 let createCalls = 0;
 let startCalls = 0;
+let listedLimit: number | undefined;
+let startedInput: Record<string, unknown> | undefined;
+let storedGrant: string | undefined;
 
 mock.module("@/lib/botid", () => ({
   checkBotProtection: async () => ({ isBot: false }),
@@ -19,6 +22,13 @@ mock.module("@/lib/rate-limit", () => ({
 
 mock.module("@/lib/operating-packs/approval-token", () => ({
   getOperatingPackApprovalToken: () => "server-only-hook-token",
+}));
+
+mock.module("@/lib/operating-packs/credential-vault", () => ({
+  storeOperatingPackWorkspaceGrant: async (input: { grant: string }) => {
+    storedGrant = input.grant;
+  },
+  deleteOperatingPackWorkspaceGrant: async () => undefined,
 }));
 
 mock.module("@/app/api/chat/_lib/chat-context", () => ({
@@ -62,11 +72,16 @@ mock.module("@/lib/db/operating-pack-runs", () => ({
   },
   attachOperatingPackWorkflowRun: async () => undefined,
   updateOperatingPackRun: async () => undefined,
+  listOwnedOperatingPackRuns: async (_userId: string, limit: number) => {
+    listedLimit = limit;
+    return [{ id: "op_recent", status: "running" }];
+  },
 }));
 
 mock.module("workflow/api", () => ({
-  start: async () => {
+  start: async (_workflow: unknown, inputs: Record<string, unknown>[]) => {
     startCalls += 1;
+    startedInput = inputs[0];
     if (startError) throw new Error("unavailable");
     return { runId: "wfr_1" };
   },
@@ -106,6 +121,9 @@ beforeEach(() => {
   claimMode = "created";
   createCalls = 0;
   startCalls = 0;
+  listedLimit = undefined;
+  startedInput = undefined;
+  storedGrant = undefined;
 });
 
 describe("operating-pack run routes", () => {
@@ -113,13 +131,27 @@ describe("operating-pack run routes", () => {
     authenticated = false;
     expect((await GET()).status).toBe(401);
     authenticated = true;
-    const response = await GET();
+    const response = await GET(
+      new Request("https://open-agents.test/api/operating-packs/runs?limit=25"),
+    );
     const body = (await response.json()) as {
       packs: { id: string; workflows: { executionMode: string }[] }[];
+      runs: { id: string; status: string }[];
     };
     expect(response.status).toBe(200);
     const tax = body.packs.find((pack) => pack.id === "tax_automation");
     expect(tax?.workflows[0]?.executionMode).toBe("structured_external_state");
+    expect(body.runs).toEqual([{ id: "op_recent", status: "running" }]);
+    expect(listedLimit).toBe(25);
+    expect(
+      (
+        await GET(
+          new Request(
+            "https://open-agents.test/api/operating-packs/runs?limit=all",
+          ),
+        )
+      ).status,
+    ).toBe(400);
   });
 
   test("rejects cross-owner and archived workspaces before claiming", async () => {
@@ -171,6 +203,12 @@ describe("operating-pack run routes", () => {
     });
     expect(createCalls).toBe(1);
     expect(startCalls).toBe(1);
+    expect(storedGrant).toBe(validBody.workspaceGrant);
+    expect(startedInput).not.toHaveProperty("workspaceGrant");
+    expect(startedInput).not.toHaveProperty("approvalToken");
+    expect(JSON.stringify(startedInput)).not.toContain(
+      validBody.workspaceGrant,
+    );
   });
 
   test("replays the same claim and rejects a conflicting claim", async () => {

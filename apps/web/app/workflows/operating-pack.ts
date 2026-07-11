@@ -17,6 +17,11 @@ import {
 import { runHarnessTurnViaApi } from "@/lib/harness-runner/client";
 import type { OperatingPackHarnessId } from "@/lib/operating-packs/runtime";
 import { resolveOperatingPackWorkflow } from "@/lib/operating-packs/runtime";
+import { getOperatingPackApprovalToken } from "@/lib/operating-packs/approval-token";
+import {
+  deleteOperatingPackWorkspaceGrant,
+  getOperatingPackWorkspaceGrant,
+} from "@/lib/operating-packs/credential-vault";
 import { createWorkspaceHarness } from "@open-agents/harness-runner";
 
 export type OperatingPackWorkflowInput = {
@@ -31,8 +36,6 @@ export type OperatingPackWorkflowInput = {
   prompt: string;
   requestOrigin: string;
   modelId: string;
-  approvalToken: string;
-  workspaceGrant: string;
 };
 
 type ApprovalPayload = {
@@ -236,6 +239,7 @@ async function persistApprovalDecisionStep(
       summary: approved ? "Workflow approved" : "Workflow rejected",
       data: { reason: payload.reason },
     }),
+    ...(approved ? [] : [deleteOperatingPackWorkspaceGrant(input.executionId)]),
   ]);
 }
 
@@ -268,6 +272,10 @@ async function runAgentStep(input: {
   }> = [];
   const toolNames = new Map<string, string>();
   const messageId = `${workflow.executionId}:${agent.agentId}`;
+  const workspaceGrant = await getOperatingPackWorkspaceGrant(
+    workflow.executionId,
+    workflow.workspaceId,
+  );
   const result = await runHarnessTurnViaApi({
     harnessId: workflow.harnessId,
     sandboxState: runtime.sandboxState,
@@ -294,7 +302,7 @@ async function runAgentStep(input: {
     permissionMode: "allow-reads",
     brokerContext: {
       workspaceId: workflow.workspaceId,
-      workspaceGrant: workflow.workspaceGrant,
+      workspaceGrant,
       executionId: workflow.executionId,
       agentRunId: agent.qualifiedId,
       allowedTools: agent.tools as Array<
@@ -397,6 +405,7 @@ async function persistCompletedStep(
       type: "run.completed",
       summary: `${results.length} agents joined`,
     }),
+    deleteOperatingPackWorkspaceGrant(input.executionId),
   ]);
 }
 
@@ -420,6 +429,7 @@ async function persistFailedStep(
       type: "run.failed",
       summary: "Operating-pack execution failed",
     }),
+    deleteOperatingPackWorkspaceGrant(input.executionId),
   ]);
 }
 
@@ -432,7 +442,9 @@ export async function runOperatingPackWorkflow(
   try {
     const runtime = await prepareRuntimeStep(input);
     if (runtime.requiresApproval) {
-      const hook = createHook<ApprovalPayload>({ token: input.approvalToken });
+      const hook = createHook<ApprovalPayload>({
+        token: getOperatingPackApprovalToken(input.executionId),
+      });
       try {
         await persistApprovalStep(input, runtime.workflowTitle);
         const decision = await Promise.race([

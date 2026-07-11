@@ -398,6 +398,24 @@ export const operatingPackRuns = pgTable(
   ],
 );
 
+export const operatingPackCredentials = pgTable(
+  "operating_pack_credentials",
+  {
+    runId: text("run_id")
+      .primaryKey()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    ciphertext: text("ciphertext").notNull(),
+    iv: text("iv").notNull(),
+    authTag: text("auth_tag").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("operating_pack_credentials_expiry_idx").on(table.expiresAt),
+  ],
+);
+
 export const operatingPackTraces = pgTable(
   "operating_pack_traces",
   {
@@ -720,6 +738,8 @@ export type WorkflowRunStep = typeof workflowRunSteps.$inferSelect;
 export type NewWorkflowRunStep = typeof workflowRunSteps.$inferInsert;
 export type OperatingPackRun = typeof operatingPackRuns.$inferSelect;
 export type NewOperatingPackRun = typeof operatingPackRuns.$inferInsert;
+export type OperatingPackCredential =
+  typeof operatingPackCredentials.$inferSelect;
 export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
 export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;

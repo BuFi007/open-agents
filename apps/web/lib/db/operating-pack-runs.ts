@@ -1,5 +1,5 @@
 import { redactTraceData, sanitizeTraceText } from "@open-agents/traces";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { db } from "./client";
 import {
   type NewOperatingPackRun,
@@ -65,6 +65,29 @@ export async function getOwnedOperatingPackRun(runId: string, userId: string) {
       eq(operatingPackRuns.userId, userId),
     ),
   });
+}
+
+export async function listOwnedOperatingPackRuns(userId: string, limit = 50) {
+  const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  return db
+    .select({
+      id: operatingPackRuns.id,
+      workflowRunId: operatingPackRuns.workflowRunId,
+      workspaceId: operatingPackRuns.workspaceId,
+      packId: operatingPackRuns.packId,
+      workflowId: operatingPackRuns.workflowId,
+      harnessId: operatingPackRuns.harnessId,
+      status: operatingPackRuns.status,
+      approvalId: operatingPackRuns.approvalId,
+      errorCode: operatingPackRuns.errorCode,
+      createdAt: operatingPackRuns.createdAt,
+      updatedAt: operatingPackRuns.updatedAt,
+      finishedAt: operatingPackRuns.finishedAt,
+    })
+    .from(operatingPackRuns)
+    .where(eq(operatingPackRuns.userId, userId))
+    .orderBy(desc(operatingPackRuns.updatedAt), desc(operatingPackRuns.id))
+    .limit(boundedLimit);
 }
 
 export async function attachOperatingPackWorkflowRun(

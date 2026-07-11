@@ -46,6 +46,10 @@ mock.module("@/lib/operating-packs/approval-token", () => ({
   getOperatingPackApprovalToken: () => "server-only-hook-token",
 }));
 
+mock.module("@/lib/operating-packs/credential-vault", () => ({
+  deleteOperatingPackWorkspaceGrant: async () => undefined,
+}));
+
 mock.module("@/lib/db/operating-pack-runs", () => ({
   getOwnedOperatingPackRun: async () =>
     owned ? { ...run, status: runStatus } : null,

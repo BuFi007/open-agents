@@ -5,6 +5,7 @@ import { checkBotProtection } from "@/lib/botid";
 import {
   attachOperatingPackWorkflowRun,
   createOperatingPackRun,
+  listOwnedOperatingPackRuns,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
@@ -14,17 +15,27 @@ import {
   resolveOperatingPackWorkflow,
   startOperatingPackRunSchema,
 } from "@/lib/operating-packs/runtime";
-import { getOperatingPackApprovalToken } from "@/lib/operating-packs/approval-token";
+import {
+  deleteOperatingPackWorkspaceGrant,
+  storeOperatingPackWorkspaceGrant,
+} from "@/lib/operating-packs/credential-vault";
 import {
   requireAuthenticatedUser,
   requireOwnedSessionChat,
 } from "@/app/api/chat/_lib/chat-context";
 import { runOperatingPackWorkflow } from "@/app/workflows/operating-pack";
 
-export async function GET() {
+export async function GET(request?: Request) {
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth.response;
-  return Response.json({ packs: listOperatingPackCatalog() });
+  const limitValue = request
+    ? new URL(request.url).searchParams.get("limit")
+    : null;
+  if (limitValue && !/^[1-9][0-9]{0,2}$/.test(limitValue))
+    return Response.json({ error: "Invalid run limit" }, { status: 400 });
+  const limit = Math.min(Number(limitValue ?? 50), 100);
+  const runs = await listOwnedOperatingPackRuns(auth.userId, limit);
+  return Response.json({ packs: listOperatingPackCatalog(), runs });
 }
 
 export async function POST(request: Request) {
@@ -139,6 +150,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    await storeOperatingPackWorkspaceGrant({
+      runId: executionId,
+      workspaceId: scopedWorkspaceId,
+      grant: input.workspaceGrant,
+    });
     const run = await start(runOperatingPackWorkflow, [
       {
         executionId,
@@ -152,8 +168,6 @@ export async function POST(request: Request) {
         prompt: input.prompt,
         requestOrigin: new URL(request.url).origin,
         modelId: owned.chat.modelId ?? APP_DEFAULT_MODEL_ID,
-        approvalToken: getOperatingPackApprovalToken(executionId),
-        workspaceGrant: input.workspaceGrant,
       },
     ]);
     await attachOperatingPackWorkflowRun(executionId, run.runId);
@@ -162,6 +176,7 @@ export async function POST(request: Request) {
       { status: 202 },
     );
   } catch {
+    await deleteOperatingPackWorkspaceGrant(executionId).catch(() => undefined);
     await updateOperatingPackRun(executionId, {
       status: "failed",
       errorCode: "WORKFLOW_START_FAILED",
