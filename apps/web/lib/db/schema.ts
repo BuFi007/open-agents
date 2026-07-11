@@ -416,6 +416,65 @@ export const operatingPackTraces = pgTable(
   ],
 );
 
+export const knowledgeEntities = pgTable(
+  "knowledge_entities",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    externalKey: text("external_key").notNull(),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("knowledge_entities_workspace_kind_external_idx").on(
+      table.workspaceId,
+      table.kind,
+      table.externalKey,
+    ),
+    index("knowledge_entities_workspace_id_idx").on(
+      table.workspaceId,
+      table.id,
+    ),
+  ],
+);
+
+export const knowledgeOutbox = pgTable(
+  "knowledge_outbox",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    topic: text("topic").notNull(),
+    schemaVersion: integer("schema_version").notNull(),
+    payload: jsonb("payload")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    status: text("status", {
+      enum: ["pending", "published", "dead"],
+    })
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: timestamp("available_at").defaultNow().notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at"),
+    lastErrorCode: text("last_error_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    publishedAt: timestamp("published_at"),
+  },
+  (table) => [
+    index("knowledge_outbox_workspace_claim_idx").on(
+      table.workspaceId,
+      table.status,
+      table.availableAt,
+      table.createdAt,
+    ),
+    index("knowledge_outbox_lease_expiry_idx").on(table.leaseExpiresAt),
+  ],
+);
+
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
 export type VercelProjectLink = typeof vercelProjectLinks.$inferSelect;
@@ -436,6 +495,10 @@ export type OperatingPackRun = typeof operatingPackRuns.$inferSelect;
 export type NewOperatingPackRun = typeof operatingPackRuns.$inferInsert;
 export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
+export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
+export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
+export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
+export type NewKnowledgeOutboxEvent = typeof knowledgeOutbox.$inferInsert;
 export type GitHubInstallation = typeof githubInstallations.$inferSelect;
 export type NewGitHubInstallation = typeof githubInstallations.$inferInsert;
 

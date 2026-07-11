@@ -22,3 +22,10 @@ export {
   certifyMixedWorkload,
   certifyOutboxChaos,
 } from "./certification";
+export {
+  QueueTaskError,
+  createBullMqRuntime,
+  type BullMqRuntime,
+  type BullMqRuntimeJob,
+  type QueueTraceFact,
+} from "./bullmq";

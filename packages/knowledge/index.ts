@@ -6,6 +6,13 @@ export {
 } from "./store";
 export { createOutbox, type OutboxEvent, type OutboxStore } from "./outbox";
 export {
+  createPostgresKnowledgeRepository,
+  type PersistentEntity,
+  type PersistentOutboxEvent,
+  type PostgresKnowledgeRepository,
+  type WorkspaceKnowledgeRepository,
+} from "./postgres";
+export {
   hybridRank,
   type RetrievalCandidate,
   type RetrievalResult,
