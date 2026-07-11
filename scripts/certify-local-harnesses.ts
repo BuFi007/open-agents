@@ -7,6 +7,10 @@ import {
   type HarnessCertificationEvidence,
   type HarnessCertificationTarget,
 } from "../packages/certification/harness-certification.ts";
+import {
+  findLiveWorkflowOutcome,
+  parseDispatchIdentity,
+} from "../packages/certification/live-status.ts";
 
 type Observation = {
   command: string;
@@ -127,12 +131,52 @@ async function dispatchOpenAgents(): Promise<Observation> {
       }),
       signal: AbortSignal.timeout(30_000),
     });
+    const dispatchIdentity = parseDispatchIdentity(
+      await response.json().catch(() => null),
+    );
+    if (!response.ok || !dispatchIdentity) {
+      return {
+        command: "POST /api/bufi/dispatch (Bearer redacted)",
+        startedAtMs,
+        completedAtMs: Date.now(),
+        exitCode: response.ok ? 1 : response.status,
+        output: `dispatch-status=${response.status};identity=${dispatchIdentity ? "valid" : "invalid"}`,
+      };
+    }
+    for (let attempt = 0; attempt < 15; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      const statusResponse = await fetch(
+        new URL(
+          `/api/bufi/sessions/recent?since=${startedAtMs - 60_000}`,
+          endpoint,
+        ),
+        {
+          headers: { authorization: `Bearer ${secret}` },
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      const outcome = findLiveWorkflowOutcome(
+        await statusResponse.json().catch(() => null),
+        dispatchIdentity,
+      );
+      if (outcome !== "pending") {
+        return {
+          command:
+            "POST /api/bufi/dispatch + poll terminal workflow (Bearer redacted)",
+          startedAtMs,
+          completedAtMs: Date.now(),
+          exitCode: outcome === "completed" ? 0 : 1,
+          output: `dispatch-status=${response.status};workflow=${outcome}`,
+        };
+      }
+    }
     return {
-      command: "POST /api/bufi/dispatch (Bearer redacted)",
+      command:
+        "POST /api/bufi/dispatch + poll terminal workflow (Bearer redacted)",
       startedAtMs,
       completedAtMs: Date.now(),
-      exitCode: response.ok ? 0 : response.status,
-      output: `status=${response.status};content-type=${response.headers.get("content-type") ?? "unknown"}`,
+      exitCode: 124,
+      output: `dispatch-status=${response.status};workflow=pending-timeout`,
     };
   } catch (error) {
     return {
@@ -209,7 +253,7 @@ async function main() {
     codex: "BUFI_CODEX_HARNESS_OK",
     "claude-code": "BUFI_CLAUDE_HARNESS_OK",
     hermes: "BUFI_HERMES_HARNESS_OK",
-    "open-agents": "status=",
+    "open-agents": "workflow=completed",
     "computer-use": "healthy",
   };
   const handshakePassed = Object.fromEntries(

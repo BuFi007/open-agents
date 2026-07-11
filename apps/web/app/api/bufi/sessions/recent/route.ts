@@ -2,10 +2,10 @@
 // Same shared Bearer secret as /api/bufi/dispatch.
 
 import crypto from "node:crypto";
-import { and, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { sessions } from "@/lib/db/schema";
+import { sessions, workflowRuns } from "@/lib/db/schema";
 
 const BUFI_BOT_USER_ID = "bufi-bridge-bot";
 
@@ -55,5 +55,41 @@ export async function GET(req: NextRequest) {
     )
     .limit(50);
 
-  return NextResponse.json(rows);
+  const recentRuns =
+    rows.length === 0
+      ? []
+      : await db
+          .select({
+            id: workflowRuns.id,
+            sessionId: workflowRuns.sessionId,
+            status: workflowRuns.status,
+            finishedAt: workflowRuns.finishedAt,
+            createdAt: workflowRuns.createdAt,
+          })
+          .from(workflowRuns)
+          .where(
+            inArray(
+              workflowRuns.sessionId,
+              rows.map((row) => row.id),
+            ),
+          )
+          .orderBy(desc(workflowRuns.createdAt))
+          .limit(200);
+  const latestRunBySession = new Map<string, (typeof recentRuns)[number]>();
+  for (const run of recentRuns) {
+    if (!latestRunBySession.has(run.sessionId))
+      latestRunBySession.set(run.sessionId, run);
+  }
+
+  return NextResponse.json(
+    rows.map((row) => {
+      const run = latestRunBySession.get(row.id);
+      return {
+        ...row,
+        latestWorkflowRunId: run?.id ?? null,
+        latestWorkflowStatus: run?.status ?? null,
+        latestWorkflowFinishedAt: run?.finishedAt ?? null,
+      };
+    }),
+  );
 }
