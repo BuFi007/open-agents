@@ -14,10 +14,19 @@ import {
   listWorkspaceOperatingPackTraces,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
+import {
+  getWorkspaceOperatingPackComposition,
+  getWorkspaceOperatingPackCompositionRevision,
+  saveWorkspaceOperatingPackComposition,
+} from "@/lib/db/operating-pack-compositions";
 import { sessions } from "@/lib/db/schema";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
 import { getOperatingPackApprovalToken } from "@/lib/operating-packs/approval-token";
+import {
+  getOperatingPackControlToken,
+  parseOperatingPackControlId,
+} from "@/lib/operating-packs/control-token";
 import {
   deleteOperatingPackWorkspaceGrant,
   storeOperatingPackWorkspaceGrant,
@@ -30,7 +39,9 @@ import {
 import {
   decideOperatingPackApprovalSchema,
   listOperatingPackCatalog,
+  operatingPackCompositionSchema,
   resolveOperatingPackWorkflow,
+  validateOperatingPackComposition,
 } from "@/lib/operating-packs/runtime";
 
 const baseSchema = z.object({
@@ -52,6 +63,25 @@ const actionSchema = z.discriminatedUnion("action", [
     runId: z.string().min(2).max(191),
     decision: decideOperatingPackApprovalSchema.shape.decision,
     reason: decideOperatingPackApprovalSchema.shape.reason,
+  }),
+  baseSchema.extend({
+    action: z.literal("save_composition"),
+    expectedRevision: z.number().int().min(0),
+    items: operatingPackCompositionSchema,
+  }),
+  baseSchema.extend({
+    action: z.literal("revert_composition"),
+    expectedRevision: z.number().int().min(1),
+    targetRevision: z.number().int().min(1),
+  }),
+  baseSchema.extend({
+    action: z.literal("pause"),
+    runId: z.string().min(2).max(191),
+  }),
+  baseSchema.extend({
+    action: z.literal("resume"),
+    runId: z.string().min(2).max(191),
+    reason: z.string().trim().min(1).max(1000),
   }),
   baseSchema.extend({
     action: z.literal("cancel"),
@@ -106,6 +136,12 @@ async function runDetail(
       run.status === "awaiting_approval" && run.approvalId
         ? { id: run.approvalId, actions: ["approved", "rejected"] }
         : null,
+    control: {
+      mode: "next_safe_checkpoint",
+      state: run.status,
+      canPause: ["running", "approved"].includes(run.status),
+      canResume: ["pause_requested", "paused"].includes(run.status),
+    },
     result: run.result,
     errorCode: run.errorCode,
     createdAt: run.createdAt,
@@ -129,7 +165,10 @@ export async function GET(request: Request) {
   const userId = deskBridgeUserId(grant.subject);
   const runId = url.searchParams.get("runId");
   if (!runId) {
-    const runs = await listWorkspaceOperatingPackRuns(workspaceId, userId, 50);
+    const [runs, composition] = await Promise.all([
+      listWorkspaceOperatingPackRuns(workspaceId, userId, 50),
+      getWorkspaceOperatingPackComposition(workspaceId, userId),
+    ]);
     const packs = listOperatingPackCatalog()
       .map((pack) => ({
         ...pack,
@@ -138,7 +177,7 @@ export async function GET(request: Request) {
         ),
       }))
       .filter((pack) => pack.workflows.length > 0);
-    return Response.json({ packs, runs });
+    return Response.json({ packs, runs, ...composition });
   }
   const traces = await listWorkspaceOperatingPackTraces({
     runId,
@@ -168,6 +207,129 @@ export async function POST(request: Request) {
   if (!grant)
     return Response.json({ error: "Invalid workspace grant" }, { status: 403 });
   const userId = await ensureDeskBridgeUser(grant.subject);
+
+  if (
+    input.action === "save_composition" ||
+    input.action === "revert_composition"
+  ) {
+    let items;
+    let eventType: "composition.saved" | "composition.reverted" =
+      "composition.saved";
+    let summary: string | undefined;
+    if (input.action === "save_composition") {
+      try {
+        items = validateOperatingPackComposition(input.items);
+      } catch {
+        return Response.json(
+          { error: "Invalid operating-pack composition" },
+          { status: 400 },
+        );
+      }
+    } else {
+      const target = await getWorkspaceOperatingPackCompositionRevision({
+        workspaceId: input.workspaceId,
+        userId,
+        revision: input.targetRevision,
+      });
+      if (!target)
+        return Response.json(
+          { error: "Composition revision not found" },
+          { status: 404 },
+        );
+      try {
+        items = validateOperatingPackComposition(target.items);
+      } catch {
+        return Response.json(
+          { error: "Stored composition revision is invalid" },
+          { status: 409 },
+        );
+      }
+      eventType = "composition.reverted";
+      summary = `Reverted composition to revision ${input.targetRevision}`;
+    }
+    const saved = await saveWorkspaceOperatingPackComposition({
+      workspaceId: input.workspaceId,
+      userId,
+      expectedRevision: input.expectedRevision,
+      items,
+      eventType,
+      summary,
+    });
+    if (!saved.saved)
+      return Response.json(
+        {
+          error: "Composition changed in another session",
+          currentRevision: saved.currentRevision,
+        },
+        { status: 409 },
+      );
+    return Response.json({ ok: true, composition: saved.composition });
+  }
+
+  if (input.action === "pause" || input.action === "resume") {
+    const run = await getWorkspaceOperatingPackRun(
+      input.runId,
+      input.workspaceId,
+      userId,
+    );
+    if (!run) return Response.json({ error: "Run not found" }, { status: 404 });
+
+    if (input.action === "pause") {
+      if (["pause_requested", "paused"].includes(run.status))
+        return Response.json({ ok: true, status: run.status });
+      if (!["running", "approved"].includes(run.status))
+        return Response.json(
+          { error: "Run cannot be paused in its current state" },
+          { status: 409 },
+        );
+      await updateOperatingPackRun(run.id, { status: "pause_requested" });
+      return Response.json({
+        ok: true,
+        status: "pause_requested",
+        mode: "next_safe_checkpoint",
+      });
+    }
+
+    if (run.status === "pause_requested") {
+      await Promise.all([
+        updateOperatingPackRun(run.id, {
+          status: "running",
+          approvalId: null,
+        }),
+        appendOperatingPackTrace({
+          id: `${run.id}:99`,
+          runId: run.id,
+          workspaceId: run.workspaceId,
+          sequence: 99,
+          type: "workflow.pause_cancelled",
+          summary: "Pending pause cancelled from Desk",
+          data: { reason: input.reason },
+        }),
+      ]);
+      return Response.json({ ok: true, status: "running" });
+    }
+    if (run.status !== "paused")
+      return Response.json({ error: "Run is not paused" }, { status: 409 });
+    const checkpoint = parseOperatingPackControlId(run.approvalId);
+    if (!checkpoint)
+      return Response.json(
+        { error: "Paused run has no valid checkpoint" },
+        { status: 409 },
+      );
+    try {
+      await resumeHook(getOperatingPackControlToken(run.id, checkpoint), {
+        action: "resume",
+        reason: input.reason,
+        actorId: userId,
+      });
+      return Response.json({ ok: true, status: "resuming", checkpoint });
+    } catch {
+      return Response.json(
+        { error: "Pause was already resumed or expired" },
+        { status: 409 },
+      );
+    }
+  }
 
   if (input.action === "decide") {
     const run = await getWorkspaceOperatingPackRun(

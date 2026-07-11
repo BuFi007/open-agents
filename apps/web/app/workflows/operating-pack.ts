@@ -12,6 +12,7 @@ import { resolveChatSandboxRuntime } from "./chat-sandbox-runtime";
 import {
   appendOperatingPackTrace,
   attachOperatingPackWorkflowRun,
+  getOperatingPackRun,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
 import { runHarnessTurnViaApi } from "@/lib/harness-runner/client";
@@ -22,6 +23,10 @@ import {
   deleteOperatingPackWorkspaceGrant,
   getOperatingPackWorkspaceGrant,
 } from "@/lib/operating-packs/credential-vault";
+import {
+  getOperatingPackControlToken,
+  type OperatingPackControlCheckpoint,
+} from "@/lib/operating-packs/control-token";
 import { createWorkspaceHarness } from "@open-agents/harness-runner";
 
 export type OperatingPackWorkflowInput = {
@@ -40,6 +45,12 @@ export type OperatingPackWorkflowInput = {
 
 type ApprovalPayload = {
   decision: "approved" | "rejected";
+  reason: string;
+  actorId: string;
+};
+
+type ControlPayload = {
+  action: "resume";
   reason: string;
   actorId: string;
 };
@@ -241,6 +252,86 @@ async function persistApprovalDecisionStep(
     }),
     ...(approved ? [] : [deleteOperatingPackWorkspaceGrant(input.executionId)]),
   ]);
+}
+
+async function isPauseRequestedStep(executionId: string): Promise<boolean> {
+  "use step";
+  const run = await getOperatingPackRun(executionId);
+  if (!run) throw new Error("Operating-pack run disappeared");
+  return run.status === "pause_requested";
+}
+
+async function persistPausedStep(
+  input: OperatingPackWorkflowInput,
+  checkpoint: OperatingPackControlCheckpoint,
+  sequence: number,
+): Promise<void> {
+  "use step";
+  await Promise.all([
+    updateOperatingPackRun(input.executionId, {
+      status: "paused",
+      approvalId: `control:${checkpoint}`,
+    }),
+    appendOperatingPackTrace({
+      id: traceId(input.executionId, sequence),
+      runId: input.executionId,
+      workspaceId: input.workspaceId,
+      sequence,
+      type: "workflow.paused",
+      summary: `Workflow paused at ${checkpoint.replaceAll("_", " ")}`,
+      data: { checkpoint, mode: "next_safe_checkpoint" },
+    }),
+  ]);
+}
+
+async function persistResumedStep(
+  input: OperatingPackWorkflowInput,
+  checkpoint: OperatingPackControlCheckpoint,
+  sequence: number,
+  payload: ControlPayload,
+): Promise<void> {
+  "use step";
+  if (
+    !payload ||
+    payload.action !== "resume" ||
+    payload.actorId !== input.userId ||
+    !payload.reason ||
+    payload.reason.length > 1000
+  )
+    throw new Error("Invalid operating-pack resume payload");
+  await Promise.all([
+    updateOperatingPackRun(input.executionId, {
+      status: "running",
+      approvalId: null,
+    }),
+    appendOperatingPackTrace({
+      id: traceId(input.executionId, sequence),
+      runId: input.executionId,
+      workspaceId: input.workspaceId,
+      sequence,
+      type: "workflow.resumed",
+      summary: `Workflow resumed at ${checkpoint.replaceAll("_", " ")}`,
+      data: { checkpoint, reason: payload.reason },
+    }),
+  ]);
+}
+
+async function pauseAtSafeCheckpoint(
+  input: OperatingPackWorkflowInput,
+  checkpoint: OperatingPackControlCheckpoint,
+  sequence: number,
+): Promise<void> {
+  if (!(await isPauseRequestedStep(input.executionId))) return;
+  const hook = createHook<ControlPayload>({
+    token: getOperatingPackControlToken(input.executionId, checkpoint),
+  });
+  try {
+    await persistPausedStep(input, checkpoint, sequence);
+    const payload = await hook;
+    await persistResumedStep(input, checkpoint, sequence + 1, payload);
+  } finally {
+    hook.dispose();
+  }
 }
 
 function responseText(parts: readonly Record<string, unknown>[]): string {
@@ -465,11 +556,13 @@ export async function runOperatingPackWorkflow(
         hook.dispose();
       }
     }
+    await pauseAtSafeCheckpoint(input, "before_agents", 100);
     const results = await Promise.all(
       runtime.agents.map((agent, index) =>
         runAgentStep({ workflow: input, runtime, agent, index }),
       ),
     );
+    await pauseAtSafeCheckpoint(input, "before_join", 9_000);
     await persistCompletedStep(input, results);
     return { status: "completed" as const, results };
   } catch (error) {

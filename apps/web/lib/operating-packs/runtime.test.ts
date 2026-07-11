@@ -5,6 +5,7 @@ import {
   resolveOperatingPackInstallation,
   resolveOperatingPackWorkflow,
   startOperatingPackRunSchema,
+  validateOperatingPackComposition,
 } from "./runtime";
 
 describe("operating-pack runtime contract", () => {
@@ -28,6 +29,47 @@ describe("operating-pack runtime contract", () => {
       }),
     ]);
     expect(catalog.every((pack) => pack.workflows.length > 0)).toBe(true);
+    expect(
+      catalog.find((pack) => pack.id === "finance_ops")?.deskWidgets,
+    ).toContainEqual({ id: "finance_scorecard", kind: "kpi" });
+  });
+
+  test("validates manifest-owned Desk composition items and excludes tax", () => {
+    expect(
+      validateOperatingPackComposition([
+        {
+          instanceId: "canvas:finance_scorecard",
+          packId: "finance_ops",
+          widgetId: "finance_scorecard",
+          kind: "kpi",
+          enabled: true,
+          order: 0,
+          width: "half",
+        },
+        {
+          instanceId: "canvas:grant_workflow",
+          packId: "grant_ops",
+          widgetId: "grant_workflow",
+          kind: "workflow",
+          enabled: true,
+          order: 1,
+          width: "full",
+        },
+      ]).map((item) => item.packId),
+    ).toEqual(["finance_ops", "grant_ops"]);
+    expect(() =>
+      validateOperatingPackComposition([
+        {
+          instanceId: "canvas:tax",
+          packId: "tax_automation",
+          widgetId: "tax_readiness",
+          kind: "workflow",
+          enabled: true,
+          order: 0,
+          width: "full",
+        },
+      ]),
+    ).toThrow("Unsupported composition pack");
   });
 
   test("installs dependencies in deterministic topological order", () => {

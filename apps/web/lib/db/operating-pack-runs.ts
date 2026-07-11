@@ -10,6 +10,8 @@ import {
 export type OperatingPackRunStatus =
   | "pending"
   | "running"
+  | "pause_requested"
+  | "paused"
   | "awaiting_approval"
   | "approved"
   | "rejected"

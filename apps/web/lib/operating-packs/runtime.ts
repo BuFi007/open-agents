@@ -41,6 +41,45 @@ export type StartOperatingPackRunRequest = z.infer<
   typeof startOperatingPackRunSchema
 >;
 
+export const operatingPackCompositionItemSchema = z
+  .object({
+    instanceId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{3,127}$/),
+    packId: z.string().regex(/^[a-z][a-z0-9._-]{1,95}$/),
+    widgetId: z.string().regex(/^[a-z][a-z0-9._-]{1,95}$/),
+    kind: z.enum([
+      "kpi",
+      "entity-table",
+      "workflow",
+      "approval",
+      "trace",
+      "graph",
+      "console",
+    ]),
+    enabled: z.boolean(),
+    order: z.number().int().min(0).max(199),
+    width: z.enum(["half", "full"]),
+  })
+  .strict();
+
+export const operatingPackCompositionSchema = z
+  .array(operatingPackCompositionItemSchema)
+  .max(60)
+  .superRefine((items, context) => {
+    const ids = new Set<string>();
+    for (const item of items) {
+      if (ids.has(item.instanceId))
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate composition instance: ${item.instanceId}`,
+        });
+      ids.add(item.instanceId);
+    }
+  });
+
+export type OperatingPackCompositionItem = z.infer<
+  typeof operatingPackCompositionItemSchema
+>;
+
 const packRegistry = new Map<string, OperatingPackManifest>(
   [
     FINANCE_OPS_PACK,
@@ -94,6 +133,16 @@ export function listOperatingPackCatalog() {
   return [...packRegistry.values()].map((pack) => ({
     id: pack.id,
     name: pack.name,
+    version: pack.version,
+    owner: pack.owner,
+    dependencies: pack.dependencies,
+    permissions: pack.permissions,
+    connectors: pack.connectors,
+    toolGrants: pack.toolGrants,
+    deskWidgets: pack.deskWidgets,
+    setupChecklist: pack.setupChecklist,
+    ontology: pack.ontology,
+    taxImplementation: pack.taxImplementation ?? false,
     workflows: pack.workflows.map((workflow) => ({
       id: workflow.id,
       title: workflow.title,
@@ -107,4 +156,23 @@ export function listOperatingPackCatalog() {
           : ("harness_agents" as const),
     })),
   }));
+}
+
+export function validateOperatingPackComposition(
+  input: unknown,
+): readonly OperatingPackCompositionItem[] {
+  const items = operatingPackCompositionSchema.parse(input);
+  for (const item of items) {
+    const pack = packRegistry.get(item.packId);
+    if (!pack || pack.taxImplementation)
+      throw new Error(`Unsupported composition pack: ${item.packId}`);
+    const widget = pack.deskWidgets.find(
+      (candidate) => candidate.id === item.widgetId,
+    );
+    if (!widget || widget.kind !== item.kind)
+      throw new Error(
+        `Unknown composition widget: ${item.packId}.${item.widgetId}`,
+      );
+  }
+  return [...items].sort((left, right) => left.order - right.order);
 }

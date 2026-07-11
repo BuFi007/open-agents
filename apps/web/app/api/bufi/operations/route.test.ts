@@ -3,12 +3,15 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 let grantValid = true;
 let existingRun = false;
 let runStatus = "awaiting_approval";
+let runApprovalId: string | null = "op_1:approval";
 let startCalls = 0;
 let storedGrant: string | undefined;
 let resumePayload: unknown;
 let cancelled = false;
 let updatedStatus: string | undefined;
 let createdSession = false;
+let savedComposition: readonly Record<string, unknown>[] | undefined;
+let compositionRevision = 1;
 
 const run = {
   id: "op_1",
@@ -66,10 +69,16 @@ mock.module("@/lib/db/operating-pack-runs", () => ({
       ? { created: false, run: { ...run, requestHash: input.requestHash } }
       : { created: true, run: input },
   attachOperatingPackWorkflowRun: async () => undefined,
-  getWorkspaceOperatingPackRun: async () => ({ ...run, status: runStatus }),
-  listWorkspaceOperatingPackRuns: async () => [{ ...run, status: runStatus }],
+  getWorkspaceOperatingPackRun: async () => ({
+    ...run,
+    status: runStatus,
+    approvalId: runApprovalId,
+  }),
+  listWorkspaceOperatingPackRuns: async () => [
+    { ...run, status: runStatus, approvalId: runApprovalId },
+  ],
   listWorkspaceOperatingPackTraces: async () => ({
-    run: { ...run, status: runStatus },
+    run: { ...run, status: runStatus, approvalId: runApprovalId },
     traces: [
       {
         id: "trace_1",
@@ -83,6 +92,37 @@ mock.module("@/lib/db/operating-pack-runs", () => ({
     updatedStatus = input.status;
   },
   appendOperatingPackTrace: async () => undefined,
+}));
+
+mock.module("@/lib/db/operating-pack-compositions", () => ({
+  getWorkspaceOperatingPackComposition: async () => ({
+    composition: { revision: compositionRevision, items: [] },
+    revisions: [],
+  }),
+  getWorkspaceOperatingPackCompositionRevision: async () => ({
+    revision: 1,
+    items: [
+      {
+        instanceId: "canvas:finance_scorecard",
+        packId: "finance_ops",
+        widgetId: "finance_scorecard",
+        kind: "kpi",
+        enabled: true,
+        order: 0,
+        width: "half",
+      },
+    ],
+  }),
+  saveWorkspaceOperatingPackComposition: async (input: {
+    items: readonly Record<string, unknown>[];
+  }) => {
+    savedComposition = input.items;
+    compositionRevision += 1;
+    return {
+      saved: true,
+      composition: { revision: compositionRevision, items: input.items },
+    };
+  },
 }));
 
 mock.module("@/lib/db/sessions", () => ({
@@ -100,6 +140,13 @@ mock.module("@/lib/operating-packs/credential-vault", () => ({
 
 mock.module("@/lib/operating-packs/approval-token", () => ({
   getOperatingPackApprovalToken: () => "server-hook-token",
+}));
+
+mock.module("@/lib/operating-packs/control-token", () => ({
+  getOperatingPackControlToken: (_runId: string, checkpoint: string) =>
+    `server-control-token:${checkpoint}`,
+  parseOperatingPackControlId: (value: string | null) =>
+    value?.startsWith("control:") ? value.slice("control:".length) : null,
 }));
 
 mock.module("@/app/workflows/operating-pack", () => ({
@@ -144,12 +191,15 @@ beforeEach(() => {
   grantValid = true;
   existingRun = false;
   runStatus = "awaiting_approval";
+  runApprovalId = "op_1:approval";
   startCalls = 0;
   storedGrant = undefined;
   resumePayload = undefined;
   cancelled = false;
   updatedStatus = undefined;
   createdSession = false;
+  savedComposition = undefined;
+  compositionRevision = 1;
 });
 
 describe("Desk B2B operations API", () => {
@@ -245,6 +295,115 @@ describe("Desk B2B operations API", () => {
     ).toBe(200);
     expect(cancelled).toBe(true);
     expect(updatedStatus).toBe("cancelled");
+  });
+
+  test("requests a safe-checkpoint pause and resumes only the persisted control hook", async () => {
+    runStatus = "running";
+    const paused = await POST(
+      request({
+        action: "pause",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        runId: "op_1",
+      }),
+    );
+    expect(paused.status).toBe(200);
+    expect(await paused.json()).toMatchObject({
+      status: "pause_requested",
+      mode: "next_safe_checkpoint",
+    });
+    expect(updatedStatus).toBe("pause_requested");
+
+    runStatus = "paused";
+    runApprovalId = "control:before_agents";
+    const resumed = await POST(
+      request({
+        action: "resume",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        runId: "op_1",
+        reason: "Operator reviewed the plan",
+      }),
+    );
+    expect(resumed.status).toBe(200);
+    expect(await resumed.json()).toMatchObject({
+      status: "resuming",
+      checkpoint: "before_agents",
+    });
+    expect(resumePayload).toMatchObject({
+      action: "resume",
+      reason: "Operator reviewed the plan",
+    });
+  });
+
+  test("saves and reverses manifest-validated multi-pack compositions", async () => {
+    const items = [
+      {
+        instanceId: "canvas:finance_scorecard",
+        packId: "finance_ops",
+        widgetId: "finance_scorecard",
+        kind: "kpi",
+        enabled: true,
+        order: 0,
+        width: "half",
+      },
+      {
+        instanceId: "canvas:grant_workflow",
+        packId: "grant_ops",
+        widgetId: "grant_workflow",
+        kind: "workflow",
+        enabled: true,
+        order: 1,
+        width: "full",
+      },
+    ];
+    const saved = await POST(
+      request({
+        action: "save_composition",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        expectedRevision: 1,
+        items,
+      }),
+    );
+    expect(saved.status).toBe(200);
+    expect(savedComposition?.map((item) => item.packId)).toEqual([
+      "finance_ops",
+      "grant_ops",
+    ]);
+
+    const reverted = await POST(
+      request({
+        action: "revert_composition",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        expectedRevision: 2,
+        targetRevision: 1,
+      }),
+    );
+    expect(reverted.status).toBe(200);
+    expect(savedComposition).toHaveLength(1);
+
+    const tax = await POST(
+      request({
+        action: "save_composition",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        expectedRevision: 3,
+        items: [
+          {
+            instanceId: "canvas:tax",
+            packId: "tax_automation",
+            widgetId: "tax_readiness",
+            kind: "workflow",
+            enabled: true,
+            order: 0,
+            width: "full",
+          },
+        ],
+      }),
+    );
+    expect(tax.status).toBe(400);
   });
 
   test("fails closed for invalid bearer, grant and workspace input", async () => {

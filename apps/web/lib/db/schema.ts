@@ -2,6 +2,7 @@ import type { SandboxState } from "@open-agents/sandbox";
 import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
+import type { OperatingPackCompositionItem } from "@/lib/operating-packs/runtime";
 import {
   bigint,
   boolean,
@@ -370,6 +371,8 @@ export const operatingPackRuns = pgTable(
       enum: [
         "pending",
         "running",
+        "pause_requested",
+        "paused",
         "awaiting_approval",
         "approved",
         "rejected",
@@ -439,6 +442,58 @@ export const operatingPackTraces = pgTable(
     index("operating_pack_traces_workspace_run_idx").on(
       table.workspaceId,
       table.runId,
+    ),
+  ],
+);
+
+export const operatingPackCompositions = pgTable(
+  "operating_pack_compositions",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(0),
+    items: jsonb("items")
+      .$type<readonly OperatingPackCompositionItem[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.userId] }),
+    index("operating_pack_compositions_user_idx").on(table.userId),
+  ],
+);
+
+export const operatingPackCompositionRevisions = pgTable(
+  "operating_pack_composition_revisions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull(),
+    eventType: text("event_type", {
+      enum: ["composition.saved", "composition.reverted"],
+    }).notNull(),
+    items: jsonb("items")
+      .$type<readonly OperatingPackCompositionItem[]>()
+      .notNull(),
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_composition_revisions_scope_revision_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.revision,
+    ),
+    index("operating_pack_composition_revisions_scope_idx").on(
+      table.workspaceId,
+      table.userId,
     ),
   ],
 );
