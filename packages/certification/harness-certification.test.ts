@@ -20,6 +20,7 @@ const green: HarnessCertificationChecks = {
   callbackVisible: true,
   degradedStateHonest: true,
   readOnlyHyperSmoke: true,
+  circleWalletReadOnly: true,
   deniedSpendWithoutApproval: true,
   computerUseDoctor: true,
 };
