@@ -1,9 +1,11 @@
 import type { SandboxState } from "@open-agents/sandbox";
+import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
 import {
   bigint,
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -14,6 +16,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+  dataType: () => "tsvector",
+});
 
 // users
 export const users = pgTable("users", {
@@ -426,6 +432,11 @@ export const knowledgeEntities = pgTable(
     kind: text("kind").notNull(),
     name: text("name").notNull(),
     version: integer("version").notNull().default(1),
+    searchVector: tsvector("search_vector")
+      .generatedAlwaysAs(
+        sql`to_tsvector('simple', "name" || ' ' || "kind" || ' ' || "external_key")`,
+      )
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -439,6 +450,7 @@ export const knowledgeEntities = pgTable(
       table.workspaceId,
       table.id,
     ),
+    index("knowledge_entities_search_idx").using("gin", table.searchVector),
   ],
 );
 

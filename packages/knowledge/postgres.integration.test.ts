@@ -139,6 +139,92 @@ liveDescribe("Postgres knowledge repository", () => {
     expect(unscoped[0]?.count).toBe(0);
   });
 
+  test("uses the tenant-scoped GIN index and recalls a bounded lexical corpus", async () => {
+    const corpus = [
+      ["patagonia", "Patagonia Software Export Invoice"],
+      ["contractor", "Buenos Aires Contractor Agreement"],
+      ["northwind", "Northwind Customer Collection"],
+      ["treasury", "USDC Treasury Settlement"],
+      ["ledger", "Contabilium Ledger Reconciliation"],
+    ] as const;
+    for (const [key, name] of corpus) {
+      await a.resolveAndEnqueue({
+        externalKey: `recall:${key}`,
+        kind: "Document",
+        name,
+        outbox: {
+          id: `event-${randomUUID()}`,
+          topic: "knowledge.entity.changed",
+          schemaVersion: 1,
+          payload: { corpus: key },
+        },
+      });
+      await b.resolveAndEnqueue({
+        externalKey: `other:${key}`,
+        kind: "Document",
+        name: `${name} private other tenant`,
+        outbox: {
+          id: `event-${randomUUID()}`,
+          topic: "knowledge.entity.changed",
+          schemaVersion: 1,
+          payload: { corpus: key },
+        },
+      });
+    }
+    await raw.begin(async (transaction) => {
+      await transaction`SET LOCAL ROLE open_agents_knowledge_runtime`;
+      await transaction`SELECT set_config('app.workspace_id', ${workspaceA}, true)`;
+      await transaction`
+        INSERT INTO knowledge_entities (
+          id, workspace_id, external_key, kind, name, version
+        )
+        SELECT
+          ${workspaceA} || ':filler:' || ordinal::text,
+          ${workspaceA},
+          'filler:' || ordinal::text,
+          'Noise',
+          'Bounded lexical corpus filler ' || ordinal::text,
+          1
+        FROM generate_series(1, 2000) AS ordinal
+      `;
+    });
+    await raw`ANALYZE knowledge_entities`;
+
+    const queries = [
+      ["patagonia export", "recall:patagonia"],
+      ["contractor agreement", "recall:contractor"],
+      ["northwind collection", "recall:northwind"],
+      ["USDC settlement", "recall:treasury"],
+      ["Contabilium reconciliation", "recall:ledger"],
+    ] as const;
+    let recalled = 0;
+    for (const [query, expected] of queries) {
+      const results = await a.search(query, 3);
+      if (results.some((result) => result.externalKey === expected))
+        recalled += 1;
+      expect(results.every((result) => result.workspaceId === workspaceA)).toBe(
+        true,
+      );
+      expect(
+        results.some((result) => result.name.includes("other tenant")),
+      ).toBe(false);
+    }
+    expect(recalled / queries.length).toBe(1);
+
+    const plan = await raw.begin(async (transaction) => {
+      await transaction`SET LOCAL enable_seqscan = off`;
+      await transaction`SET LOCAL enable_indexscan = off`;
+      return transaction<{ "QUERY PLAN": string }[]>`
+        EXPLAIN (FORMAT TEXT)
+        SELECT * FROM knowledge_entities
+        WHERE search_vector @@ websearch_to_tsquery('simple', 'patagonia export')
+      `;
+    });
+    expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain(
+      "knowledge_entities_search_idx",
+    );
+  });
+
   test("uses stable created-at/id cursors without cross-page duplicates", async () => {
     const first = await a.page(undefined, 1);
     expect(first.items).toHaveLength(1);

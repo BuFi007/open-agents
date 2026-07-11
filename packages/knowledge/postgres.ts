@@ -41,6 +41,10 @@ export type WorkspaceKnowledgeRepository = {
     };
   }): Promise<{ entity: PersistentEntity; event: PersistentOutboxEvent }>;
   page(cursor?: string, limit?: number): Promise<Page<PersistentEntity>>;
+  search(
+    query: string,
+    limit?: number,
+  ): Promise<readonly (PersistentEntity & { lexicalScore: number })[]>;
   claimOutbox(input: {
     workerId: string;
     limit: number;
@@ -141,7 +145,8 @@ export function createPostgresKnowledgeRepository(options: {
                     THEN now()
                   ELSE knowledge_entities.updated_at
                 END
-              RETURNING *
+              RETURNING id, workspace_id, external_key, kind, name, version,
+                created_at, updated_at
             `;
             const events = await transaction<OutboxRow[]>`
               INSERT INTO knowledge_outbox (
@@ -182,7 +187,9 @@ export function createPostgresKnowledgeRepository(options: {
             await setWorkspaceScope(transaction, workspaceId);
             const rows = decodedCursor
               ? await transaction<EntityRow[]>`
-                  SELECT * FROM knowledge_entities
+                  SELECT id, workspace_id, external_key, kind, name, version,
+                    created_at, updated_at
+                  FROM knowledge_entities
                   WHERE workspace_id = ${workspaceId}
                     AND (date_trunc('milliseconds', created_at), id) > (
                       ${decodedCursor.createdAt}, ${decodedCursor.id}
@@ -191,7 +198,9 @@ export function createPostgresKnowledgeRepository(options: {
                   LIMIT ${limit + 1}
                 `
               : await transaction<EntityRow[]>`
-                  SELECT * FROM knowledge_entities
+                  SELECT id, workspace_id, external_key, kind, name, version,
+                    created_at, updated_at
+                  FROM knowledge_entities
                   WHERE workspace_id = ${workspaceId}
                   ORDER BY date_trunc('milliseconds', created_at) ASC, id ASC
                   LIMIT ${limit + 1}
@@ -204,6 +213,37 @@ export function createPostgresKnowledgeRepository(options: {
                 ? { nextCursor: encodeCursor(rows[limit - 1]!) }
                 : {}),
             };
+          });
+        },
+        async search(query, limit = 20) {
+          const normalized = query.trim();
+          if (normalized.length < 2 || normalized.length > 500)
+            throw new Error(
+              "Search query must be between 2 and 500 characters",
+            );
+          if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+            throw new Error("Search limit must be between 1 and 100");
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<
+              (EntityRow & { lexical_score: number })[]
+            >`
+              SELECT entity.id, entity.workspace_id, entity.external_key,
+                entity.kind, entity.name, entity.version, entity.created_at,
+                entity.updated_at,
+                ts_rank_cd(
+                  entity.search_vector,
+                  websearch_to_tsquery('simple', ${normalized})
+                )::real AS lexical_score
+              FROM knowledge_entities AS entity
+              WHERE entity.search_vector @@ websearch_to_tsquery('simple', ${normalized})
+              ORDER BY lexical_score DESC, entity.updated_at DESC, entity.id ASC
+              LIMIT ${limit}
+            `;
+            return rows.map((row) => ({
+              ...mapEntity(row),
+              lexicalScore: row.lexical_score,
+            }));
           });
         },
         async claimOutbox(input) {

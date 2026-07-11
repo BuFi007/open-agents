@@ -90,6 +90,7 @@ function fakeRepository(
       throw new Error("not used");
     },
     page: async () => ({ items: [] }),
+    search: async () => [],
     async claimOutbox() {
       return pending.splice(0).map((item) => ({
         ...item,

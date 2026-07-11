@@ -16,7 +16,7 @@ authorized provider sandboxes are production certified.
 | Logging/trace safety | 8 | Queue facts expose IDs, profile, logical queue, attempt and safe error code only; no payload, stack, credential or chain-of-thought enters traces. |
 | Type safety | 9 | Strict job/entity/outbox types, bounded enums, JSON validation and package/app typechecks pass. |
 | Testability | 9 | Unit suites plus real Neon and isolated Redis integration tests; randomized workspaces/namespaces clean up their own state. |
-| Performance | 8 | Composite claim indexes, `SKIP LOCKED`, bounded batches, one physical queue per profile, cross-replica Redis admission slots and no Redis `KEYS` call. |
+| Performance | 9 | Composite claim indexes, `SKIP LOCKED`, bounded batches, one physical queue per profile, cross-replica Redis admission slots, no Redis `KEYS` call, plus a generated lexical vector and GIN planner assertion. |
 | Security | 9 | Forced RLS, dedicated knowledge and connector `NOBYPASSRLS` roles, transaction-local tenant/deployment scope, atomic webhook replay claims, raw-body hash-only retention, credential-key rejection, 64 KiB payload ceiling and compact hashed DLQ. |
 | AI verification | 9 | Live tests exposed and corrected two non-obvious defects: Neon owner RLS bypass and microsecond cursor replay. Configured Upstash failure is retained as a blocker. |
 
@@ -40,6 +40,10 @@ authorized provider sandboxes are production certified.
 - Live Neon → isolated Redis/BullMQ connected pipeline: 1 suite pass with 4
   assertions; canonical-write, enrichment, embedding and projection all ran,
   preserved tenant/trace/artifact lineage and left no pending replay.
+- Live Neon lexical retrieval: bounded five-query corpus reached recall@3 1.0,
+  cross-tenant matches stayed invisible, and `EXPLAIN` selected the generated
+  `tsvector` GIN index. Stable explicit select lists survived the additive
+  column migration without changing repository result types.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
