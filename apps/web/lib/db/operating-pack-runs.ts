@@ -67,6 +67,20 @@ export async function getOwnedOperatingPackRun(runId: string, userId: string) {
   });
 }
 
+export async function getWorkspaceOperatingPackRun(
+  runId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  return db.query.operatingPackRuns.findFirst({
+    where: and(
+      eq(operatingPackRuns.id, runId),
+      eq(operatingPackRuns.workspaceId, workspaceId),
+      eq(operatingPackRuns.userId, userId),
+    ),
+  });
+}
+
 export async function listOwnedOperatingPackRuns(userId: string, limit = 50) {
   const boundedLimit = Math.min(Math.max(limit, 1), 100);
   return db
@@ -88,6 +102,68 @@ export async function listOwnedOperatingPackRuns(userId: string, limit = 50) {
     .where(eq(operatingPackRuns.userId, userId))
     .orderBy(desc(operatingPackRuns.updatedAt), desc(operatingPackRuns.id))
     .limit(boundedLimit);
+}
+
+export async function listWorkspaceOperatingPackRuns(
+  workspaceId: string,
+  userId: string,
+  limit = 50,
+) {
+  const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  return db
+    .select({
+      id: operatingPackRuns.id,
+      workflowRunId: operatingPackRuns.workflowRunId,
+      workspaceId: operatingPackRuns.workspaceId,
+      packId: operatingPackRuns.packId,
+      workflowId: operatingPackRuns.workflowId,
+      harnessId: operatingPackRuns.harnessId,
+      status: operatingPackRuns.status,
+      approvalId: operatingPackRuns.approvalId,
+      errorCode: operatingPackRuns.errorCode,
+      createdAt: operatingPackRuns.createdAt,
+      updatedAt: operatingPackRuns.updatedAt,
+      finishedAt: operatingPackRuns.finishedAt,
+    })
+    .from(operatingPackRuns)
+    .where(
+      and(
+        eq(operatingPackRuns.workspaceId, workspaceId),
+        eq(operatingPackRuns.userId, userId),
+      ),
+    )
+    .orderBy(desc(operatingPackRuns.updatedAt), desc(operatingPackRuns.id))
+    .limit(boundedLimit);
+}
+
+export async function listWorkspaceOperatingPackTraces(input: {
+  runId: string;
+  workspaceId: string;
+  userId: string;
+  afterSequence?: number;
+  limit?: number;
+}) {
+  const run = await getWorkspaceOperatingPackRun(
+    input.runId,
+    input.workspaceId,
+    input.userId,
+  );
+  if (!run) return null;
+  const limit = Math.min(Math.max(input.limit ?? 100, 1), 200);
+  const afterSequence = Math.max(input.afterSequence ?? 0, 0);
+  const traces = await db
+    .select()
+    .from(operatingPackTraces)
+    .where(
+      and(
+        eq(operatingPackTraces.runId, run.id),
+        eq(operatingPackTraces.workspaceId, run.workspaceId),
+        gt(operatingPackTraces.sequence, afterSequence),
+      ),
+    )
+    .orderBy(asc(operatingPackTraces.sequence))
+    .limit(limit);
+  return { run, traces };
 }
 
 export async function attachOperatingPackWorkflowRun(
