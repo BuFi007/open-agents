@@ -122,7 +122,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **78.6%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **78.9%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted Redis, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.
