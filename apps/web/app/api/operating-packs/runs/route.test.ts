@@ -109,14 +109,17 @@ beforeEach(() => {
 });
 
 describe("operating-pack run routes", () => {
-  test("catalog requires authentication and excludes tax", async () => {
+  test("catalog requires authentication and exposes structured tax execution", async () => {
     authenticated = false;
     expect((await GET()).status).toBe(401);
     authenticated = true;
     const response = await GET();
-    const body = (await response.json()) as { packs: { id: string }[] };
+    const body = (await response.json()) as {
+      packs: { id: string; workflows: { executionMode: string }[] }[];
+    };
     expect(response.status).toBe(200);
-    expect(body.packs.some((pack) => pack.id.includes("tax"))).toBe(false);
+    const tax = body.packs.find((pack) => pack.id === "tax_automation");
+    expect(tax?.workflows[0]?.executionMode).toBe("structured_external_state");
   });
 
   test("rejects cross-owner and archived workspaces before claiming", async () => {
@@ -137,7 +140,7 @@ describe("operating-pack run routes", () => {
     expect(createCalls).toBe(0);
   });
 
-  test("rejects unknown and tax workflows", async () => {
+  test("rejects unknown and prompt-started tax workflows", async () => {
     expect(
       (
         await POST(
@@ -145,6 +148,17 @@ describe("operating-pack run routes", () => {
         )
       ).status,
     ).toBe(404);
+    const taxResponse = await POST(
+      request({
+        ...validBody,
+        packId: "tax_automation",
+        workflowId: "ai_invoice_to_factura_e",
+      }),
+    );
+    expect(taxResponse.status).toBe(422);
+    expect(await taxResponse.json()).toMatchObject({
+      code: "STRUCTURED_TAX_INVOICE_INGRESS_REQUIRED",
+    });
     expect(createCalls).toBe(0);
   });
 
