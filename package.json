@@ -13,6 +13,7 @@
     "harness:smoke:sandbox:create": "node --env-file-if-exists=.env.local scripts/vercel-create-harness-smoke-sandbox.ts",
     "harness:smoke:codex": "node --env-file-if-exists=.env.local scripts/codex-harness-smoke.ts",
     "harness:certify:contracts": "bun test packages/certification/harness-certification.test.ts",
+    "harness:certify:live": "bun --env-file=.env.local scripts/certify-local-harnesses.ts",
     "sandbox:snapshot-base": "node scripts/vercel-refresh-base-snapshot.ts",
     "typecheck": "turbo typecheck",
     "check": "ultracite check",

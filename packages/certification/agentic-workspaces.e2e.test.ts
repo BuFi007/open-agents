@@ -357,6 +357,9 @@ describe("Agentic Workspaces contract E2E", () => {
         outboxP95Ms: 1000,
         recallAtK: 0.9,
         chaosPassed: true,
+        mixedWorkloadPassed: true,
+        outboxChaosPassed: true,
+        prioritySloProtected: true,
       }).passed,
     ).toBe(true);
   });
