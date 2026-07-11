@@ -17,6 +17,16 @@ export {
   type RetrievalCandidate,
   type RetrievalResult,
 } from "./retrieval";
+export {
+  DEFAULT_KNOWLEDGE_EMBEDDING_MODEL,
+  KNOWLEDGE_EMBEDDING_DIMENSIONS,
+  KNOWLEDGE_EMBEDDING_INPUT_VERSION,
+  createAiGatewayKnowledgeEmbeddingProvider,
+  knowledgeEmbeddingInput,
+  knowledgeEmbeddingInputHash,
+  type KnowledgeEmbeddingBatch,
+  type KnowledgeEmbeddingProvider,
+} from "./embedding-provider";
 export { needsRefresh, type ProjectionVersion } from "./freshness";
 export {
   evaluateProductionGate,

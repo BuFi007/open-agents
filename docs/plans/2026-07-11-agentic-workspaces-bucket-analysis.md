@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 58.1%.** The repository has strong contracts and a growing
+**Production parity: 61.2%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -15,14 +15,14 @@ provider, rendered client, production worker, or live evidence path.
 | --- | ---: | ---: | ---: | --- |
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
-| Canonical Postgres KG and transactional outbox | 15 | 72% | 10.8 | Live Neon test proves atomic resolver/outbox, rollback, leases, stable cursors and two-tenant RLS through no-bypass runtime roles. A signed connector artifact now reaches every durable stage through the real outbox. |
-| BullMQ data plane and workload isolation | 12 | 68% | 8.2 | Real BullMQ/Redis tests prove global workspace slots across two runtimes, retries, permanent-error discard, deadlines, compact DLQ, safe trace facts, crash recovery and a four-stage connector pipeline. Configured Upstash TCP readiness currently fails. |
-| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 45% | 4.5 | Live tenant-scoped PostgreSQL lexical retrieval has a generated `tsvector` GIN index, a planner assertion and 1.0 recall@3 on the bounded certification corpus. Semantic embeddings, Typesense and repair workers remain unproven. |
+| Canonical Postgres KG and transactional outbox | 15 | 76% | 11.4 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding projection and immutable source/artifact lineage through no-bypass runtime roles. |
+| BullMQ data plane and workload isolation | 12 | 70% | 8.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery, a four-stage connector pipeline and a live embedding leaf worker. Configured Upstash TCP readiness currently fails. |
+| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 68% | 6.8 | Live lexical GIN and pgvector HNSW paths, real AI Gateway 1536-dimension embeddings, tenant isolation, stale-vector rejection, combined recall ≥0.8 and an outbox→BullMQ→Gateway→Neon semantic worker pass. Alternate Typesense certification, load and repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 45% | 5.9 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, lineage-safe metadata and a live Neon→BullMQ four-stage pipeline pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **58.1%** |  |
+| **Total** | **100** |  | **61.2%** |  |
 
 ## Newly proven in this pass
 
@@ -59,17 +59,27 @@ provider, rendered client, production worker, or live evidence path.
 - Explicit entity select lists replace `SELECT *`; the live rolling migration
   exposed a prepared-plan result-type failure when the generated search column
   appeared, and the stable projection fixes that deployment hazard.
+- Forced-RLS pgvector projections keyed by entity, workspace, model and input
+  version, with a composite entity/workspace foreign key and HNSW cosine index.
+- Real `openai/text-embedding-3-small` calls through Vercel AI Gateway/OIDC;
+  minimized entity inputs are hash-bound to the exact entity revision, stale
+  writes fail closed and cross-tenant vectors are invisible.
+- A concrete BullMQ embedding processor now fetches canonical entity truth,
+  embeds it, performs the version-checked projection write and reports only
+  safe hash/model/usage metadata. Live Neon → outbox → local Redis/BullMQ → AI
+  Gateway → Neon projection and semantic query passed.
 
 ## Must-have gaps before 100%
 
 1. Replace or repair the configured Redis/Upstash TCP provider and run the same
    mixed workload against that production target. A local isolated Redis pass is
    evidence for the runtime, not the hosted provider.
-2. Deploy the outbox relay and replace certification processors with concrete
-   canonical-write, enrichment, embedding, Typesense, projection and repair
-   workers. Prove crash-after-effect against real business constraints.
-3. Run clean migration replay, multi-tenant load, semantic/combined retrieval
-   recall, freshness repair and Redis/worker kill-restart certification.
+2. Deploy the outbox relay and replace the remaining certification processors
+   with concrete canonical-write, enrichment, alternate-index projection and
+   repair workers. Prove crash-after-effect against real business constraints.
+3. Run clean migration replay, multi-tenant load, larger combined-recall and
+   latency benchmarks, freshness repair and Redis/worker kill-restart
+   certification.
 4. Connect real Pipedream, Magic Inbox, QuickBooks/Xero/Conta Azul and at least
    one authorized ERP sandbox through the shared artifact/effect path.
 5. Implement and browser-test concrete Desk command center, pack composer and

@@ -6,6 +6,7 @@ import {
   bigint,
   boolean,
   customType,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -15,6 +16,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
 
 const tsvector = customType<{ data: string }>({
@@ -446,6 +448,10 @@ export const knowledgeEntities = pgTable(
       table.kind,
       table.externalKey,
     ),
+    uniqueIndex("knowledge_entities_id_workspace_idx").on(
+      table.id,
+      table.workspaceId,
+    ),
     index("knowledge_entities_workspace_id_idx").on(
       table.workspaceId,
       table.id,
@@ -485,6 +491,39 @@ export const knowledgeOutbox = pgTable(
       table.createdAt,
     ),
     index("knowledge_outbox_lease_expiry_idx").on(table.leaseExpiresAt),
+  ],
+);
+
+export const knowledgeEmbeddings = pgTable(
+  "knowledge_embeddings",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    model: text("model").notNull(),
+    inputVersion: text("input_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.entityId, table.model, table.inputVersion],
+    }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_embeddings_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_embeddings_workspace_model_idx").on(
+      table.workspaceId,
+      table.model,
+      table.inputVersion,
+    ),
+    index("knowledge_embeddings_cosine_idx")
+      .using("hnsw", table.embedding.op("vector_cosine_ops"))
+      .with({ m: 16, ef_construction: 64 }),
   ],
 );
 
@@ -596,6 +635,8 @@ export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
 export type NewKnowledgeOutboxEvent = typeof knowledgeOutbox.$inferInsert;
+export type KnowledgeEmbedding = typeof knowledgeEmbeddings.$inferSelect;
+export type NewKnowledgeEmbedding = typeof knowledgeEmbeddings.$inferInsert;
 export type ConnectorDeployment = typeof connectorDeployments.$inferSelect;
 export type NewConnectorDeployment = typeof connectorDeployments.$inferInsert;
 export type ConnectorEventReceipt = typeof connectorEventReceipts.$inferSelect;

@@ -213,6 +213,7 @@
       "name": "@open-agents/knowledge",
       "version": "0.0.0",
       "dependencies": {
+        "ai": "7.0.0-canary.174",
         "postgres": "^3.4.8",
       },
       "devDependencies": {

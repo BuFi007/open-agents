@@ -86,11 +86,14 @@ function fakeRepository(
   return {
     workspaceId: "workspace-1",
     published,
+    getById: async () => undefined,
     resolveAndEnqueue: async () => {
       throw new Error("not used");
     },
     page: async () => ({ items: [] }),
     search: async () => [],
+    upsertEmbedding: async () => ({ replayed: false }),
+    semanticSearch: async () => [],
     async claimOutbox() {
       return pending.splice(0).map((item) => ({
         ...item,

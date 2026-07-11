@@ -330,6 +330,20 @@
       "when": 1783798520340,
       "tag": "0046_easy_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1783798916958,
+      "tag": "0047_sleepy_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1783798935122,
+      "tag": "0048_motionless_doctor_strange",
+      "breakpoints": true
     }
   ]
 }

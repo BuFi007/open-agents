@@ -33,3 +33,7 @@ export {
   relayKnowledgeOutbox,
   type KnowledgeOutboxRelayResult,
 } from "./outbox-relay";
+export {
+  createKnowledgeEmbeddingProcessor,
+  type KnowledgeEmbeddingProcessorResult,
+} from "./knowledge-processors";

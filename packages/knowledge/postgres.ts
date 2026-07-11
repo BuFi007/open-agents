@@ -29,6 +29,7 @@ export type PersistentOutboxEvent = {
 
 export type WorkspaceKnowledgeRepository = {
   readonly workspaceId: string;
+  getById(id: string): Promise<PersistentEntity | undefined>;
   resolveAndEnqueue(input: {
     externalKey: string;
     kind: string;
@@ -45,6 +46,24 @@ export type WorkspaceKnowledgeRepository = {
     query: string,
     limit?: number,
   ): Promise<readonly (PersistentEntity & { lexicalScore: number })[]>;
+  upsertEmbedding(input: {
+    entityId: string;
+    model: string;
+    inputVersion: string;
+    inputHash: string;
+    sourceVersion: number;
+    embedding: readonly number[];
+  }): Promise<{ replayed: boolean }>;
+  semanticSearch(input: {
+    embedding: readonly number[];
+    model: string;
+    inputVersion: string;
+    limit?: number;
+  }): Promise<
+    readonly (PersistentEntity & {
+      semanticScore: number;
+    })[]
+  >;
   claimOutbox(input: {
     workerId: string;
     limit: number;
@@ -110,6 +129,19 @@ export function createPostgresKnowledgeRepository(options: {
       assertIdentifier("workspaceId", workspaceId, 191);
       return {
         workspaceId,
+        async getById(id) {
+          assertIdentifier("entity.id", id, 191);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<EntityRow[]>`
+              SELECT id, workspace_id, external_key, kind, name, version,
+                created_at, updated_at
+              FROM knowledge_entities
+              WHERE id = ${id} AND workspace_id = ${workspaceId}
+            `;
+            return rows[0] ? mapEntity(rows[0]) : undefined;
+          });
+        },
         async resolveAndEnqueue(input) {
           assertIdentifier("externalKey", input.externalKey, 500);
           assertIdentifier("kind", input.kind, 120);
@@ -243,6 +275,98 @@ export function createPostgresKnowledgeRepository(options: {
             return rows.map((row) => ({
               ...mapEntity(row),
               lexicalScore: row.lexical_score,
+            }));
+          });
+        },
+        async upsertEmbedding(input) {
+          assertIdentifier("entity.id", input.entityId, 191);
+          assertIdentifier("embedding.model", input.model, 191);
+          assertIdentifier("embedding.inputVersion", input.inputVersion, 120);
+          assertSha256("embedding.inputHash", input.inputHash);
+          if (!Number.isInteger(input.sourceVersion) || input.sourceVersion < 1)
+            throw new Error("Embedding source version must be positive");
+          const embedding = vectorLiteral(input.embedding);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const entities = await transaction<{ version: number }[]>`
+              SELECT version FROM knowledge_entities
+              WHERE id = ${input.entityId} AND workspace_id = ${workspaceId}
+            `;
+            if (!entities[0])
+              throw new Error("Embedding entity is not visible");
+            if (entities[0].version !== input.sourceVersion)
+              throw new Error("Embedding source version is stale");
+            const existing = await transaction<
+              { input_hash: string; source_version: number }[]
+            >`
+              SELECT input_hash, source_version FROM knowledge_embeddings
+              WHERE entity_id = ${input.entityId}
+                AND workspace_id = ${workspaceId}
+                AND model = ${input.model}
+                AND input_version = ${input.inputVersion}
+            `;
+            if (existing[0]) {
+              if (
+                existing[0].source_version === input.sourceVersion &&
+                existing[0].input_hash === input.inputHash
+              )
+                return { replayed: true };
+              if (existing[0].source_version >= input.sourceVersion)
+                throw new Error("Embedding idempotency conflict");
+            }
+            const rows = await transaction<{ entity_id: string }[]>`
+              INSERT INTO knowledge_embeddings (
+                entity_id, workspace_id, model, input_version, input_hash,
+                source_version, embedding
+              ) VALUES (
+                ${input.entityId}, ${workspaceId}, ${input.model},
+                ${input.inputVersion}, ${input.inputHash}, ${input.sourceVersion},
+                ${embedding}::vector
+              )
+              ON CONFLICT (entity_id, model, input_version)
+              DO UPDATE SET
+                input_hash = EXCLUDED.input_hash,
+                source_version = EXCLUDED.source_version,
+                embedding = EXCLUDED.embedding,
+                updated_at = now()
+              WHERE knowledge_embeddings.source_version < EXCLUDED.source_version
+              RETURNING entity_id
+            `;
+            if (!rows[0]) throw new Error("Embedding write did not converge");
+            return { replayed: false };
+          });
+        },
+        async semanticSearch(input) {
+          assertIdentifier("embedding.model", input.model, 191);
+          assertIdentifier("embedding.inputVersion", input.inputVersion, 120);
+          const limit = input.limit ?? 20;
+          if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+            throw new Error("Semantic search limit must be between 1 and 100");
+          const embedding = vectorLiteral(input.embedding);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<
+              (EntityRow & { semantic_score: number })[]
+            >`
+              SELECT entity.id, entity.workspace_id, entity.external_key,
+                entity.kind, entity.name, entity.version, entity.created_at,
+                entity.updated_at,
+                (1 - (projection.embedding <=> ${embedding}::vector))::real
+                  AS semantic_score
+              FROM knowledge_embeddings AS projection
+              JOIN knowledge_entities AS entity
+                ON entity.id = projection.entity_id
+                AND entity.workspace_id = projection.workspace_id
+              WHERE projection.workspace_id = ${workspaceId}
+                AND projection.model = ${input.model}
+                AND projection.input_version = ${input.inputVersion}
+              ORDER BY projection.embedding <=> ${embedding}::vector,
+                entity.id ASC
+              LIMIT ${limit}
+            `;
+            return rows.map((row) => ({
+              ...mapEntity(row),
+              semanticScore: row.semantic_score,
             }));
           });
         },
@@ -418,6 +542,19 @@ function assertIdentifier(name: string, value: string, maximum: number): void {
     })
   )
     throw new Error(`${name} is invalid`);
+}
+
+function assertSha256(name: string, value: string): void {
+  if (!/^sha256:[a-f0-9]{64}$/.test(value))
+    throw new Error(`${name} must be a SHA-256 reference`);
+}
+
+function vectorLiteral(values: readonly number[]): string {
+  if (values.length !== 1536)
+    throw new Error("Embedding vector must contain 1536 dimensions");
+  if (values.some((value) => !Number.isFinite(value)))
+    throw new Error("Embedding vector must contain only finite values");
+  return `[${values.join(",")}]`;
 }
 
 function assertSafePayload(payload: Readonly<Record<string, unknown>>): void {
