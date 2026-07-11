@@ -18,6 +18,7 @@ export type OperatingPackBrokerContext = {
   workspaceId: string;
   workspaceGrant: string;
   executionId: string;
+  agentRunId: string;
   allowedTools: readonly OperatingPackToolName[];
 };
 
@@ -49,15 +50,17 @@ async function callBroker(
     options.brokerSecret ?? process.env.BUFI_AGENT_TOOL_BROKER_SECRET;
   if (!brokerUrl || !secret || secret.length < 32)
     throw new Error("BUFI agent tool broker is not configured");
+  const requestId = `${context.executionId}:${toolName}:${crypto.randomUUID()}`;
   const body = JSON.stringify({
     workspaceId: context.workspaceId,
     executionId: context.executionId,
+    agentRunId: context.agentRunId,
+    traceId: requestId,
     workspaceGrant: context.workspaceGrant,
     tool: toolName,
     arguments: args,
   });
   const timestamp = String(Date.now());
-  const requestId = `${context.executionId}:${toolName}:${crypto.randomUUID()}`;
   const response = await (options.fetchImpl ?? fetch)(brokerUrl, {
     method: "POST",
     headers: {
@@ -97,7 +100,8 @@ function validateKnowledgePacket(
   }
   if (
     packet.workspaceId !== context.workspaceId ||
-    packet.workflowRunId !== context.executionId
+    packet.workflowRunId !== context.executionId ||
+    packet.agentRunId !== context.agentRunId
   )
     throw new Error("BUFI knowledge packet is not bound to this agent run");
   return packet;

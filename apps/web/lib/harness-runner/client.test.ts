@@ -57,6 +57,7 @@ describe("runHarnessTurnViaApi", () => {
           brokerContext: {
             workspaceId: "11111111-1111-4111-8111-111111111111",
             executionId: "op_test",
+            agentRunId: "agent_finance",
             allowedTools: ["knowledge_read"],
           },
         });
@@ -110,6 +111,7 @@ describe("runHarnessTurnViaApi", () => {
         workspaceId: "11111111-1111-4111-8111-111111111111",
         workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
         executionId: "op_test",
+        agentRunId: "agent_finance",
         allowedTools: ["knowledge_read"],
       },
       onChunk: (chunk) => {

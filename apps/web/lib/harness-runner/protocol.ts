@@ -70,6 +70,7 @@ const internalHarnessRunRequestSchema = z
         workspaceId: z.string().uuid(),
         workspaceGrant: z.string().min(80).max(2048),
         executionId: id,
+        agentRunId: id,
         allowedTools: z
           .array(
             z.enum(["knowledge_read", "workflow_run", "circle_get_balance"]),

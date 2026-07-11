@@ -296,6 +296,7 @@ async function runAgentStep(input: {
       workspaceId: workflow.workspaceId,
       workspaceGrant: workflow.workspaceGrant,
       executionId: workflow.executionId,
+      agentRunId: agent.qualifiedId,
       allowedTools: agent.tools as Array<
         "knowledge_read" | "workflow_run" | "circle_get_balance"
       >,

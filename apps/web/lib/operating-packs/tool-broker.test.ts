@@ -17,6 +17,7 @@ const context = {
   workspaceId: "11111111-1111-4111-8111-111111111111",
   workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
   executionId: "op_test",
+  agentRunId: "agent_finance",
   allowedTools: ["knowledge_read", "workflow_run"] as const,
 };
 
@@ -42,7 +43,7 @@ describe("operating-pack host tool broker", () => {
         inputVersion: "v1",
       },
       workflowRunId: context.executionId,
-      agentRunId: "agent:1",
+      agentRunId: context.agentRunId,
       traceId: "trace:1",
       generatedAtMs: 1_000,
       expiresAtMs: 2_000,
@@ -56,6 +57,7 @@ describe("operating-pack host tool broker", () => {
           workspaceId: context.workspaceId,
           workspaceGrant: context.workspaceGrant,
           tool: "knowledge_read",
+          agentRunId: context.agentRunId,
         });
         return Response.json({ result: packet });
       },
