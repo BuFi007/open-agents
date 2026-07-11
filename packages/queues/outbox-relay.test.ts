@@ -87,12 +87,20 @@ function fakeRepository(
     workspaceId: "workspace-1",
     published,
     getById: async () => undefined,
+    getByExternalKey: async () => undefined,
+    resolve: async () => {
+      throw new Error("not used");
+    },
     resolveAndEnqueue: async () => {
       throw new Error("not used");
     },
     page: async () => ({ items: [] }),
     search: async () => [],
     upsertEmbedding: async () => ({ replayed: false }),
+    getEnrichment: async () => undefined,
+    upsertEnrichment: async () => ({ replayed: false }),
+    getSearchProjection: async () => undefined,
+    upsertSearchProjection: async () => ({ replayed: false }),
     semanticSearch: async () => [],
     async claimOutbox() {
       return pending.splice(0).map((item) => ({

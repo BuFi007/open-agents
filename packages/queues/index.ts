@@ -34,6 +34,14 @@ export {
   type KnowledgeOutboxRelayResult,
 } from "./outbox-relay";
 export {
+  KNOWLEDGE_ENRICHMENT_CLASSIFIER_VERSION,
+  createKnowledgeAiProcessor,
+  createKnowledgeCanonicalWriteProcessor,
   createKnowledgeEmbeddingProcessor,
+  createKnowledgeEnrichmentProcessor,
+  createKnowledgeRepairProcessor,
+  createKnowledgeSearchProjectionProcessor,
+  type KnowledgeProcessorArtifact,
+  type KnowledgeProcessorArtifactReader,
   type KnowledgeEmbeddingProcessorResult,
 } from "./knowledge-processors";

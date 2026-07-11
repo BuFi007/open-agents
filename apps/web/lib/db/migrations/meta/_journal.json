@@ -344,6 +344,13 @@
       "when": 1783798935122,
       "tag": "0048_motionless_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1783800166546,
+      "tag": "0049_safe_logan",
+      "breakpoints": true
     }
   ]
 }

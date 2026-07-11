@@ -155,6 +155,16 @@ describe("Postgres connector data plane (live)", () => {
       expect(persisted.replayed).toBe(false);
       expect(persisted.outboxIds).toHaveLength(4);
       await expect(
+        first.getArtifact(workspaceA, artifact.artifactKey),
+      ).resolves.toMatchObject({
+        artifactKey: artifact.artifactKey,
+        sourceRevision: artifact.sourceRevision,
+        metadata: { filename: "invoice.pdf" },
+      });
+      await expect(
+        first.getArtifact(workspaceB, artifact.artifactKey),
+      ).resolves.toBeUndefined();
+      await expect(
         second.persistArtifactAndStages({
           deploymentId: deploymentA,
           artifact,

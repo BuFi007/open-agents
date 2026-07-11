@@ -5,11 +5,22 @@ import {
   createPostgresConnectorRepository,
   createSourceArtifact,
 } from "@open-agents/connectors";
-import { createPostgresKnowledgeRepository } from "@open-agents/knowledge";
+import {
+  type KnowledgeEmbeddingProvider,
+  type KnowledgeSearchDocument,
+  type KnowledgeSearchProjectionProvider,
+  createPostgresKnowledgeRepository,
+} from "@open-agents/knowledge";
 import {
   createBullMqRuntime,
+  createKnowledgeAiProcessor,
+  createKnowledgeCanonicalWriteProcessor,
+  createKnowledgeEmbeddingProcessor,
+  createKnowledgeEnrichmentProcessor,
+  createKnowledgeRepairProcessor,
+  createKnowledgeSearchProjectionProcessor,
   relayKnowledgeOutbox,
-  type BullMqRuntimeJob,
+  type QueueTraceFact,
 } from "@open-agents/queues";
 import postgres from "postgres";
 
@@ -23,8 +34,10 @@ const deploymentId = `dep-pipeline-${suffix}`;
 const connectionId = `conn-pipeline-${suffix}`;
 const namespace = `pipeline-${suffix.slice(0, 16)}`;
 const outboxIds = new Set<string>();
+const externalIndex = new Map<string, KnowledgeSearchDocument>();
+let projectionAttempts = 0;
 
-setDefaultTimeout(30_000);
+setDefaultTimeout(60_000);
 
 const connector = databaseUrl
   ? createPostgresConnectorRepository({ connectionString: databaseUrl })
@@ -35,13 +48,54 @@ const knowledge = databaseUrl
 const inspection = databaseUrl
   ? postgres(databaseUrl, { max: 1, connect_timeout: 10 })
   : null;
-const runtime = redisUrl ? createBullMqRuntime({ redisUrl, namespace }) : null;
+const queueFacts: QueueTraceFact[] = [];
+const runtime = redisUrl
+  ? createBullMqRuntime({
+      redisUrl,
+      namespace,
+      trace: (fact) => {
+        queueFacts.push(fact);
+      },
+    })
+  : null;
+const embeddingProvider: KnowledgeEmbeddingProvider = {
+  model: "certification/1536",
+  inputVersion: "entity-search.v1",
+  async embed(values) {
+    return {
+      model: this.model,
+      inputVersion: this.inputVersion,
+      dimensions: 1536,
+      embeddings: values.map(() =>
+        Array.from({ length: 1536 }, (_value, index) => (index === 0 ? 1 : 0)),
+      ),
+      usageTokens: values.length,
+    };
+  },
+};
+const searchProvider: KnowledgeSearchProjectionProvider = {
+  provider: "typesense-certification",
+  collection: "workspace-knowledge",
+  schemaVersion: "knowledge-search.v1",
+  async upsert(document) {
+    projectionAttempts += 1;
+    externalIndex.set(document.id, document);
+    if (projectionAttempts === 1)
+      throw new Error("SIMULATED_CRASH_AFTER_EFFECT");
+    return {
+      provider: this.provider,
+      collection: this.collection,
+      schemaVersion: this.schemaVersion,
+      providerRevision: document.inputHash,
+    };
+  },
+};
 
 describe("connected data plane (live Postgres + BullMQ)", () => {
   liveTest(
     "moves one source artifact through the transactional outbox into every worker stage",
     async () => {
-      if (!(connector && knowledge && runtime))
+      if (!(connector && knowledge && runtime && inspection))
         throw new Error("connected pipeline test is not configured");
       const manifest: ConnectorManifest = {
         version: 1,
@@ -95,13 +149,37 @@ describe("connected data plane (live Postgres + BullMQ)", () => {
       });
       persisted.outboxIds.forEach((id) => outboxIds.add(id));
 
-      const processed: BullMqRuntimeJob[] = [];
-      const process = async (job: BullMqRuntimeJob) => {
-        processed.push(job);
-      };
+      const canonical = createKnowledgeCanonicalWriteProcessor({
+        artifacts: connector,
+        forWorkspace: (id) => knowledge.forWorkspace(id),
+      });
+      const enrichment = createKnowledgeEnrichmentProcessor({
+        artifacts: connector,
+        forWorkspace: (id) => knowledge.forWorkspace(id),
+      });
+      const embedding = createKnowledgeEmbeddingProcessor({
+        forWorkspace: (id) => knowledge.forWorkspace(id),
+        provider: embeddingProvider,
+      });
+      const projection = createKnowledgeSearchProjectionProcessor({
+        forWorkspace: (id) => knowledge.forWorkspace(id),
+        provider: searchProvider,
+      });
+      const repair = createKnowledgeRepairProcessor({
+        canonical,
+        enrichment,
+        embedding,
+        projection,
+      });
       await runtime.start({
-        "source-connectors": process,
-        "knowledge-ai": process,
+        "source-connectors": canonical,
+        "knowledge-ai": createKnowledgeAiProcessor({
+          canonical,
+          enrichment,
+          embedding,
+          projection,
+          repair,
+        }),
       });
       const relayed = await relayKnowledgeOutbox({
         workspace: knowledge.forWorkspace(workspaceId),
@@ -116,21 +194,41 @@ describe("connected data plane (live Postgres + BullMQ)", () => {
           dead: 0,
         }),
       );
-      await runtime.waitUntilIdle(20_000);
-      expect(processed.map((job) => job.queue).sort()).toEqual([
-        "canonical-write",
-        "embedding",
-        "enrichment",
-        "projection",
-      ]);
-      expect(
-        processed.every(
-          (job) =>
-            job.workspaceId === workspaceId &&
-            job.payload.artifactKey === artifact.artifactKey &&
-            job.traceId === artifact.correlationId,
-        ),
-      ).toBe(true);
+      try {
+        await runtime.waitUntilIdle(45_000);
+      } catch (error) {
+        console.error("connected pipeline queue facts", queueFacts);
+        throw error;
+      }
+      const entity = await knowledge
+        .forWorkspace(workspaceId)
+        .getByExternalKey("SourceArtifact", artifact.artifactKey);
+      expect(entity).toMatchObject({ name: "invoice.pdf", version: 1 });
+      const enrichmentRecord = await knowledge
+        .forWorkspace(workspaceId)
+        .getEnrichment(entity!.id, "source-artifact-rules.v1");
+      expect(enrichmentRecord).toMatchObject({
+        classification: "invoice-document",
+        sourceVersion: 1,
+      });
+      const projectionRecord = await knowledge
+        .forWorkspace(workspaceId)
+        .getSearchProjection({
+          entityId: entity!.id,
+          provider: searchProvider.provider,
+          collection: searchProvider.collection,
+        });
+      expect(projectionRecord).toMatchObject({
+        sourceVersion: 1,
+        providerRevision: externalIndex.get(entity!.id)?.inputHash,
+      });
+      expect(externalIndex.size).toBe(1);
+      expect(projectionAttempts).toBe(2);
+      const [embeddingCount] = await inspection<{ count: number }[]>`
+        SELECT count(*)::int AS count FROM knowledge_embeddings
+        WHERE workspace_id = ${workspaceId} AND entity_id = ${entity!.id}
+      `;
+      expect(embeddingCount?.count).toBe(1);
       await expect(
         relayKnowledgeOutbox({
           workspace: knowledge.forWorkspace(workspaceId),
@@ -151,6 +249,7 @@ afterAll(async () => {
   if (inspection) {
     if (outboxIds.size)
       await inspection`DELETE FROM knowledge_outbox WHERE id IN ${inspection([...outboxIds])}`;
+    await inspection`DELETE FROM knowledge_entities WHERE workspace_id = ${workspaceId}`;
     await inspection`DELETE FROM source_artifacts WHERE workspace_id = ${workspaceId}`;
     await inspection`DELETE FROM connector_deployments WHERE deployment_id = ${deploymentId}`;
     await inspection.end({ timeout: 5 });

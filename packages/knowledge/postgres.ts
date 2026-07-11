@@ -27,9 +27,42 @@ export type PersistentOutboxEvent = {
   publishedAt: string | null;
 };
 
+export type PersistentKnowledgeEnrichment = Readonly<{
+  entityId: string;
+  workspaceId: string;
+  classifierVersion: string;
+  inputHash: string;
+  sourceVersion: number;
+  classification: string;
+  confidence: number;
+  updatedAt: string;
+}>;
+
+export type PersistentSearchProjection = Readonly<{
+  entityId: string;
+  workspaceId: string;
+  provider: string;
+  collection: string;
+  schemaVersion: string;
+  inputHash: string;
+  sourceVersion: number;
+  providerRevision: string | null;
+  projectedAt: string;
+  updatedAt: string;
+}>;
+
 export type WorkspaceKnowledgeRepository = {
   readonly workspaceId: string;
   getById(id: string): Promise<PersistentEntity | undefined>;
+  getByExternalKey(
+    kind: string,
+    externalKey: string,
+  ): Promise<PersistentEntity | undefined>;
+  resolve(input: {
+    externalKey: string;
+    kind: string;
+    name: string;
+  }): Promise<PersistentEntity>;
   resolveAndEnqueue(input: {
     externalKey: string;
     kind: string;
@@ -53,6 +86,33 @@ export type WorkspaceKnowledgeRepository = {
     inputHash: string;
     sourceVersion: number;
     embedding: readonly number[];
+  }): Promise<{ replayed: boolean }>;
+  getEnrichment(
+    entityId: string,
+    classifierVersion: string,
+  ): Promise<PersistentKnowledgeEnrichment | undefined>;
+  upsertEnrichment(input: {
+    entityId: string;
+    classifierVersion: string;
+    inputHash: string;
+    sourceVersion: number;
+    classification: string;
+    confidence: number;
+  }): Promise<{ replayed: boolean }>;
+  getSearchProjection(input: {
+    entityId: string;
+    provider: string;
+    collection: string;
+  }): Promise<PersistentSearchProjection | undefined>;
+  upsertSearchProjection(input: {
+    entityId: string;
+    provider: string;
+    collection: string;
+    schemaVersion: string;
+    inputHash: string;
+    sourceVersion: number;
+    providerRevision?: string;
+    projectedAt: string;
   }): Promise<{ replayed: boolean }>;
   semanticSearch(input: {
     embedding: readonly number[];
@@ -111,6 +171,30 @@ type OutboxRow = {
   published_at: Date | null;
 };
 
+type EnrichmentRow = {
+  entity_id: string;
+  workspace_id: string;
+  classifier_version: string;
+  input_hash: string;
+  source_version: number;
+  classification: string;
+  confidence: number;
+  updated_at: Date;
+};
+
+type SearchProjectionRow = {
+  entity_id: string;
+  workspace_id: string;
+  provider: string;
+  collection: string;
+  schema_version: string;
+  input_hash: string;
+  source_version: number;
+  provider_revision: string | null;
+  projected_at: Date;
+  updated_at: Date;
+};
+
 export function createPostgresKnowledgeRepository(options: {
   connectionString: string;
   maxConnections?: number;
@@ -140,6 +224,34 @@ export function createPostgresKnowledgeRepository(options: {
               WHERE id = ${id} AND workspace_id = ${workspaceId}
             `;
             return rows[0] ? mapEntity(rows[0]) : undefined;
+          });
+        },
+        async getByExternalKey(kind, externalKey) {
+          assertIdentifier("kind", kind, 120);
+          assertIdentifier("externalKey", externalKey, 500);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<EntityRow[]>`
+              SELECT id, workspace_id, external_key, kind, name, version,
+                created_at, updated_at
+              FROM knowledge_entities
+              WHERE workspace_id = ${workspaceId}
+                AND kind = ${kind}
+                AND external_key = ${externalKey}
+            `;
+            return rows[0] ? mapEntity(rows[0]) : undefined;
+          });
+        },
+        async resolve(input) {
+          assertIdentifier("externalKey", input.externalKey, 500);
+          assertIdentifier("kind", input.kind, 120);
+          assertIdentifier("name", input.name, 500);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await resolveEntity(transaction, workspaceId, input);
+            if (!rows[0])
+              throw new Error("Knowledge entity write did not return a result");
+            return mapEntity(rows[0]);
           });
         },
         async resolveAndEnqueue(input) {
@@ -189,12 +301,17 @@ export function createPostgresKnowledgeRepository(options: {
                 ${transaction.json(input.outbox.payload as postgres.JSONValue)}
               )
               ON CONFLICT (id) DO NOTHING
-              RETURNING *
+              RETURNING id, workspace_id, topic, schema_version, payload,
+                status, attempts, available_at, lease_owner, lease_expires_at,
+                last_error_code, created_at, published_at
             `;
             let event = events[0];
             if (!event) {
               const existing = await transaction<OutboxRow[]>`
-                SELECT * FROM knowledge_outbox
+                SELECT id, workspace_id, topic, schema_version, payload,
+                  status, attempts, available_at, lease_owner, lease_expires_at,
+                  last_error_code, created_at, published_at
+                FROM knowledge_outbox
                 WHERE id = ${input.outbox.id} AND workspace_id = ${workspaceId}
               `;
               event = existing[0];
@@ -336,6 +453,191 @@ export function createPostgresKnowledgeRepository(options: {
             return { replayed: false };
           });
         },
+        async getEnrichment(entityId, classifierVersion) {
+          assertIdentifier("entity.id", entityId, 191);
+          assertIdentifier(
+            "enrichment.classifierVersion",
+            classifierVersion,
+            120,
+          );
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<EnrichmentRow[]>`
+              SELECT entity_id, workspace_id, classifier_version, input_hash,
+                source_version, classification, confidence, updated_at
+              FROM knowledge_enrichments
+              WHERE entity_id = ${entityId}
+                AND workspace_id = ${workspaceId}
+                AND classifier_version = ${classifierVersion}
+            `;
+            return rows[0] ? mapEnrichment(rows[0]) : undefined;
+          });
+        },
+        async upsertEnrichment(input) {
+          assertIdentifier("entity.id", input.entityId, 191);
+          assertIdentifier(
+            "enrichment.classifierVersion",
+            input.classifierVersion,
+            120,
+          );
+          assertIdentifier(
+            "enrichment.classification",
+            input.classification,
+            120,
+          );
+          assertSha256("enrichment.inputHash", input.inputHash);
+          if (!Number.isInteger(input.sourceVersion) || input.sourceVersion < 1)
+            throw new Error("Enrichment source version must be positive");
+          if (
+            !Number.isFinite(input.confidence) ||
+            input.confidence < 0 ||
+            input.confidence > 1
+          )
+            throw new Error("Enrichment confidence must be between 0 and 1");
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            await assertCurrentEntityVersion(
+              transaction,
+              workspaceId,
+              input.entityId,
+              input.sourceVersion,
+              "Enrichment",
+            );
+            const existing = await transaction<
+              { input_hash: string; source_version: number }[]
+            >`
+              SELECT input_hash, source_version FROM knowledge_enrichments
+              WHERE entity_id = ${input.entityId}
+                AND workspace_id = ${workspaceId}
+                AND classifier_version = ${input.classifierVersion}
+            `;
+            if (
+              existing[0]?.source_version === input.sourceVersion &&
+              existing[0].input_hash === input.inputHash
+            )
+              return { replayed: true };
+            if (
+              existing[0] &&
+              existing[0].source_version >= input.sourceVersion
+            )
+              throw new Error("Enrichment idempotency conflict");
+            const rows = await transaction<{ entity_id: string }[]>`
+              INSERT INTO knowledge_enrichments (
+                entity_id, workspace_id, classifier_version, input_hash,
+                source_version, classification, confidence
+              ) VALUES (
+                ${input.entityId}, ${workspaceId}, ${input.classifierVersion},
+                ${input.inputHash}, ${input.sourceVersion},
+                ${input.classification}, ${input.confidence}
+              )
+              ON CONFLICT (entity_id, classifier_version)
+              DO UPDATE SET
+                input_hash = EXCLUDED.input_hash,
+                source_version = EXCLUDED.source_version,
+                classification = EXCLUDED.classification,
+                confidence = EXCLUDED.confidence,
+                updated_at = now()
+              WHERE knowledge_enrichments.source_version < EXCLUDED.source_version
+              RETURNING entity_id
+            `;
+            if (!rows[0]) throw new Error("Enrichment write did not converge");
+            return { replayed: false };
+          });
+        },
+        async getSearchProjection(input) {
+          assertIdentifier("entity.id", input.entityId, 191);
+          assertIdentifier("projection.provider", input.provider, 120);
+          assertIdentifier("projection.collection", input.collection, 120);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<SearchProjectionRow[]>`
+              SELECT entity_id, workspace_id, provider, collection,
+                schema_version, input_hash, source_version, provider_revision,
+                projected_at, updated_at
+              FROM knowledge_search_projections
+              WHERE entity_id = ${input.entityId}
+                AND workspace_id = ${workspaceId}
+                AND provider = ${input.provider}
+                AND collection = ${input.collection}
+            `;
+            return rows[0] ? mapSearchProjection(rows[0]) : undefined;
+          });
+        },
+        async upsertSearchProjection(input) {
+          assertIdentifier("entity.id", input.entityId, 191);
+          assertIdentifier("projection.provider", input.provider, 120);
+          assertIdentifier("projection.collection", input.collection, 120);
+          assertIdentifier(
+            "projection.schemaVersion",
+            input.schemaVersion,
+            120,
+          );
+          assertSha256("projection.inputHash", input.inputHash);
+          if (input.providerRevision)
+            assertIdentifier(
+              "projection.providerRevision",
+              input.providerRevision,
+              191,
+            );
+          if (!Number.isInteger(input.sourceVersion) || input.sourceVersion < 1)
+            throw new Error("Projection source version must be positive");
+          const projectedAt = new Date(input.projectedAt);
+          if (Number.isNaN(projectedAt.getTime()))
+            throw new Error("Projection timestamp is invalid");
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            await assertCurrentEntityVersion(
+              transaction,
+              workspaceId,
+              input.entityId,
+              input.sourceVersion,
+              "Projection",
+            );
+            const existing = await transaction<
+              { input_hash: string; source_version: number }[]
+            >`
+              SELECT input_hash, source_version
+              FROM knowledge_search_projections
+              WHERE entity_id = ${input.entityId}
+                AND workspace_id = ${workspaceId}
+                AND provider = ${input.provider}
+                AND collection = ${input.collection}
+            `;
+            if (
+              existing[0]?.source_version === input.sourceVersion &&
+              existing[0].input_hash === input.inputHash
+            )
+              return { replayed: true };
+            if (
+              existing[0] &&
+              existing[0].source_version >= input.sourceVersion
+            )
+              throw new Error("Projection idempotency conflict");
+            const rows = await transaction<{ entity_id: string }[]>`
+              INSERT INTO knowledge_search_projections (
+                entity_id, workspace_id, provider, collection, schema_version,
+                input_hash, source_version, provider_revision, projected_at
+              ) VALUES (
+                ${input.entityId}, ${workspaceId}, ${input.provider},
+                ${input.collection}, ${input.schemaVersion}, ${input.inputHash},
+                ${input.sourceVersion}, ${input.providerRevision ?? null},
+                ${projectedAt}
+              )
+              ON CONFLICT (entity_id, provider, collection)
+              DO UPDATE SET
+                schema_version = EXCLUDED.schema_version,
+                input_hash = EXCLUDED.input_hash,
+                source_version = EXCLUDED.source_version,
+                provider_revision = EXCLUDED.provider_revision,
+                projected_at = EXCLUDED.projected_at,
+                updated_at = now()
+              WHERE knowledge_search_projections.source_version < EXCLUDED.source_version
+              RETURNING entity_id
+            `;
+            if (!rows[0]) throw new Error("Projection write did not converge");
+            return { replayed: false };
+          });
+        },
         async semanticSearch(input) {
           assertIdentifier("embedding.model", input.model, 191);
           assertIdentifier("embedding.inputVersion", input.inputVersion, 120);
@@ -403,7 +705,11 @@ export function createPostgresKnowledgeRepository(options: {
                   lease_expires_at = now() + (${input.leaseMs} * interval '1 millisecond')
               FROM candidates
               WHERE event.id = candidates.id
-              RETURNING event.*
+              RETURNING event.id, event.workspace_id, event.topic,
+                event.schema_version, event.payload, event.status,
+                event.attempts, event.available_at, event.lease_owner,
+                event.lease_expires_at, event.last_error_code,
+                event.created_at, event.published_at
             `;
             return rows.map(mapOutbox);
           });
@@ -467,6 +773,52 @@ export function createPostgresKnowledgeRepository(options: {
   };
 }
 
+async function resolveEntity(
+  transaction: postgres.TransactionSql,
+  workspaceId: string,
+  input: { externalKey: string; kind: string; name: string },
+): Promise<EntityRow[]> {
+  return transaction<EntityRow[]>`
+    INSERT INTO knowledge_entities (
+      id, workspace_id, external_key, kind, name, version
+    ) VALUES (
+      ${randomUUID()}, ${workspaceId}, ${input.externalKey},
+      ${input.kind}, ${input.name}, 1
+    )
+    ON CONFLICT (workspace_id, kind, external_key)
+    DO UPDATE SET
+      name = EXCLUDED.name,
+      version = CASE
+        WHEN knowledge_entities.name IS DISTINCT FROM EXCLUDED.name
+          THEN knowledge_entities.version + 1
+        ELSE knowledge_entities.version
+      END,
+      updated_at = CASE
+        WHEN knowledge_entities.name IS DISTINCT FROM EXCLUDED.name
+          THEN now()
+        ELSE knowledge_entities.updated_at
+      END
+    RETURNING id, workspace_id, external_key, kind, name, version,
+      created_at, updated_at
+  `;
+}
+
+async function assertCurrentEntityVersion(
+  transaction: postgres.TransactionSql,
+  workspaceId: string,
+  entityId: string,
+  sourceVersion: number,
+  projectionName: string,
+): Promise<void> {
+  const rows = await transaction<{ version: number }[]>`
+    SELECT version FROM knowledge_entities
+    WHERE id = ${entityId} AND workspace_id = ${workspaceId}
+  `;
+  if (!rows[0]) throw new Error(`${projectionName} entity is not visible`);
+  if (rows[0].version !== sourceVersion)
+    throw new Error(`${projectionName} source version is stale`);
+}
+
 async function setWorkspaceScope(
   transaction: postgres.TransactionSql,
   workspaceId: string,
@@ -503,6 +855,36 @@ function mapOutbox(row: OutboxRow): PersistentOutboxEvent {
     lastErrorCode: row.last_error_code,
     createdAt: row.created_at.toISOString(),
     publishedAt: row.published_at?.toISOString() ?? null,
+  };
+}
+
+function mapEnrichment(row: EnrichmentRow): PersistentKnowledgeEnrichment {
+  return {
+    entityId: row.entity_id,
+    workspaceId: row.workspace_id,
+    classifierVersion: row.classifier_version,
+    inputHash: row.input_hash,
+    sourceVersion: row.source_version,
+    classification: row.classification,
+    confidence: row.confidence,
+    updatedAt: row.updated_at.toISOString(),
+  };
+}
+
+function mapSearchProjection(
+  row: SearchProjectionRow,
+): PersistentSearchProjection {
+  return {
+    entityId: row.entity_id,
+    workspaceId: row.workspace_id,
+    provider: row.provider,
+    collection: row.collection,
+    schemaVersion: row.schema_version,
+    inputHash: row.input_hash,
+    sourceVersion: row.source_version,
+    providerRevision: row.provider_revision,
+    projectedAt: row.projected_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   };
 }
 

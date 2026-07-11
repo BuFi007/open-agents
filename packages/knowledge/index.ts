@@ -8,7 +8,9 @@ export { createOutbox, type OutboxEvent, type OutboxStore } from "./outbox";
 export {
   createPostgresKnowledgeRepository,
   type PersistentEntity,
+  type PersistentKnowledgeEnrichment,
   type PersistentOutboxEvent,
+  type PersistentSearchProjection,
   type PostgresKnowledgeRepository,
   type WorkspaceKnowledgeRepository,
 } from "./postgres";
@@ -27,6 +29,14 @@ export {
   type KnowledgeEmbeddingBatch,
   type KnowledgeEmbeddingProvider,
 } from "./embedding-provider";
+export {
+  KNOWLEDGE_SEARCH_SCHEMA_VERSION,
+  createTypesenseKnowledgeProjectionProvider,
+  knowledgeSearchDocument,
+  type KnowledgeSearchDocument,
+  type KnowledgeSearchProjectionProvider,
+  type KnowledgeSearchProjectionResult,
+} from "./search-projection";
 export { needsRefresh, type ProjectionVersion } from "./freshness";
 export {
   evaluateProductionGate,

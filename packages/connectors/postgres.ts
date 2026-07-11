@@ -37,8 +37,27 @@ type ArtifactRow = {
   observed_at: Date;
 };
 
+export type PersistentSourceArtifact = Readonly<{
+  artifactKey: string;
+  workspaceId: string;
+  connectorId: string;
+  provider: SourceArtifact["provider"];
+  contentHash: string;
+  mimeType: string;
+  sizeBytes: number;
+  safeStorageRef: string;
+  sourceRevision: string;
+  metadata: Readonly<Record<string, unknown>>;
+  receivedAt: string;
+  observedAt: string;
+}>;
+
 export type PersistentConnectorRepository = ConnectorEventRegistry & {
   registerDeployment(manifest: ConnectorManifest): Promise<void>;
+  getArtifact(
+    workspaceId: string,
+    artifactKey: string,
+  ): Promise<PersistentSourceArtifact | undefined>;
   persistArtifactAndStages(input: {
     deploymentId: string;
     artifact: SourceArtifact;
@@ -143,6 +162,22 @@ export function createPostgresConnectorRepository(options: {
         return rows.length === 1;
       });
     },
+    async getArtifact(workspaceId, artifactKey) {
+      assertId("workspaceId", workspaceId, 191);
+      assertId("artifactKey", artifactKey, 191);
+      return sql.begin(async (transaction) => {
+        await setArtifactScope(transaction, workspaceId);
+        const rows = await transaction<ArtifactRow[]>`
+          SELECT artifact_key, workspace_id, connector_id, provider,
+            content_hash, mime_type, size_bytes, safe_storage_ref,
+            source_revision, metadata, received_at, observed_at
+          FROM source_artifacts
+          WHERE artifact_key = ${artifactKey}
+            AND workspace_id = ${workspaceId}
+        `;
+        return rows[0] ? mapArtifact(rows[0]) : undefined;
+      });
+    },
     async persistArtifactAndStages(input) {
       assertId("deploymentId", input.deploymentId, 191);
       return sql.begin(async (transaction) => {
@@ -196,7 +231,10 @@ export function createPostgresConnectorRepository(options: {
         const replayed = inserted.length === 0;
         if (replayed) {
           const rows = await transaction<ArtifactRow[]>`
-            SELECT * FROM source_artifacts
+            SELECT artifact_key, workspace_id, connector_id, provider,
+              content_hash, mime_type, size_bytes, safe_storage_ref,
+              source_revision, metadata, received_at, observed_at
+            FROM source_artifacts
             WHERE artifact_key = ${artifact.artifactKey}
               AND workspace_id = ${artifact.workspaceId}
           `;
@@ -262,6 +300,31 @@ async function setConnectorScope(
 ): Promise<void> {
   await setDeploymentScope(transaction, input.deploymentId);
   await transaction`SELECT set_config('app.workspace_id', ${input.workspaceId}, true)`;
+}
+
+async function setArtifactScope(
+  transaction: postgres.TransactionSql,
+  workspaceId: string,
+): Promise<void> {
+  await transaction`SET LOCAL ROLE open_agents_connector_runtime`;
+  await transaction`SELECT set_config('app.workspace_id', ${workspaceId}, true)`;
+}
+
+function mapArtifact(row: ArtifactRow): PersistentSourceArtifact {
+  return {
+    artifactKey: row.artifact_key,
+    workspaceId: row.workspace_id,
+    connectorId: row.connector_id,
+    provider: row.provider,
+    contentHash: row.content_hash,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    safeStorageRef: row.safe_storage_ref,
+    sourceRevision: row.source_revision,
+    metadata: row.metadata,
+    receivedAt: row.received_at.toISOString(),
+    observedAt: row.observed_at.toISOString(),
+  };
 }
 
 function validateReceipt(input: ConnectorEventReceiptInput): void {

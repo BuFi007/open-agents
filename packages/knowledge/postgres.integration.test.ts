@@ -35,9 +35,12 @@ liveDescribe("Postgres knowledge repository", () => {
     const tables = await raw<{ table_name: string }[]>`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND table_name IN ('knowledge_entities', 'knowledge_outbox')
+        AND table_name IN (
+          'knowledge_entities', 'knowledge_outbox',
+          'knowledge_enrichments', 'knowledge_search_projections'
+        )
     `;
-    if (tables.length !== 2)
+    if (tables.length !== 4)
       throw new Error("Run the knowledge database migration before live tests");
   });
 
@@ -235,6 +238,78 @@ liveDescribe("Postgres knowledge repository", () => {
     await expect(a.page("not-a-valid-cursor", 1)).rejects.toThrow(
       "cursor is invalid",
     );
+  });
+
+  test("persists version-bound enrichment and alternate-index receipts under RLS", async () => {
+    const entity = await a.resolve({
+      externalKey: "artifact:projection-cert",
+      kind: "SourceArtifact",
+      name: "invoice.pdf",
+    });
+    const enrichmentInput = {
+      entityId: entity.id,
+      classifierVersion: "source-artifact-rules.v1",
+      inputHash: `sha256:${"a".repeat(64)}`,
+      sourceVersion: entity.version,
+      classification: "invoice-document",
+      confidence: 0.98,
+    };
+    await expect(a.upsertEnrichment(enrichmentInput)).resolves.toEqual({
+      replayed: false,
+    });
+    await expect(a.upsertEnrichment(enrichmentInput)).resolves.toEqual({
+      replayed: true,
+    });
+    expect(
+      await a.getEnrichment(entity.id, enrichmentInput.classifierVersion),
+    ).toMatchObject(enrichmentInput);
+    expect(
+      await b.getEnrichment(entity.id, enrichmentInput.classifierVersion),
+    ).toBeUndefined();
+
+    const projectionInput = {
+      entityId: entity.id,
+      provider: "typesense-certification",
+      collection: "workspace-knowledge",
+      schemaVersion: "knowledge-search.v1",
+      inputHash: `sha256:${"b".repeat(64)}`,
+      sourceVersion: entity.version,
+      providerRevision: `sha256:${"b".repeat(64)}`,
+      projectedAt: "2026-07-11T12:00:00.000Z",
+    };
+    await expect(a.upsertSearchProjection(projectionInput)).resolves.toEqual({
+      replayed: false,
+    });
+    await expect(a.upsertSearchProjection(projectionInput)).resolves.toEqual({
+      replayed: true,
+    });
+    expect(
+      await a.getSearchProjection({
+        entityId: entity.id,
+        provider: projectionInput.provider,
+        collection: projectionInput.collection,
+      }),
+    ).toMatchObject(projectionInput);
+    expect(
+      await b.getSearchProjection({
+        entityId: entity.id,
+        provider: projectionInput.provider,
+        collection: projectionInput.collection,
+      }),
+    ).toBeUndefined();
+
+    const renamed = await a.resolve({
+      externalKey: entity.externalKey,
+      kind: entity.kind,
+      name: "renamed-invoice.pdf",
+    });
+    expect(renamed.version).toBe(entity.version + 1);
+    await expect(
+      a.upsertEnrichment({
+        ...enrichmentInput,
+        inputHash: `sha256:${"c".repeat(64)}`,
+      }),
+    ).rejects.toThrow("stale");
   });
 
   test("claims with skip-locked leases and bounds retry/dead-letter state", async () => {

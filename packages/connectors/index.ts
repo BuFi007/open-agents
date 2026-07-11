@@ -24,4 +24,5 @@ export {
 export {
   createPostgresConnectorRepository,
   type PersistentConnectorRepository,
+  type PersistentSourceArtifact,
 } from "./postgres";

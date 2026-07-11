@@ -527,6 +527,64 @@ export const knowledgeEmbeddings = pgTable(
   ],
 );
 
+export const knowledgeEnrichments = pgTable(
+  "knowledge_enrichments",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    classifierVersion: text("classifier_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    classification: text("classification").notNull(),
+    confidence: real("confidence").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.entityId, table.classifierVersion] }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_enrichments_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_enrichments_workspace_classification_idx").on(
+      table.workspaceId,
+      table.classification,
+    ),
+  ],
+);
+
+export const knowledgeSearchProjections = pgTable(
+  "knowledge_search_projections",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    provider: text("provider").notNull(),
+    collection: text("collection").notNull(),
+    schemaVersion: text("schema_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    providerRevision: text("provider_revision"),
+    projectedAt: timestamp("projected_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.entityId, table.provider, table.collection],
+    }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_search_projections_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_search_projections_workspace_version_idx").on(
+      table.workspaceId,
+      table.sourceVersion,
+    ),
+  ],
+);
+
 export const connectorDeployments = pgTable(
   "connector_deployments",
   {
@@ -637,6 +695,12 @@ export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
 export type NewKnowledgeOutboxEvent = typeof knowledgeOutbox.$inferInsert;
 export type KnowledgeEmbedding = typeof knowledgeEmbeddings.$inferSelect;
 export type NewKnowledgeEmbedding = typeof knowledgeEmbeddings.$inferInsert;
+export type KnowledgeEnrichment = typeof knowledgeEnrichments.$inferSelect;
+export type NewKnowledgeEnrichment = typeof knowledgeEnrichments.$inferInsert;
+export type KnowledgeSearchProjection =
+  typeof knowledgeSearchProjections.$inferSelect;
+export type NewKnowledgeSearchProjection =
+  typeof knowledgeSearchProjections.$inferInsert;
 export type ConnectorDeployment = typeof connectorDeployments.$inferSelect;
 export type NewConnectorDeployment = typeof connectorDeployments.$inferInsert;
 export type ConnectorEventReceipt = typeof connectorEventReceipts.$inferSelect;
