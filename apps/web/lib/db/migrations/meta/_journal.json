@@ -288,6 +288,13 @@
       "when": 1781591975650,
       "tag": "0040_salty_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783756134192,
+      "tag": "0041_rainy_power_man",
+      "breakpoints": true
     }
   ]
 }

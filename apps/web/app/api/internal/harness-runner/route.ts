@@ -11,10 +11,8 @@ import {
   INTERNAL_HARNESS_SIGNATURE_HEADER,
   verifyInternalHarnessRequest,
 } from "@/lib/harness-runner/internal-request";
-import type {
-  InternalHarnessRunEvent,
-  InternalHarnessRunRequest,
-} from "@/lib/harness-runner/protocol";
+import type { InternalHarnessRunEvent } from "@/lib/harness-runner/protocol";
+import { parseInternalHarnessRunRequest } from "@/lib/harness-runner/protocol";
 import {
   AGENT_HARNESS_BRIDGE_PORTS,
   DEFAULT_SANDBOX_PORTS,
@@ -52,11 +50,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let input: InternalHarnessRunRequest;
+  let input;
   try {
-    input = JSON.parse(bodyText) as InternalHarnessRunRequest;
+    input = parseInternalHarnessRunRequest(JSON.parse(bodyText));
   } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    return Response.json({ error: "Invalid harness request" }, { status: 400 });
   }
   if (!isExternalHarnessId(input.harnessId)) {
     return Response.json({ error: "Invalid harness" }, { status: 400 });
@@ -96,6 +94,8 @@ export async function POST(request: Request) {
             originalMessages: input.originalMessages,
             selectedModelId: input.selectedModelId,
             modelId: input.modelId,
+            instructions: input.instructions,
+            permissionMode: input.permissionMode,
             abortSignal: request.signal,
             onChunk: (chunk) => {
               send({ type: "chunk", chunk });

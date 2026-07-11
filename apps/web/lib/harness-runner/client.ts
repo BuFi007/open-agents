@@ -47,6 +47,8 @@ export async function runHarnessTurnViaApi(
     originalMessages: input.originalMessages as HarnessUIMessage[],
     selectedModelId: input.selectedModelId,
     modelId: input.modelId,
+    instructions: input.instructions,
+    permissionMode: input.permissionMode,
   };
   const body = JSON.stringify(requestBody);
   const response = await fetch(

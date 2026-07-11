@@ -335,6 +335,87 @@ export const workflowRunSteps = pgTable(
   ],
 );
 
+export const operatingPackRuns = pgTable(
+  "operating_pack_runs",
+  {
+    id: text("id").primaryKey(),
+    workflowRunId: text("workflow_run_id").unique(),
+    workspaceId: text("workspace_id").notNull(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    packId: text("pack_id").notNull(),
+    workflowId: text("workflow_id").notNull(),
+    harnessId: text("harness_id", {
+      enum: ["codex", "claude-code", "pi"],
+    }).notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: text("status", {
+      enum: [
+        "pending",
+        "running",
+        "awaiting_approval",
+        "approved",
+        "rejected",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("pending"),
+    approvalId: text("approval_id"),
+    result: jsonb("result").$type<Readonly<Record<string, unknown>>>(),
+    errorCode: text("error_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_runs_workspace_idempotency_idx").on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index("operating_pack_runs_session_id_idx").on(table.sessionId),
+    index("operating_pack_runs_user_id_idx").on(table.userId),
+    index("operating_pack_runs_status_idx").on(table.status),
+  ],
+);
+
+export const operatingPackTraces = pgTable(
+  "operating_pack_traces",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    sequence: integer("sequence").notNull(),
+    type: text("type").notNull(),
+    agentId: text("agent_id"),
+    summary: text("summary"),
+    data: jsonb("data").$type<Readonly<Record<string, unknown>>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_traces_run_sequence_idx").on(
+      table.runId,
+      table.sequence,
+    ),
+    index("operating_pack_traces_workspace_run_idx").on(
+      table.workspaceId,
+      table.runId,
+    ),
+  ],
+);
+
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
 export type VercelProjectLink = typeof vercelProjectLinks.$inferSelect;
@@ -351,6 +432,10 @@ export type WorkflowRun = typeof workflowRuns.$inferSelect;
 export type NewWorkflowRun = typeof workflowRuns.$inferInsert;
 export type WorkflowRunStep = typeof workflowRunSteps.$inferSelect;
 export type NewWorkflowRunStep = typeof workflowRunSteps.$inferInsert;
+export type OperatingPackRun = typeof operatingPackRuns.$inferSelect;
+export type NewOperatingPackRun = typeof operatingPackRuns.$inferInsert;
+export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
+export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
 export type GitHubInstallation = typeof githubInstallations.$inferSelect;
 export type NewGitHubInstallation = typeof githubInstallations.$inferInsert;
 

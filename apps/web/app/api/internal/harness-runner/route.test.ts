@@ -109,7 +109,7 @@ describe("/api/internal/harness-runner", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Invalid harness",
+      error: "Invalid harness request",
     });
     expect(spies.connectSandbox).not.toHaveBeenCalled();
   });

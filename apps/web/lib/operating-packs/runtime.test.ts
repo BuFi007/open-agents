@@ -1,0 +1,80 @@
+import { describe, expect, test } from "bun:test";
+import {
+  decideOperatingPackApprovalSchema,
+  listOperatingPackCatalog,
+  resolveOperatingPackInstallation,
+  resolveOperatingPackWorkflow,
+  startOperatingPackRunSchema,
+} from "./runtime";
+
+describe("operating-pack runtime contract", () => {
+  test("publishes only non-tax packs and their executable workflows", () => {
+    const catalog = listOperatingPackCatalog();
+    expect(catalog.map((pack) => pack.id)).toEqual([
+      "finance_ops",
+      "grant_ops",
+      "product_ops",
+      "sales_ops",
+      "bufi_internal_ops",
+    ]);
+    expect(catalog.some((pack) => pack.id.includes("tax"))).toBe(false);
+    expect(catalog.every((pack) => pack.workflows.length > 0)).toBe(true);
+  });
+
+  test("installs dependencies in deterministic topological order", () => {
+    expect(
+      resolveOperatingPackInstallation("sales_ops").map((pack) => pack.id),
+    ).toEqual(["product_ops", "finance_ops", "sales_ops"]);
+  });
+
+  test("resolves only a workflow owned by the requested pack", () => {
+    expect(
+      resolveOperatingPackWorkflow({
+        packId: "finance_ops",
+        workflowId: "weekly_finance_review",
+      }).workflow.title,
+    ).toBe("Weekly finance review");
+    expect(() =>
+      resolveOperatingPackWorkflow({
+        packId: "finance_ops",
+        workflowId: "feedback_to_release",
+      }),
+    ).toThrow("Unknown operating-pack workflow");
+    expect(() => resolveOperatingPackInstallation("tax_ops")).toThrow(
+      "Unsupported operating pack",
+    );
+  });
+
+  test("strictly validates starts and approval decisions", () => {
+    expect(
+      startOperatingPackRunSchema.safeParse({
+        sessionId: "session_1",
+        chatId: "chat_1",
+        packId: "finance_ops",
+        workflowId: "weekly_finance_review",
+        harnessId: "claude-code",
+        prompt: "Review this workspace",
+        idempotencyKey: "request:12345678",
+      }).success,
+    ).toBe(true);
+    expect(
+      startOperatingPackRunSchema.safeParse({
+        sessionId: "session_1",
+        chatId: "chat_1",
+        packId: "finance_ops",
+        workflowId: "weekly_finance_review",
+        harnessId: "claude-code",
+        prompt: "Review",
+        idempotencyKey: "request:12345678",
+        userId: "forged_user",
+      }).success,
+    ).toBe(false);
+    expect(
+      decideOperatingPackApprovalSchema.safeParse({
+        decision: "approved",
+        reason: "Reviewed evidence",
+        actorId: "forged_user",
+      }).success,
+    ).toBe(false);
+  });
+});
