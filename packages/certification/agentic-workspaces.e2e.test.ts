@@ -105,11 +105,10 @@ describe("Agentic Workspaces contract E2E", () => {
       async getByDeploymentId() {
         return manifest;
       },
-      async hasSeenEvent(eventId) {
-        return seen.has(eventId);
-      },
-      async markSeenEvent(eventId) {
+      async consumeEvent({ eventId }) {
+        if (seen.has(eventId)) return false;
         seen.add(eventId);
+        return true;
       },
     };
     const verified = await verifySignedConnectorEvent(

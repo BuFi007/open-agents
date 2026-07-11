@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { ConnectorStage } from "./manifest";
 
 export type SourceArtifactInput = {
@@ -80,11 +81,18 @@ export function createSourceArtifact(
     throw new Error(
       "source artifact received time cannot be materially after observation",
     );
-  const artifactKey = `${input.workspaceId}:${input.connectorId}:${providerIdentity(input)}`;
+  const artifactKey = `artifact:${createHash("sha256")
+    .update(
+      `${input.workspaceId}:${input.connectorId}:${providerIdentity(input)}`,
+    )
+    .digest("hex")}`;
+  const sourceRevision = `revision:${createHash("sha256")
+    .update(`${artifactKey}:${input.schemaVersion}:${input.normalizerVersion}`)
+    .digest("hex")}`;
   return {
     ...input,
     artifactKey,
-    sourceRevision: `${artifactKey}:${input.schemaVersion}:${input.normalizerVersion}`,
+    sourceRevision,
   };
 }
 

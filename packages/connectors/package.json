@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-agents/queues": "workspace:*"
+    "@open-agents/queues": "workspace:*",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@open-agents/tsconfig": "workspace:*",

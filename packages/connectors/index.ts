@@ -11,6 +11,7 @@ export {
 } from "./manifest";
 export {
   type ConnectorEventRegistry,
+  type ConnectorEventReceiptInput,
   type SignedConnectorEventInput,
   verifySignedConnectorEvent,
 } from "./signed-event";
@@ -20,3 +21,7 @@ export {
   createSourceArtifact,
   sourceArtifactStageOperationId,
 } from "./source-artifact";
+export {
+  createPostgresConnectorRepository,
+  type PersistentConnectorRepository,
+} from "./postgres";

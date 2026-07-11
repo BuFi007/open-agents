@@ -302,6 +302,13 @@
       "when": 1783795266917,
       "tag": "0042_bumpy_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1783796999863,
+      "tag": "0043_spicy_sleepwalker",
+      "breakpoints": true
     }
   ]
 }

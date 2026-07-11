@@ -2,6 +2,7 @@ import type { SandboxState } from "@open-agents/sandbox";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -475,6 +476,90 @@ export const knowledgeOutbox = pgTable(
   ],
 );
 
+export const connectorDeployments = pgTable(
+  "connector_deployments",
+  {
+    deploymentId: text("deployment_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectionId: text("connection_id").notNull(),
+    environment: text("environment", {
+      enum: ["development", "staging", "production"],
+    }).notNull(),
+    manifest: jsonb("manifest")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("connector_deployments_workspace_connection_env_idx").on(
+      table.workspaceId,
+      table.connectionId,
+      table.environment,
+    ),
+    index("connector_deployments_workspace_idx").on(table.workspaceId),
+  ],
+);
+
+export const connectorEventReceipts = pgTable(
+  "connector_event_receipts",
+  {
+    deploymentId: text("deployment_id")
+      .notNull()
+      .references(() => connectorDeployments.deploymentId, {
+        onDelete: "cascade",
+      }),
+    eventId: text("event_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    timestampMs: bigint("timestamp_ms", { mode: "number" }).notNull(),
+    bodyHash: text("body_hash").notNull(),
+    receivedAt: timestamp("received_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deploymentId, table.eventId] }),
+    index("connector_event_receipts_workspace_received_idx").on(
+      table.workspaceId,
+      table.receivedAt,
+    ),
+  ],
+);
+
+export const sourceArtifacts = pgTable(
+  "source_artifacts",
+  {
+    artifactKey: text("artifact_key").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectorId: text("connector_id").notNull(),
+    provider: text("provider", {
+      enum: ["manual", "gmail", "outlook", "pipedream"],
+    }).notNull(),
+    contentHash: text("content_hash").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    safeStorageRef: text("safe_storage_ref").notNull(),
+    sourceRevision: text("source_revision").notNull(),
+    metadata: jsonb("metadata")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    receivedAt: timestamp("received_at").notNull(),
+    observedAt: timestamp("observed_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("source_artifacts_workspace_revision_idx").on(
+      table.workspaceId,
+      table.sourceRevision,
+    ),
+    index("source_artifacts_workspace_observed_idx").on(
+      table.workspaceId,
+      table.observedAt,
+    ),
+  ],
+);
+
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
 export type VercelProjectLink = typeof vercelProjectLinks.$inferSelect;
@@ -499,6 +584,13 @@ export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
 export type NewKnowledgeOutboxEvent = typeof knowledgeOutbox.$inferInsert;
+export type ConnectorDeployment = typeof connectorDeployments.$inferSelect;
+export type NewConnectorDeployment = typeof connectorDeployments.$inferInsert;
+export type ConnectorEventReceipt = typeof connectorEventReceipts.$inferSelect;
+export type NewConnectorEventReceipt =
+  typeof connectorEventReceipts.$inferInsert;
+export type SourceArtifactRecord = typeof sourceArtifacts.$inferSelect;
+export type NewSourceArtifactRecord = typeof sourceArtifacts.$inferInsert;
 export type GitHubInstallation = typeof githubInstallations.$inferSelect;
 export type NewGitHubInstallation = typeof githubInstallations.$inferInsert;
 

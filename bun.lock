@@ -134,6 +134,7 @@
       "devDependencies": {
         "@open-agents/tsconfig": "workspace:*",
         "@types/bun": "1.3.12",
+        "postgres": "^3.4.7",
         "typescript": "^5",
       },
     },
@@ -157,6 +158,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@open-agents/queues": "workspace:*",
+        "postgres": "^3.4.7",
       },
       "devDependencies": {
         "@open-agents/tsconfig": "workspace:*",
