@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 
 export type HarnessCertificationTarget =
-  "hermes" | "codex" | "claude-code" | "open-agents" | "computer-use";
+  | "hermes"
+  | "codex"
+  | "claude-code"
+  | "open-agents"
+  | "computer-use";
 export type HarnessCertificationChecks = {
   identityBound: boolean;
   workspaceBound: boolean;
