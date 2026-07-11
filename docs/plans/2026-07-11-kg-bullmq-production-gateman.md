@@ -77,6 +77,10 @@ authorized provider sandboxes are production certified.
   specialist changes the packet hash. Ten focused Desk tests pass and
   `@bu/intelligence` typechecks. The Desk full API shard still exposes unrelated
   pre-existing type debt, so this is not represented as a green Desk build.
+- Tenant-safe citation resolution: Desk PR #541 verifies membership before any
+  packet read and rechecks schema, packet hash, citation/reference alignment and
+  storage/workspace binding. Unknown handles return 404; tampered packets return
+  409. Seven focused adapter/resolver tests pass.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -112,7 +116,7 @@ authorized provider sandboxes are production certified.
    outbox reads were removed after the audit identified rolling-migration risk.
 4. **Applaud Humility — pass.** The result remains `YES_WITH_FOLLOWUPS`; local
    Typesense and isolated Redis are not represented as hosted production
-   certification, and 66.4% is not represented as full parity.
+   certification, and 66.8% is not represented as full parity.
 
 ### Section results
 

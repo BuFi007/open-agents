@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 66.4%.** The repository has strong contracts and a growing
+**Production parity: 66.8%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -17,12 +17,12 @@ provider, rendered client, production worker, or live evidence path.
 | Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
-| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 88% | 8.8 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Desk now emits the exact run-bound packet contract and Open Agents validates it. Native client citation rendering and larger load/freshness repair remain open. |
+| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 92% | 9.2 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Desk emits the exact run-bound packet contract, Open Agents validates it, and a tenant-safe integrity-checking citation resolver API exists. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **66.4%** |  |
+| **Total** | **100** |  | **66.8%** |  |
 
 ## Newly proven in this pass
 
@@ -103,6 +103,11 @@ provider, rendered client, production worker, or live evidence path.
   with Open Agents' real validator. Ten focused Desk tests pass; its intelligence
   package typechecks. Desk's full API shard remains red on pre-existing unrelated
   type debt and is not counted as a green application build.
+- Desk PR #541 also exposes a membership-gated ContextPacket/citation resolver.
+  It revalidates packet schema, SHA-256 integrity, citation/reference alignment,
+  workspace/storage binding and requested `cN` handles before returning evidence.
+  Four adapter tests and three route tests pass; unknown handles, tampering and
+  cross-tenant access fail closed.
 
 ## Must-have gaps before 100%
 
