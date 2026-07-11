@@ -335,6 +335,11 @@ export type TaxInvoicePhase =
   | "wsfex_submission_required"
   | "authority_pending"
   | "authorized"
+  | "settlement_pending"
+  | "settlement_attention_required"
+  | "fx_ingress_review_required"
+  | "tax_declaration_review_required"
+  | "accounting_ready"
   | "rejected"
   | "blocked";
 
@@ -662,7 +667,33 @@ export async function advanceTaxInvoiceCase(
       runId,
       input.idempotencyKey,
     );
-    return checkpoint(run, nextActions, "authorized", handoff, true);
+    if (
+      run.settlementState === "reversed" ||
+      run.settlementState === "disputed"
+    )
+      return checkpoint(
+        run,
+        nextActions,
+        "settlement_attention_required",
+        handoff,
+      );
+    if (run.settlementState !== "final")
+      return checkpoint(run, nextActions, "settlement_pending", handoff);
+    if (run.fxIngressState === "unverified")
+      return checkpoint(
+        run,
+        nextActions,
+        "fx_ingress_review_required",
+        handoff,
+      );
+    if (run.taxDeclarationState !== "declared")
+      return checkpoint(
+        run,
+        nextActions,
+        "tax_declaration_review_required",
+        handoff,
+      );
+    return checkpoint(run, nextActions, "accounting_ready", handoff, true);
   }
   return checkpoint(run, nextActions, "authority_pending", null);
 }

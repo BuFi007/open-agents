@@ -45,10 +45,27 @@ function phaseOrdinal(phase: TaxInvoiceCheckpoint["phase"]): number {
       "wsfex_submission_required",
       "authority_pending",
       "authorized",
+      "settlement_pending",
+      "settlement_attention_required",
+      "fx_ingress_review_required",
+      "tax_declaration_review_required",
+      "accounting_ready",
       "rejected",
       "blocked",
     ].indexOf(phase) + 1
   );
+}
+
+function checkpointTraceType(phase: TaxInvoiceCheckpoint["phase"]): string {
+  if (phase === "authorized") return "authority.verified";
+  if (phase === "settlement_pending") return "settlement.pending";
+  if (phase === "settlement_attention_required")
+    return "settlement.attention_required";
+  if (phase === "fx_ingress_review_required") return "fx.review_required";
+  if (phase === "tax_declaration_review_required") return "tax.review_required";
+  if (phase === "accounting_ready") return "accounting.ready";
+  if (phase.includes("approval")) return "approval.requested";
+  return "workflow.checkpoint";
 }
 
 async function markStartedStep(
@@ -105,7 +122,7 @@ async function persistCheckpointStep(
 ): Promise<void> {
   "use step";
   const status = checkpoint.terminal
-    ? checkpoint.phase === "authorized"
+    ? checkpoint.phase === "accounting_ready"
       ? "completed"
       : checkpoint.phase === "rejected"
         ? "rejected"
@@ -115,6 +132,9 @@ async function persistCheckpointStep(
           "accountant_approval_required",
           "manual_arca_issuance_required",
           "readiness_interaction_required",
+          "settlement_attention_required",
+          "fx_ingress_review_required",
+          "tax_declaration_review_required",
         ].includes(checkpoint.phase)
       ? "awaiting_approval"
       : "running";
@@ -143,12 +163,7 @@ async function persistCheckpointStep(
       runId: input.executionId,
       workspaceId: input.dispatch.workspaceId,
       sequence: traceSequence(checkpoint),
-      type:
-        checkpoint.phase === "authorized"
-          ? "authority.verified"
-          : checkpoint.phase.includes("approval")
-            ? "approval.requested"
-            : "workflow.checkpoint",
+      type: checkpointTraceType(checkpoint.phase),
       agentId: "tax_automation:tax_orchestrator",
       summary: `Tax invoice phase: ${checkpoint.phase}`,
       data: {
@@ -190,10 +205,11 @@ export async function runTaxInvoiceWorkflow(input: TaxInvoiceWorkflowInput) {
   try {
     let checkpoint = await prepareStep(input);
     await persistCheckpointStep(input, checkpoint);
-    for (let poll = 0; poll < 672 && !checkpoint.terminal; poll += 1) {
-      // Keep the first human/Reclaim interactions feeling immediate, then
-      // back off for long-lived accountant or authority waits.
-      await sleep(poll < 30 ? "2m" : "15m");
+    for (let poll = 0; poll < 487 && !checkpoint.terminal; poll += 1) {
+      // Keep Reclaim and authority interactions feeling immediate, back off
+      // across the first day, then durably monitor settlement/accounting for
+      // up to one year without holding a process or credential in memory.
+      await sleep(poll < 30 ? "2m" : poll < 122 ? "15m" : "1d");
       checkpoint = await advanceStep(input);
       await persistCheckpointStep(input, checkpoint);
     }
@@ -206,7 +222,7 @@ export async function runTaxInvoiceWorkflow(input: TaxInvoiceWorkflowInput) {
     }
     return {
       status:
-        checkpoint.phase === "authorized"
+        checkpoint.phase === "accounting_ready"
           ? ("completed" as const)
           : ("failed" as const),
       checkpoint,

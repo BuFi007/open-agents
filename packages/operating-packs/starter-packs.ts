@@ -450,7 +450,7 @@ export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
   workflows: [
     {
       id: "ai_invoice_to_factura_e",
-      title: "AI invoice to verified Factura E",
+      title: "AI invoice to reconciled Factura E",
       agentIds: ["tax_evidence", "tax_orchestrator"],
       requiredApproval: false,
       risk: "high",
@@ -468,6 +468,8 @@ export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
         "factura_e.prepare",
         "factura_e.read",
         "reclaim.handoff",
+        "settlement.reconcile",
+        "accounting.attestation.read",
       ],
     },
     {

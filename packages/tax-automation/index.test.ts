@@ -285,7 +285,7 @@ describe("Tax Automation Engine agent bridge", () => {
     expect(JSON.stringify(requests)).not.toContain("clave fiscal");
   });
 
-  test("advances deterministically through external approval and verified authority states", async () => {
+  test("advances deterministically through approval, authority, settlement, and accounting states", async () => {
     let state = run({ readinessState: "verified", revision: 3 });
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
@@ -368,9 +368,97 @@ describe("Tax Automation Engine agent bridge", () => {
       revision: 7,
     });
     expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
-      phase: "authorized",
+      phase: "settlement_pending",
+      terminal: false,
+      handoff: { accountingHandoff: { requiresApproval: true } },
+    });
+    state = run({
+      readinessState: "verified",
+      intentState: "frozen",
+      approvalState: "user_approved",
+      issuanceState: "arca_authorized",
+      settlementState: "final",
+      intentHash: "c".repeat(64),
+      revision: 8,
+    });
+    expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
+      phase: "fx_ingress_review_required",
+      terminal: false,
+    });
+    state = run({
+      readinessState: "verified",
+      intentState: "frozen",
+      approvalState: "user_approved",
+      issuanceState: "arca_authorized",
+      settlementState: "final",
+      fxIngressState: "verified",
+      taxDeclarationState: "ready_for_accountant",
+      intentHash: "c".repeat(64),
+      revision: 9,
+    });
+    expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
+      phase: "tax_declaration_review_required",
+      terminal: false,
+    });
+    state = run({
+      readinessState: "verified",
+      intentState: "frozen",
+      approvalState: "user_approved",
+      issuanceState: "arca_authorized",
+      settlementState: "final",
+      fxIngressState: "verified",
+      taxDeclarationState: "declared",
+      financeEligibility: "reviewable",
+      intentHash: "c".repeat(64),
+      revision: 10,
+    });
+    expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
+      phase: "accounting_ready",
       terminal: true,
       handoff: { accountingHandoff: { requiresApproval: true } },
+    });
+  });
+
+  test("never treats a reversed or disputed settlement as completed", async () => {
+    let state = run({
+      readinessState: "verified",
+      intentState: "frozen",
+      approvalState: "user_approved",
+      issuanceState: "arca_authorized",
+      settlementState: "reversed",
+      fxIngressState: "verified",
+      taxDeclarationState: "declared",
+      intentHash: "d".repeat(64),
+      revision: 11,
+    });
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      evidenceIngestToken: "evidence-token-at-least-sixteen",
+      fetchImpl: async (url) => {
+        const path = new URL(String(url)).pathname;
+        if (path === `/v1/agent/runs/${runId}`)
+          return response({ data: state, nextActions: ["review_reversal"] });
+        if (
+          path.endsWith(
+            "tax_ar_factura_e_get_accounting_attestation_packet/invoke",
+          )
+        )
+          return response({
+            data: { accountingHandoff: { requiresApproval: true } },
+          });
+        throw new Error(`unexpected ${path}`);
+      },
+    });
+
+    expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
+      phase: "settlement_attention_required",
+      terminal: false,
+    });
+    state = { ...state, settlementState: "disputed", revision: 12 };
+    expect(await advanceTaxInvoiceCase(client, input, runId)).toMatchObject({
+      phase: "settlement_attention_required",
+      terminal: false,
     });
   });
 
