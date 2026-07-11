@@ -20,6 +20,10 @@ import type { OperatingPackHarnessId } from "@/lib/operating-packs/runtime";
 import { resolveOperatingPackWorkflow } from "@/lib/operating-packs/runtime";
 import { getOperatingPackApprovalToken } from "@/lib/operating-packs/approval-token";
 import {
+  type OperatingPackMobileNotificationStatus,
+  sendOperatingPackMobileNotification,
+} from "@/lib/operating-packs/mobile-notification";
+import {
   deleteOperatingPackWorkspaceGrant,
   getOperatingPackWorkspaceGrant,
 } from "@/lib/operating-packs/credential-vault";
@@ -220,6 +224,33 @@ async function persistApprovalStep(
       data: { approvalId },
     }),
   ]);
+}
+
+async function notifyMobileStep(
+  input: OperatingPackWorkflowInput,
+  status: OperatingPackMobileNotificationStatus,
+  sequence: number,
+): Promise<void> {
+  "use step";
+  const result = await sendOperatingPackMobileNotification({
+    executionId: input.executionId,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    packId: input.packId,
+    workflowId: input.workflowId,
+    status,
+  });
+  await appendOperatingPackTrace({
+    id: traceId(input.executionId, sequence),
+    runId: input.executionId,
+    workspaceId: input.workspaceId,
+    sequence,
+    type: result.delivered ? "notification.dispatched" : "notification.skipped",
+    summary: result.delivered
+      ? `Mobile notification dispatched for ${status}`
+      : `Mobile notification ${result.reason ?? "not delivered"}`,
+    data: { status, delivered: result.delivered, reason: result.reason },
+  });
 }
 
 async function persistApprovalDecisionStep(
@@ -538,6 +569,7 @@ export async function runOperatingPackWorkflow(
       });
       try {
         await persistApprovalStep(input, runtime.workflowTitle);
+        await notifyMobileStep(input, "awaiting_approval", 5);
         const decision = await Promise.race([
           hook,
           sleep("7d").then(
@@ -550,8 +582,10 @@ export async function runOperatingPackWorkflow(
           ),
         ]);
         await persistApprovalDecisionStep(input, decision);
-        if (decision.decision === "rejected")
+        if (decision.decision === "rejected") {
+          await notifyMobileStep(input, "rejected", 6);
           return { status: "rejected" as const };
+        }
       } finally {
         hook.dispose();
       }
@@ -564,9 +598,11 @@ export async function runOperatingPackWorkflow(
     );
     await pauseAtSafeCheckpoint(input, "before_join", 9_000);
     await persistCompletedStep(input, results);
+    await notifyMobileStep(input, "completed", 10_002);
     return { status: "completed" as const, results };
   } catch (error) {
     await persistFailedStep(input, error);
+    await notifyMobileStep(input, "failed", 10_003);
     throw error;
   }
 }
