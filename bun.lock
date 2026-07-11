@@ -239,12 +239,14 @@
       "name": "@open-agents/queues",
       "version": "0.0.0",
       "dependencies": {
+        "@open-agents/knowledge": "workspace:*",
         "bullmq": "^5.58.5",
         "ioredis": "^5.9.2",
       },
       "devDependencies": {
         "@open-agents/tsconfig": "workspace:*",
         "@types/bun": "1.3.12",
+        "postgres": "^3.4.8",
         "typescript": "^5",
       },
     },

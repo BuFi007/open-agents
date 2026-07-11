@@ -30,6 +30,9 @@ certified.
 - Live isolated Redis 8.6/BullMQ: 1 mixed-workload suite pass with 17 assertions,
   two runtime replicas, noisy/quiet tenants, transient/permanent/deadline paths,
   sanitized DLQ and trace facts.
+- Live Neon → isolated Redis/BullMQ: 1 cross-plane suite pass; a forced crash
+  after enqueue but before outbox acknowledgement is reclaimed and processed
+  exactly once.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -41,4 +44,3 @@ certified.
 3. Add lag/age/CPU/memory/DB/provider metrics and alert thresholds to the
    deployed workers.
 4. Certify Typesense/embedding projection and retrieval recall under load.
-

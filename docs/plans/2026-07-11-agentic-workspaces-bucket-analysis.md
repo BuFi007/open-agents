@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 51%.** The repository has strong contracts and a growing
+**Production parity: 52.5%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -15,14 +15,14 @@ provider, rendered client, production worker, or live evidence path.
 | --- | ---: | ---: | ---: | --- |
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
-| Canonical Postgres KG and transactional outbox | 15 | 60% | 9.0 | Live Neon test proves atomic resolver/outbox, rollback, leases, stable cursors and two-tenant RLS through a no-bypass runtime role. Connector ingestion is not wired to it yet. |
-| BullMQ data plane and workload isolation | 12 | 58% | 7.0 | Real BullMQ/Redis test proves global workspace slots across two runtimes, retries, permanent-error discard, deadlines, compact DLQ and safe trace facts. Configured Upstash TCP readiness currently fails. |
+| Canonical Postgres KG and transactional outbox | 15 | 65% | 9.8 | Live Neon test proves atomic resolver/outbox, rollback, leases, stable cursors and two-tenant RLS through a no-bypass runtime role. A live relay reaches BullMQ without duplicate processing; connectors are not wired yet. |
+| BullMQ data plane and workload isolation | 12 | 63% | 7.6 | Real BullMQ/Redis test proves global workspace slots across two runtimes, retries, permanent-error discard, deadlines, compact DLQ, safe trace facts and crash-after-enqueue relay recovery. Configured Upstash TCP readiness currently fails. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 30% | 3.0 | Ranking/freshness/gate contracts exist; no live index, recall corpus, query plan or repair worker is certified. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 25% | 3.3 | Manifests, signed-event, artifact and effect contracts exist; live provider sandboxes and canonical ingestion/effect wiring are absent. |
 | Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **51.1%** |  |
+| **Total** | **100** |  | **52.5%** |  |
 
 ## Newly proven in this pass
 
@@ -37,6 +37,9 @@ provider, rendered client, production worker, or live evidence path.
   fixed PostgreSQL microsecond/JavaScript millisecond replay drift.
 - Real BullMQ queues multiplexed by worker profile, preventing concurrency from
   multiplying once per logical queue.
+- A Postgres-to-BullMQ relay with explicit topic routing, leases and replay-safe
+  database acknowledgement; a live fault-injection test crashes after enqueue
+  and proves the recovered relay does not process the job twice.
 - Redis sorted-set workspace admission shared across runtime replicas, bounded
   deadlines with `AbortSignal`, retry classification, sanitized bounded DLQ and
   payload-free trace facts.
@@ -46,9 +49,9 @@ provider, rendered client, production worker, or live evidence path.
 1. Replace or repair the configured Redis/Upstash TCP provider and run the same
    mixed workload against that production target. A local isolated Redis pass is
    evidence for the runtime, not the hosted provider.
-2. Wire the Postgres outbox relay to the BullMQ runtime and concrete connector,
-   canonical-write, enrichment, embedding, Typesense, projection and repair
-   processors. Prove crash-after-claim and crash-after-effect against the real DB.
+2. Deploy the outbox relay and wire concrete connector, canonical-write,
+   enrichment, embedding, Typesense, projection and repair processors. Prove
+   crash-after-effect against the real business-effect constraints.
 3. Run clean migration replay, indexed query plans, multi-tenant load, retrieval
    recall, freshness repair and Redis/worker kill-restart certification.
 4. Connect real Pipedream, Magic Inbox, QuickBooks/Xero/Conta Azul and at least
@@ -68,4 +71,3 @@ The architecture is coherent and the new KG/queue slice moves two major buckets
 from reference contracts to real infrastructure. **100% parity is not yet true**;
 BU-214/216/218–231/276/277/279/280 must remain open or in review until their
 live and rendered acceptance criteria are demonstrated.
-

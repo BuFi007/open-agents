@@ -29,3 +29,7 @@ export {
   type BullMqRuntimeJob,
   type QueueTraceFact,
 } from "./bullmq";
+export {
+  relayKnowledgeOutbox,
+  type KnowledgeOutboxRelayResult,
+} from "./outbox-relay";
