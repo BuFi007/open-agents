@@ -14,7 +14,7 @@ import {
   listWorkspaceOperatingPackTraces,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
-import { sessions, users } from "@/lib/db/schema";
+import { sessions } from "@/lib/db/schema";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
 import { getOperatingPackApprovalToken } from "@/lib/operating-packs/approval-token";
@@ -23,6 +23,10 @@ import {
   storeOperatingPackWorkspaceGrant,
 } from "@/lib/operating-packs/credential-vault";
 import { verifyDeskWorkspaceGrant } from "@/lib/operating-packs/desk-grant";
+import {
+  deskBridgeUserId,
+  ensureDeskBridgeUser,
+} from "@/lib/operating-packs/desk-bridge-user";
 import {
   decideOperatingPackApprovalSchema,
   listOperatingPackCatalog,
@@ -64,32 +68,6 @@ function bearerAuthorized(request: Request): boolean {
     actual.length === expected.length &&
     timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
   );
-}
-
-function bridgeUserId(subject: string): string {
-  return `desk_${createHash("sha256").update(subject).digest("hex").slice(0, 32)}`;
-}
-
-async function ensureBridgeUser(subject: string): Promise<string> {
-  const id = bridgeUserId(subject);
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.id, id))
-    .limit(1);
-  if (existing[0]) return id;
-  await db
-    .insert(users)
-    .values({
-      id,
-      username: id,
-      email: `${id}@bridge.bu.finance`,
-      emailVerified: true,
-      name: "BUFI Desk Operator",
-      isAdmin: false,
-    })
-    .onConflictDoNothing({ target: users.id });
-  return id;
 }
 
 function authorizeGrant(input: {
@@ -148,7 +126,7 @@ export async function GET(request: Request) {
   const grant = authorizeGrant({ request, ...parsed.data });
   if (!grant)
     return Response.json({ error: "Invalid workspace grant" }, { status: 403 });
-  const userId = bridgeUserId(grant.subject);
+  const userId = deskBridgeUserId(grant.subject);
   const runId = url.searchParams.get("runId");
   if (!runId) {
     const runs = await listWorkspaceOperatingPackRuns(workspaceId, userId, 50);
@@ -189,7 +167,7 @@ export async function POST(request: Request) {
   const grant = authorizeGrant({ request, ...input });
   if (!grant)
     return Response.json({ error: "Invalid workspace grant" }, { status: 403 });
-  const userId = await ensureBridgeUser(grant.subject);
+  const userId = await ensureDeskBridgeUser(grant.subject);
 
   if (input.action === "decide") {
     const run = await getWorkspaceOperatingPackRun(

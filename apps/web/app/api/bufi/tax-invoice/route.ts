@@ -7,49 +7,26 @@ import {
   dispatchFromAiInvoiceDocument,
   type TaxInvoiceDispatch,
 } from "@open-agents/tax-automation";
-import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { runTaxInvoiceWorkflow } from "@/app/workflows/tax-invoice";
-import { db } from "@/lib/db/client";
 import {
   createOperatingPackRun,
   getOperatingPackRunByIdempotency,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
-import { users } from "@/lib/db/schema";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
-
-const BOT_USER_ID = "bufi-bridge-bot";
+import { ensureDeskBridgeUser } from "@/lib/operating-packs/desk-bridge-user";
+import { verifyDeskWorkspaceGrant } from "@/lib/operating-packs/desk-grant";
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.OPEN_AGENTS_BUFI_INGRESS_SECRET;
   const actual = request.headers.get("authorization");
-  if (!secret || !actual) return false;
+  if (!secret || secret.length < 32 || !actual) return false;
   const expected = `Bearer ${secret}`;
   if (actual.length !== expected.length) return false;
   return timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
-}
-
-async function ensureBotUser(): Promise<void> {
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.id, BOT_USER_ID))
-    .limit(1);
-  if (existing[0]) return;
-  await db
-    .insert(users)
-    .values({
-      id: BOT_USER_ID,
-      username: BOT_USER_ID,
-      email: "bridge@bu.finance",
-      emailVerified: true,
-      name: "BUFI Bridge Bot",
-      isAdmin: false,
-    })
-    .onConflictDoNothing({ target: users.id });
 }
 
 export async function POST(request: NextRequest) {
@@ -83,6 +60,16 @@ export async function POST(request: NextRequest) {
       { status: 422 },
     );
   }
+  const workspaceGrant = request.headers.get("x-bufi-workspace-grant") ?? "";
+  const grant = verifyDeskWorkspaceGrant({
+    token: workspaceGrant,
+    workspaceId: dispatch.workspaceId,
+  });
+  if (!grant || grant.subject !== dispatch.actorId)
+    return NextResponse.json(
+      { error: "Invalid workspace grant" },
+      { status: 403 },
+    );
   const requestHash = createHash("sha256")
     .update(JSON.stringify(dispatch))
     .digest("hex");
@@ -108,13 +95,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await ensureBotUser();
+  const userId = await ensureDeskBridgeUser(grant.subject);
   const sessionId = `tax_${nanoid(20)}`;
   const chatId = `tax_${nanoid(20)}`;
   await createSessionWithInitialChat({
     session: {
       id: sessionId,
-      userId: BOT_USER_ID,
+      userId,
       title: `Tax invoice: ${dispatch.invoice.invoiceId}`,
       repoOwner: null,
       repoName: null,
@@ -137,7 +124,7 @@ export async function POST(request: NextRequest) {
     workspaceId: dispatch.workspaceId,
     sessionId,
     chatId,
-    userId: BOT_USER_ID,
+    userId,
     packId: "tax_automation",
     workflowId: "ai_invoice_to_factura_e",
     harnessId: "pi",
