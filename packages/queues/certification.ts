@@ -126,9 +126,12 @@ export function certifyMixedWorkload(input: {
         break;
       }
       if (!selected) {
-        const nextSubmission = [...pending.values()]
-          .flatMap((queue) => (queue[0] ? [queue[0].submittedAtMs] : []))
-          .filter((atMs) => atMs > nowMs);
+        const nextSubmission: number[] = [];
+        for (const queue of pending.values()) {
+          const submittedAtMs = queue[0]?.submittedAtMs;
+          if (submittedAtMs !== undefined && submittedAtMs > nowMs)
+            nextSubmission.push(submittedAtMs);
+        }
         const nextCompletion = active.map((item) => item.completesAtMs);
         nowMs = Math.min(...nextSubmission, ...nextCompletion);
         continue;
