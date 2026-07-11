@@ -464,6 +464,7 @@ export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
       required: true,
       capabilities: [
         "evidence.append",
+        "invoice.ai-artifact.normalize",
         "factura_e.prepare",
         "factura_e.read",
         "reclaim.handoff",

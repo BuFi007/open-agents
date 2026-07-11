@@ -1,12 +1,52 @@
 import { describe, expect, test } from "bun:test";
 import {
+  AiInvoiceArtifactDispatchSchema,
   TaxAutomationClient,
   advanceTaxInvoiceCase,
+  dispatchFromAiInvoiceArtifact,
   prepareTaxInvoiceCase,
   taxRunIdFor,
   type TaxAutomationRun,
   type TaxInvoiceDispatch,
 } from "./index";
+
+const aiArtifactInput = {
+  workspaceId: "11111111-1111-4111-8111-111111111111",
+  actorId: "agent:tax",
+  idempotencyKey: "tax-invoice:ai-document-1",
+  issuancePath: "reclaim_copilot" as const,
+  artifact: {
+    documentId: "ai-document-1",
+    invoiceNumber: "INV-2026-001",
+    customerSafeLabel: "Foreign customer",
+    issueDate: "2026-07-11",
+    dueDate: "2026-08-10",
+    currency: "USD",
+    lineItems: [
+      {
+        name: "Software services used abroad",
+        quantityDecimal: "1.5",
+        unitPriceCents: 100_000,
+      },
+    ],
+    subtotalCents: 150_000,
+    taxAmountCents: 0,
+    discountAmountCents: 0,
+    totalCents: 150_000,
+    note: "Due on receipt",
+  },
+  exportContext: {
+    destinationCountry: "US",
+    destinationCountryArcaCode: 200,
+    pointOfSale: 4,
+    paymentDate: "2026-07-11",
+    sameCurrencyPayment: true,
+    exchangeRate: null,
+    consentVersion: "tax-consent-v1",
+    unitCode: 7,
+    observedAt: "2026-07-11T12:00:00.000Z",
+  },
+};
 
 const runId = "10000000-0000-4000-8000-000000000001";
 const input: TaxInvoiceDispatch = {
@@ -60,6 +100,56 @@ function response(value: unknown): Response {
 }
 
 describe("Tax Automation Engine agent bridge", () => {
+  test("turns an AI invoice artifact into exact, hash-bound tax evidence", () => {
+    const first = dispatchFromAiInvoiceArtifact(aiArtifactInput);
+    const replay = dispatchFromAiInvoiceArtifact({
+      ...aiArtifactInput,
+      artifact: { ...aiArtifactInput.artifact },
+    });
+    expect(first).toMatchObject({
+      invoice: {
+        invoiceId: "ai-document-1",
+        total: { decimal: "1500.00", currency: "USD" },
+        serviceDescription: "Software services used abroad",
+      },
+    });
+    expect(first.invoice.artifactHash).toBe(replay.invoice.artifactHash);
+    expect(first.invoice.sourceEventHash).toBe(replay.invoice.sourceEventHash);
+    expect(first.invoice.artifactHash).toHaveLength(64);
+  });
+
+  test("blocks AI arithmetic drift and authority-shaped fields", () => {
+    expect(() =>
+      dispatchFromAiInvoiceArtifact({
+        ...aiArtifactInput,
+        artifact: { ...aiArtifactInput.artifact, totalCents: 149_999 },
+      }),
+    ).toThrow("does not reconcile exactly");
+    expect(() =>
+      dispatchFromAiInvoiceArtifact({
+        ...aiArtifactInput,
+        artifact: {
+          ...aiArtifactInput.artifact,
+          lineItems: [
+            {
+              name: "Fractional minor unit",
+              quantityDecimal: "0.001",
+              unitPriceCents: 1,
+            },
+          ],
+          subtotalCents: 0,
+          totalCents: 0,
+        },
+      }),
+    ).toThrow("fractional minor units");
+    expect(
+      AiInvoiceArtifactDispatchSchema.safeParse({
+        ...aiArtifactInput,
+        exportContext: { ...aiArtifactInput.exportContext, cae: "123456" },
+      }).success,
+    ).toBe(false);
+  });
+
   test("prepares accepted invoice evidence and starts a credential-less readiness handoff", async () => {
     let state = run();
     const requests: Array<{ path: string; body: unknown; headers: Headers }> =

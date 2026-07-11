@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Decimal } from "decimal.js";
 import { z } from "zod";
 
 const decimal = z.string().regex(/^\d+(?:\.\d+)?$/);
@@ -48,6 +49,114 @@ export const TaxInvoiceDispatchSchema = z
   .strict();
 
 export type TaxInvoiceDispatch = z.infer<typeof TaxInvoiceDispatchSchema>;
+
+const aiInvoiceLineItemSchema = z
+  .object({
+    name: z.string().trim().min(1).max(500),
+    quantityDecimal: decimal,
+    unitPriceCents: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+
+export const AiInvoiceArtifactDispatchSchema = z
+  .object({
+    workspaceId: z.string().uuid(),
+    actorId: z.string().min(2).max(191),
+    idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,191}$/),
+    issuancePath: z.enum(["reclaim_copilot", "wsfex_delegated"]),
+    artifact: z
+      .object({
+        documentId: z.string().min(1).max(191),
+        invoiceNumber: z.string().min(1).max(191),
+        customerSafeLabel: z.string().trim().min(1).max(160),
+        issueDate: isoDate,
+        dueDate: isoDate,
+        currency: z.string().regex(/^[A-Z]{3,10}$/),
+        lineItems: z.array(aiInvoiceLineItemSchema).min(1).max(100),
+        subtotalCents: z.number().int().nonnegative().safe(),
+        taxAmountCents: z.number().int().nonnegative().safe().default(0),
+        discountAmountCents: z.number().int().nonnegative().safe().default(0),
+        totalCents: z.number().int().nonnegative().safe(),
+        note: z.string().max(1_000).optional(),
+      })
+      .strict(),
+    exportContext: z
+      .object({
+        destinationCountry: z.string().regex(/^[A-Z]{2}$/),
+        destinationCountryArcaCode: z.number().int().positive().max(999),
+        pointOfSale: z.number().int().positive().max(99_998),
+        paymentDate: isoDate,
+        sameCurrencyPayment: z.boolean(),
+        exchangeRate: z
+          .object({
+            decimal,
+            sourceReferenceId: z.string().min(1).max(500),
+            observedForDate: isoDate,
+            authorityRuleDecisionId: z.string().min(1).max(191),
+          })
+          .strict()
+          .nullable(),
+        consentVersion: z.string().min(1).max(191),
+        unitCode: z.number().int().nonnegative().max(99).default(7),
+        observedAt: isoDateTime,
+      })
+      .strict(),
+  })
+  .strict();
+
+export type AiInvoiceArtifactDispatch = z.infer<
+  typeof AiInvoiceArtifactDispatchSchema
+>;
+
+export function dispatchFromAiInvoiceArtifact(
+  input: AiInvoiceArtifactDispatch,
+): TaxInvoiceDispatch {
+  const parsed = AiInvoiceArtifactDispatchSchema.parse(input);
+  assertAiInvoiceTotals(parsed.artifact);
+  const artifactHash = hash(stableJson(parsed.artifact));
+  const sourceEventHash = hash(
+    stableJson({
+      workspaceId: parsed.workspaceId,
+      documentId: parsed.artifact.documentId,
+      artifactHash,
+      consentVersion: parsed.exportContext.consentVersion,
+    }),
+  );
+  const serviceDescription = parsed.artifact.lineItems
+    .map((item) => item.name)
+    .join("; ")
+    .slice(0, 4_000);
+  return TaxInvoiceDispatchSchema.parse({
+    workspaceId: parsed.workspaceId,
+    actorId: parsed.actorId,
+    idempotencyKey: parsed.idempotencyKey,
+    issuancePath: parsed.issuancePath,
+    invoice: {
+      invoiceId: parsed.artifact.documentId,
+      economicEventId: `invoice:${parsed.artifact.documentId}`,
+      artifactHash,
+      sourceEventHash,
+      consentVersion: parsed.exportContext.consentVersion,
+      foreignCustomerSafeLabel: parsed.artifact.customerSafeLabel,
+      destinationCountry: parsed.exportContext.destinationCountry,
+      destinationCountryArcaCode:
+        parsed.exportContext.destinationCountryArcaCode,
+      pointOfSale: parsed.exportContext.pointOfSale,
+      issueDate: parsed.artifact.issueDate,
+      paymentDate: parsed.exportContext.paymentDate,
+      sameCurrencyPayment: parsed.exportContext.sameCurrencyPayment,
+      exchangeRate: parsed.exportContext.exchangeRate,
+      total: {
+        decimal: centsToDecimal(parsed.artifact.totalCents),
+        currency: parsed.artifact.currency,
+      },
+      serviceDescription,
+      paymentTerms: parsed.artifact.note ?? `Due ${parsed.artifact.dueDate}`,
+      unitCode: parsed.exportContext.unitCode,
+      observedAt: parsed.exportContext.observedAt,
+    },
+  });
+}
 
 export function taxRunIdFor(
   workspaceId: string,
@@ -514,6 +623,42 @@ function safeBaseUrl(value: string): URL {
   url.search = "";
   url.hash = "";
   return url;
+}
+
+function assertAiInvoiceTotals(
+  artifact: AiInvoiceArtifactDispatch["artifact"],
+): void {
+  const lineSubtotal = artifact.lineItems.reduce((sum, item) => {
+    const lineTotal = new Decimal(item.unitPriceCents).mul(
+      item.quantityDecimal,
+    );
+    if (!lineTotal.isInteger())
+      throw new Error("AI invoice line total has fractional minor units");
+    return sum.add(lineTotal);
+  }, new Decimal(0));
+  if (!lineSubtotal.eq(artifact.subtotalCents))
+    throw new Error("AI invoice subtotal does not match its line items");
+  const expectedTotal = new Decimal(artifact.subtotalCents)
+    .add(artifact.taxAmountCents)
+    .sub(artifact.discountAmountCents);
+  if (expectedTotal.isNegative() || !expectedTotal.eq(artifact.totalCents))
+    throw new Error("AI invoice total does not reconcile exactly");
+}
+
+function centsToDecimal(cents: number): string {
+  const digits = String(cents).padStart(3, "0");
+  return `${digits.slice(0, -2)}.${digits.slice(-2)}`;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function hash(value: string): string {

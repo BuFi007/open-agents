@@ -1,5 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { TaxInvoiceDispatchSchema } from "@open-agents/tax-automation";
+import {
+  AiInvoiceArtifactDispatchSchema,
+  TaxInvoiceDispatchSchema,
+  dispatchFromAiInvoiceArtifact,
+  type TaxInvoiceDispatch,
+} from "@open-agents/tax-automation";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
@@ -48,15 +53,28 @@ async function ensureBotUser(): Promise<void> {
 export async function POST(request: NextRequest) {
   if (!authorized(request))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = TaxInvoiceDispatchSchema.safeParse(
-    await request.json().catch(() => null),
-  );
-  if (!parsed.success)
+  const body = await request.json().catch(() => null);
+  const canonical = TaxInvoiceDispatchSchema.safeParse(body);
+  const aiArtifact = canonical.success
+    ? null
+    : AiInvoiceArtifactDispatchSchema.safeParse(body);
+  if (!canonical.success && !aiArtifact?.success)
     return NextResponse.json(
       { error: "Invalid tax invoice workflow request" },
       { status: 400 },
     );
-  const dispatch = parsed.data;
+  let dispatch: TaxInvoiceDispatch;
+  try {
+    if (canonical.success) dispatch = canonical.data;
+    else if (aiArtifact?.success)
+      dispatch = dispatchFromAiInvoiceArtifact(aiArtifact.data);
+    else throw new Error("unreachable invalid dispatch");
+  } catch {
+    return NextResponse.json(
+      { error: "AI invoice totals do not reconcile" },
+      { status: 422 },
+    );
+  }
   const requestHash = createHash("sha256")
     .update(JSON.stringify(dispatch))
     .digest("hex");
@@ -89,7 +107,7 @@ export async function POST(request: NextRequest) {
     session: {
       id: sessionId,
       userId: BOT_USER_ID,
-      title: `Tax invoice: ${dispatch.invoice.foreignCustomerSafeLabel}`,
+      title: `Tax invoice: ${dispatch.invoice.invoiceId}`,
       repoOwner: null,
       repoName: null,
       branch: null,
