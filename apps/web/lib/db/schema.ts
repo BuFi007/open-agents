@@ -585,6 +585,39 @@ export const knowledgeSearchProjections = pgTable(
   ],
 );
 
+export const knowledgeContextPackets = pgTable(
+  "knowledge_context_packets",
+  {
+    packetHash: text("packet_hash").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    workflowRunId: text("workflow_run_id").notNull(),
+    agentRunId: text("agent_run_id").notNull(),
+    traceId: text("trace_id").notNull(),
+    authorizationScope: text("authorization_scope").notNull(),
+    graphWatermark: text("graph_watermark").notNull(),
+    projectionWatermark: text("projection_watermark").notNull(),
+    ontologyVersion: text("ontology_version").notNull(),
+    packet: jsonb("packet")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    generatedAt: timestamp("generated_at").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("knowledge_context_packets_workspace_run_idx").on(
+      table.workspaceId,
+      table.workflowRunId,
+      table.agentRunId,
+      table.generatedAt,
+    ),
+    index("knowledge_context_packets_workspace_expiry_idx").on(
+      table.workspaceId,
+      table.expiresAt,
+    ),
+  ],
+);
+
 export const connectorDeployments = pgTable(
   "connector_deployments",
   {
@@ -701,6 +734,10 @@ export type KnowledgeSearchProjection =
   typeof knowledgeSearchProjections.$inferSelect;
 export type NewKnowledgeSearchProjection =
   typeof knowledgeSearchProjections.$inferInsert;
+export type KnowledgeContextPacket =
+  typeof knowledgeContextPackets.$inferSelect;
+export type NewKnowledgeContextPacket =
+  typeof knowledgeContextPackets.$inferInsert;
 export type ConnectorDeployment = typeof connectorDeployments.$inferSelect;
 export type NewConnectorDeployment = typeof connectorDeployments.$inferInsert;
 export type ConnectorEventReceipt = typeof connectorEventReceipts.$inferSelect;

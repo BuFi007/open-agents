@@ -101,6 +101,11 @@ function fakeRepository(
     upsertEnrichment: async () => ({ replayed: false }),
     getSearchProjection: async () => undefined,
     upsertSearchProjection: async () => ({ replayed: false }),
+    persistContextPacket: async (packet) => ({
+      packetHash: packet.packetHash,
+      replayed: false,
+    }),
+    getContextPacket: async () => undefined,
     semanticSearch: async () => [],
     async claimOutbox() {
       return pending.splice(0).map((item) => ({

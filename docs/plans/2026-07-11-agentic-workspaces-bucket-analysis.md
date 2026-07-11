@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 64.7%.** The repository has strong contracts and a growing
+**Production parity: 65.0%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -17,12 +17,12 @@ provider, rendered client, production worker, or live evidence path.
 | Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
-| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 75% | 7.5 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts and idempotent Typesense upsert pass. Larger load/freshness repair remain open. |
+| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 78% | 7.8 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Native client citations and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 52% | 6.8 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads and a live concrete Neon→BullMQ processor pipeline pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 20% | 2.0 | Typed projections exist. Concrete Desk workflow graph, console, grants, composer and approval operation are not rendered and E2E certified. |
 | Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
 | Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **64.7%** |  |
+| **Total** | **100** |  | **65.0%** |  |
 
 ## Newly proven in this pass
 
@@ -87,6 +87,11 @@ provider, rendered client, production worker, or live evidence path.
   profile/queue. Configurable SLO evaluation emits structured alerts without
   exposing workspace, trace, job payload or error detail. It is library evidence
   only until a deployed worker exports the snapshots to the BUFI trace cockpit.
+- Migration 0050 persists immutable ContextPackets behind forced RLS. Packet
+  hashes are re-derived on write/read, exact replay is idempotent, cross-tenant
+  access is invisible, and watermark/reference diffs are deterministic. Live
+  Neon passed 8 tests and 46 assertions. Query/evidence budgets, duplicate
+  references, evidence revisions and observed times fail closed.
 
 ## Must-have gaps before 100%
 
@@ -109,6 +114,9 @@ provider, rendered client, production worker, or live evidence path.
    Accessibility + Screen Recording so the complete harness matrix can pass.
 8. Attach a real BUFI internal operating-week report with three durable
    workflows, five evidence-backed KPIs, traces and no autonomous spend.
+9. Construct one persisted ContextPacket per actual agent step and render its
+   citation handles/diffs identically in Desk and Expo; current evidence covers
+   the immutable store and validation contract, not runtime/client consumption.
 
 ## Bucket verdict
 

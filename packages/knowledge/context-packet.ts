@@ -56,6 +56,13 @@ export type ContextPacket = Omit<ContextPacketInput, "references"> & {
   packetHash: string;
 };
 
+export type ContextPacketDiff = {
+  graphChanged: boolean;
+  projectionChanged: boolean;
+  addedReferenceIds: readonly string[];
+  removedReferenceIds: readonly string[];
+};
+
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9:_./-]{1,191}$/;
 
 function requireId(name: string, value: string): void {
@@ -89,8 +96,15 @@ export function buildContextPacket(input: ContextPacketInput): ContextPacket {
     workflowRunId: input.workflowRunId,
     agentRunId: input.agentRunId,
     traceId: input.traceId,
+    intent: input.intent,
+    embeddingProvider: input.embedding.provider,
+    embeddingModel: input.embedding.model,
+    embeddingInputVersion: input.embedding.inputVersion,
   }))
     requireId(name, String(value));
+  const query = input.query.trim();
+  if (!query || query.length > 1_000)
+    throw new Error("invalid context packet query");
   if (input.generatedAtMs <= 0 || input.expiresAtMs <= input.generatedAtMs)
     throw new Error("invalid context packet time window");
   if (input.budgets.maxReferences < 1 || input.budgets.maxReferences > 200)
@@ -110,9 +124,23 @@ export function buildContextPacket(input: ContextPacketInput): ContextPacket {
     .sort((a, b) => a.rank - b.rank)
     .slice(0, input.budgets.maxReferences);
   let restricted = 0;
+  const referenceIds = new Set<string>();
   const references = ranked.map((reference, index) => {
     requireId("referenceId", reference.id);
     requireId("sourceId", reference.sourceId);
+    if (referenceIds.has(reference.id))
+      throw new Error("duplicate context packet reference id");
+    referenceIds.add(reference.id);
+    if (
+      !Number.isInteger(reference.rank) ||
+      reference.rank < 1 ||
+      !Number.isInteger(reference.evidenceVersion) ||
+      reference.evidenceVersion < 1 ||
+      !Number.isFinite(reference.observedAtMs) ||
+      reference.observedAtMs <= 0 ||
+      reference.observedAtMs > input.generatedAtMs
+    )
+      throw new Error("invalid context packet reference metadata");
     boundedScore("confidence", reference.confidence);
     for (const [name, value] of Object.entries(reference.scores))
       boundedScore(name, value);
@@ -134,11 +162,40 @@ export function buildContextPacket(input: ContextPacketInput): ContextPacket {
     observedAtMs: reference.observedAtMs,
     confidence: reference.confidence,
   }));
-  const withoutHash = { ...input, references, citations };
+  const withoutHash = { ...input, query, references, citations };
   return {
     ...input,
+    query,
     references,
     citations,
     packetHash: `sha256:${createHash("sha256").update(stable(withoutHash)).digest("hex")}`,
+  };
+}
+
+export function validateContextPacket(packet: ContextPacket): ContextPacket {
+  const { packetHash, citations: _citations, ...input } = packet;
+  const rebuilt = buildContextPacket(input);
+  if (rebuilt.packetHash !== packetHash)
+    throw new Error("context packet hash does not match its contents");
+  return rebuilt;
+}
+
+export function diffContextPackets(
+  before: ContextPacket,
+  after: ContextPacket,
+): ContextPacketDiff {
+  const left = validateContextPacket(before);
+  const right = validateContextPacket(after);
+  if (left.workspaceId !== right.workspaceId)
+    throw new Error("context packet diff crosses workspace boundary");
+  const beforeIds = new Set(left.references.map((reference) => reference.id));
+  const afterIds = new Set(right.references.map((reference) => reference.id));
+  return {
+    graphChanged: left.graphWatermark !== right.graphWatermark,
+    projectionChanged: left.projectionWatermark !== right.projectionWatermark,
+    addedReferenceIds: [...afterIds].filter((id) => !beforeIds.has(id)).sort(),
+    removedReferenceIds: [...beforeIds]
+      .filter((id) => !afterIds.has(id))
+      .sort(),
   };
 }

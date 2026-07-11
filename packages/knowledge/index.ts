@@ -49,6 +49,9 @@ export {
   type ContextPacketInput,
   type ContextPacketReference,
   buildContextPacket,
+  diffContextPackets,
+  type ContextPacketDiff,
+  validateContextPacket,
 } from "./context-packet";
 export {
   type KnowledgeChange,

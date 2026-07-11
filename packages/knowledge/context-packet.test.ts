@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { buildContextPacket, type ContextPacketInput } from "./index";
+import {
+  buildContextPacket,
+  diffContextPackets,
+  validateContextPacket,
+  type ContextPacketInput,
+} from "./index";
 
 const base: ContextPacketInput = {
   workspaceId: "ws_1",
@@ -94,5 +99,47 @@ describe("context packets", () => {
         references: [{ ...base.references[0]!, redaction: "restricted" }],
       }),
     ).toThrow("restricted");
+  });
+
+  it("rejects tampering and produces a bounded watermark/reference diff", () => {
+    const before = buildContextPacket(base);
+    expect(() =>
+      validateContextPacket({ ...before, query: "tampered" }),
+    ).toThrow("hash");
+    const after = buildContextPacket({
+      ...base,
+      graphWatermark: "graph_11",
+      references: [base.references[1]!, base.references[2]!],
+    });
+    expect(diffContextPackets(before, after)).toEqual({
+      graphChanged: true,
+      projectionChanged: false,
+      addedReferenceIds: ["ref_3"],
+      removedReferenceIds: ["ref_2"],
+    });
+    expect(() =>
+      diffContextPackets(
+        before,
+        buildContextPacket({ ...base, workspaceId: "ws_2" }),
+      ),
+    ).toThrow("workspace");
+  });
+
+  it("rejects unbounded queries, duplicate evidence and invalid revisions", () => {
+    expect(() =>
+      buildContextPacket({ ...base, query: "x".repeat(1_001) }),
+    ).toThrow("query");
+    expect(() =>
+      buildContextPacket({
+        ...base,
+        references: [base.references[0]!, base.references[0]!],
+      }),
+    ).toThrow("duplicate");
+    expect(() =>
+      buildContextPacket({
+        ...base,
+        references: [{ ...base.references[0]!, evidenceVersion: 0 }],
+      }),
+    ).toThrow("metadata");
   });
 });

@@ -1,8 +1,9 @@
 # Gateman — Postgres KG + connector + BullMQ production slice
 
 Date: 2026-07-11  
-Scope: non-tax BU-218/219/220/221/222/223 production infrastructure slice,
-including migration 0049 and concrete knowledge processors.
+Scope: non-tax BU-218/219/220/221/222/223/229 production infrastructure slice,
+including migrations 0049–0050, concrete knowledge processors and immutable
+ContextPacket persistence.
 
 ## Verdict
 
@@ -63,6 +64,10 @@ authorized provider sandboxes are production certified.
 - Payload-free queue telemetry: 3 tests and 6 assertions cover bounded state,
   p95 queue/processing latency, retry/DLQ/throttle/in-flight counters, alert
   thresholds, and omission of workspace, trace and error details from snapshots.
+- Live Neon ContextPackets: migration 0050 plus 8 repository tests and 46
+  assertions prove immutable hash-verified replay, forced-RLS isolation and
+  cross-tenant invisibility. Pure tests cover deterministic diffs and rejection
+  of tampering, duplicate evidence, unbounded queries and invalid revisions.
 - Configured Upstash: TCP opens but TLS/Redis readiness times out; **not green**.
 
 ## Follow-ups required for production claim
@@ -98,7 +103,7 @@ authorized provider sandboxes are production certified.
    outbox reads were removed after the audit identified rolling-migration risk.
 4. **Applaud Humility — pass.** The result remains `YES_WITH_FOLLOWUPS`; local
    Typesense and isolated Redis are not represented as hosted production
-   certification, and 64.7% is not represented as full parity.
+   certification, and 65.0% is not represented as full parity.
 
 ### Section results
 

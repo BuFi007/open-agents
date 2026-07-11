@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
+import { type ContextPacket, validateContextPacket } from "./context-packet";
 import type { Entity, Page } from "./store";
 
 const MAX_PAYLOAD_BYTES = 65_536;
@@ -114,6 +115,10 @@ export type WorkspaceKnowledgeRepository = {
     providerRevision?: string;
     projectedAt: string;
   }): Promise<{ replayed: boolean }>;
+  persistContextPacket(
+    packet: ContextPacket,
+  ): Promise<{ packetHash: string; replayed: boolean }>;
+  getContextPacket(packetHash: string): Promise<ContextPacket | undefined>;
   semanticSearch(input: {
     embedding: readonly number[];
     model: string;
@@ -193,6 +198,12 @@ type SearchProjectionRow = {
   provider_revision: string | null;
   projected_at: Date;
   updated_at: Date;
+};
+
+type ContextPacketRow = {
+  packet_hash: string;
+  workspace_id: string;
+  packet: ContextPacket;
 };
 
 export function createPostgresKnowledgeRepository(options: {
@@ -636,6 +647,63 @@ export function createPostgresKnowledgeRepository(options: {
             `;
             if (!rows[0]) throw new Error("Projection write did not converge");
             return { replayed: false };
+          });
+        },
+        async persistContextPacket(candidate) {
+          const packet = validateContextPacket(candidate);
+          if (packet.workspaceId !== workspaceId)
+            throw new Error("Context packet workspace does not match scope");
+          assertSha256("contextPacket.packetHash", packet.packetHash);
+          const generatedAt = new Date(packet.generatedAtMs);
+          const expiresAt = new Date(packet.expiresAtMs);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<{ packet_hash: string }[]>`
+              INSERT INTO knowledge_context_packets (
+                packet_hash, workspace_id, workflow_run_id, agent_run_id,
+                trace_id, authorization_scope, graph_watermark,
+                projection_watermark, ontology_version, packet, generated_at,
+                expires_at
+              ) VALUES (
+                ${packet.packetHash}, ${workspaceId}, ${packet.workflowRunId},
+                ${packet.agentRunId}, ${packet.traceId},
+                ${packet.authorizationScope}, ${packet.graphWatermark},
+                ${packet.projectionWatermark}, ${packet.ontologyVersion},
+                ${transaction.json(packet as unknown as postgres.JSONValue)},
+                ${generatedAt}, ${expiresAt}
+              )
+              ON CONFLICT (packet_hash) DO NOTHING
+              RETURNING packet_hash
+            `;
+            if (rows[0])
+              return { packetHash: rows[0].packet_hash, replayed: false };
+            const existing = await transaction<ContextPacketRow[]>`
+              SELECT packet_hash, workspace_id, packet
+              FROM knowledge_context_packets
+              WHERE packet_hash = ${packet.packetHash}
+                AND workspace_id = ${workspaceId}
+            `;
+            if (!existing[0])
+              throw new Error("Context packet hash is not visible");
+            const persisted = validateContextPacket(existing[0].packet);
+            if (stableJson(persisted) !== stableJson(packet))
+              throw new Error("Context packet idempotency conflict");
+            return { packetHash: persisted.packetHash, replayed: true };
+          });
+        },
+        async getContextPacket(packetHash) {
+          assertSha256("contextPacket.packetHash", packetHash);
+          return sql.begin(async (transaction) => {
+            await setWorkspaceScope(transaction, workspaceId);
+            const rows = await transaction<ContextPacketRow[]>`
+              SELECT packet_hash, workspace_id, packet
+              FROM knowledge_context_packets
+              WHERE packet_hash = ${packetHash}
+                AND workspace_id = ${workspaceId}
+            `;
+            return rows[0]
+              ? validateContextPacket(structuredClone(rows[0].packet))
+              : undefined;
           });
         },
         async semanticSearch(input) {

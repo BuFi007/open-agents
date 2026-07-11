@@ -8,6 +8,7 @@ import {
   test,
 } from "bun:test";
 import postgres from "postgres";
+import { buildContextPacket } from "./context-packet";
 import { createPostgresKnowledgeRepository } from "./postgres";
 
 const configuredConnectionString =
@@ -37,10 +38,11 @@ liveDescribe("Postgres knowledge repository", () => {
       WHERE table_schema = 'public'
         AND table_name IN (
           'knowledge_entities', 'knowledge_outbox',
-          'knowledge_enrichments', 'knowledge_search_projections'
+          'knowledge_enrichments', 'knowledge_search_projections',
+          'knowledge_context_packets'
         )
     `;
-    if (tables.length !== 4)
+    if (tables.length !== 5)
       throw new Error("Run the knowledge database migration before live tests");
   });
 
@@ -48,6 +50,7 @@ liveDescribe("Postgres knowledge repository", () => {
     for (const workspaceId of [workspaceA, workspaceB]) {
       await raw.begin(async (transaction) => {
         await transaction`SELECT set_config('app.workspace_id', ${workspaceId}, true)`;
+        await transaction`DELETE FROM knowledge_context_packets WHERE workspace_id = ${workspaceId}`;
         await transaction`DELETE FROM knowledge_outbox WHERE workspace_id = ${workspaceId}`;
         await transaction`DELETE FROM knowledge_entities WHERE workspace_id = ${workspaceId}`;
       });
@@ -310,6 +313,61 @@ liveDescribe("Postgres knowledge repository", () => {
         inputHash: `sha256:${"c".repeat(64)}`,
       }),
     ).rejects.toThrow("stale");
+  });
+
+  test("persists immutable replay-safe context packets under RLS", async () => {
+    const packet = buildContextPacket({
+      workspaceId: workspaceA,
+      authorizationScope: "scope:knowledge-read",
+      graphWatermark: "graph:42",
+      projectionWatermark: "projection:18",
+      ontologyVersion: "ontology:1",
+      query: "open invoices",
+      intent: "cfo-summary",
+      budgets: {
+        maxReferences: 2,
+        maxSnippetChars: 100,
+        maxRestrictedReferences: 0,
+      },
+      rankFusionVersion: "rrf:1",
+      embedding: {
+        provider: "typesense",
+        model: "hybrid",
+        inputVersion: "v1",
+      },
+      workflowRunId: "workflow:1",
+      agentRunId: "agent:1",
+      traceId: "trace:1",
+      generatedAtMs: 1_000,
+      expiresAtMs: 2_000,
+      references: [
+        {
+          id: "reference:1",
+          kind: "source-artifact",
+          sourceId: "artifact:1",
+          observedAtMs: 900,
+          confidence: 0.95,
+          redaction: "standard",
+          scores: { lexical: 1, vector: 0.8, graph: 0.7, recency: 0.9 },
+          rank: 1,
+          snippet: "Invoice evidence",
+          evidenceVersion: 1,
+        },
+      ],
+    });
+    await expect(a.persistContextPacket(packet)).resolves.toEqual({
+      packetHash: packet.packetHash,
+      replayed: false,
+    });
+    await expect(a.persistContextPacket(packet)).resolves.toEqual({
+      packetHash: packet.packetHash,
+      replayed: true,
+    });
+    expect(await a.getContextPacket(packet.packetHash)).toEqual(packet);
+    expect(await b.getContextPacket(packet.packetHash)).toBeUndefined();
+    await expect(
+      b.persistContextPacket({ ...packet, workspaceId: workspaceB }),
+    ).rejects.toThrow("hash");
   });
 
   test("claims with skip-locked leases and bounds retry/dead-letter state", async () => {
