@@ -7,22 +7,22 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 67.8%.** The repository has strong contracts and a growing
+**Production parity: 78.6%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
 | Must-have bucket | Weight | Proven completion | Weighted result | Authoritative evidence |
 | --- | ---: | ---: | ---: | --- |
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
-| Harness, MCP and Circle agent-wallet boundary | 13 | 72% | 9.4 | Hermes, Codex, Open Agents, bufi-hyper and Circle read-only pass; Claude credits and Computer Use TCC fail honestly. |
+| Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
 | BullMQ data plane and workload isolation | 12 | 78% | 9.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Configured Upstash TCP readiness currently fails. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 92% | 9.2 | Live lexical GIN, pgvector HNSW and local Typesense 30.2 paths; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent Typesense upsert and immutable ContextPacket persistence pass. Desk emits the exact run-bound packet contract, Open Agents validates it, and a tenant-safe integrity-checking citation resolver API exists. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
-| Desk command center and pack composer | 10 | 30% | 3.0 | Open Agents now has a concrete authenticated operations surface over owner-scoped run/trace/approval/cancel APIs, with an encrypted one-use Desk grant vault and local SSR evidence. Desk embedding/SSO, pack composer and authenticated browser interaction remain uncertified. |
-| Expo/Cleo command center | 7 | 20% | 1.4 | A substantial adapter/projection exists. Concrete Expo screens, deep links, notifications and approval E2E are absent. |
-| Horizontal operating packs and BUFI dogfood | 8 | 65% | 5.2 | Packs, policy, simulation, KPI definitions and durable runtime exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **67.8%** |  |
+| Desk command center and pack composer | 10 | 82% | 8.2 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets and a Team Cockpit projection. Focused suites and Vercel previews pass; authenticated browser E2E is still uncertified. |
+| Expo/Cleo command center | 7 | 78% | 5.5 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge and push notifications. Expo web export passes; authenticated device E2E remains open. |
+| Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
+| **Total** | **100** |  | **78.6%** |  |
 
 ## Newly proven in this pass
 
@@ -120,7 +120,36 @@ provider, rendered client, production worker, or live evidence path.
 - The command center's unauthenticated guard and full SSR layout were exercised
   locally. The macOS Computer Use pipe was unavailable, and the temporary
   headless client did not establish an authenticated hydrated session; therefore
-  this evidence raises the bucket only to 30%, not to a rendered Desk E2E claim.
+  that earlier evidence alone was not a rendered Desk E2E claim.
+- Desk PR #542 now supplies the cross-product command center and pack composer,
+  including persisted run/trace/approval controls, a workflow timeline, explicit
+  agent/human ownership, active blockers derived only from persisted facts,
+  ontology/entity evidence facets and deterministic asynchronous handoffs.
+  Twelve focused command-center/API tests and all Vercel previews pass. GitHub's
+  Validate job did not start on an organization runner, so this is not counted as
+  an authenticated browser certification.
+- Desk PR #544 now supplies a concrete Expo/Cleo workflow inbox, strict
+  workspace-bound deep links, non-authoritative approval/edit intents for server
+  revalidation, trace summaries, Shiva bridge and push registration/notification
+  handling. Eight adapter tests, production Expo web export and Vercel previews
+  pass; physical-device authenticated E2E remains open.
+- `@bufinance/intelligence@0.4.0` is publicly installable with the full 17-tool
+  Circle-compatible registry, and the matching `bu-intelligence-agent` Eve
+  binding is merged. This supersedes the closed four-tool Desk PR #495 instead
+  of duplicating a weaker wallet contract in the monorepo.
+- A fresh live harness certification passes Hermes, Codex, an Open Agents
+  dispatch through terminal completion, bufi-hyper Circle tool discovery and an
+  existing Circle agent-wallet inventory/balance read. Mutation and spend remain
+  denied without approval. Claude Code reports no authenticated login and
+  CuaDriver reports missing Accessibility and Screen Recording TCC grants.
+- A fresh hosted-infrastructure rerun passes ten live Neon/connector/RLS/search/
+  pgvector/AI Gateway cases. The configured Upstash endpoint closes TLS before
+  handshake, producing eight honest BullMQ/outbox/worker failures; local Redis
+  success is not substituted for this production-provider failure.
+- `@bufinance/open-agents-expo-adapter@0.1.0` was accepted by npm and cannot be
+  republished, but the public registry metadata endpoint still returns 404. The
+  package is therefore not counted as externally installable until a clean
+  `npm view` plus install/import smoke passes.
 
 ## Must-have gaps before 100%
 
@@ -135,12 +164,12 @@ provider, rendered client, production worker, or live evidence path.
    certification.
 4. Connect real Pipedream, Magic Inbox, QuickBooks/Xero/Conta Azul and at least
    one authorized ERP sandbox through the shared artifact/effect path.
-5. Embed/SSO the operations command center in Desk, implement the pack composer,
-   and browser-test launch, approval/rejection, cancellation, traces and citation
-   resolution with a real signed Desk grant. The Open Agents surface and APIs
-   exist, but authenticated cross-product E2E evidence does not.
-6. Implement and device-test concrete Expo/Cleo inbox, approvals, deep links and
-   notifications against the same APIs.
+5. Browser-test the embedded Desk command center and pack composer end to end:
+   launch, approval/rejection, cancellation, traces and citation resolution with
+   a real signed Desk grant. Implementation and focused tests exist, but the
+   authenticated cross-product browser journey remains uncertified.
+6. Device-test the implemented Expo/Cleo inbox, approvals, deep links and push
+   notifications against the same authenticated APIs.
 7. Fund/configure Claude Code or its Vercel AI Gateway key, and grant macOS
    Accessibility + Screen Recording so the complete harness matrix can pass.
 8. Attach a real BUFI internal operating-week report with three durable
@@ -149,6 +178,8 @@ provider, rendered client, production worker, or live evidence path.
    run the signed broker path against a deployed preview. The producer/consumer
    contract now passes directly across repositories, but client consumption and
    hosted request evidence remain uncertified.
+10. Resolve npm visibility for the public Expo adapter and prove a clean external
+    install/import; an accepted-but-unqueryable package is not ecosystem parity.
 
 ## Bucket verdict
 
