@@ -93,6 +93,8 @@ const validBody = {
   workflowId: "weekly_finance_review",
   harnessId: "claude-code",
   prompt: "Review the current workspace evidence",
+  workspaceId: "11111111-1111-4111-8111-111111111111",
+  workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
   idempotencyKey: "request:12345678",
 } as const;
 

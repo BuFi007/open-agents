@@ -32,6 +32,7 @@ export type OperatingPackWorkflowInput = {
   requestOrigin: string;
   modelId: string;
   approvalToken: string;
+  workspaceGrant: string;
 };
 
 type ApprovalPayload = {
@@ -259,6 +260,11 @@ async function runAgentStep(input: {
     `[operating-pack] AGENT START execution=${workflow.executionId} agent=${agent.qualifiedId}`,
   );
   let toolEvents = 0;
+  const toolTraceEvents: Array<{
+    type: string;
+    toolName: string;
+    toolCallId: string | null;
+  }> = [];
   const messageId = `${workflow.executionId}:${agent.agentId}`;
   const result = await runHarnessTurnViaApi({
     harnessId: workflow.harnessId,
@@ -284,27 +290,62 @@ async function runAgentStep(input: {
     requestUrl: workflow.requestOrigin,
     instructions: agent.instructions,
     permissionMode: "allow-reads",
+    brokerContext: {
+      workspaceId: workflow.workspaceId,
+      workspaceGrant: workflow.workspaceGrant,
+      executionId: workflow.executionId,
+      allowedTools: agent.tools as Array<
+        "knowledge_read" | "workflow_run" | "circle_get_balance"
+      >,
+    },
     onChunk: (chunk: HarnessUIMessageChunk) => {
-      if (String(chunk.type).startsWith("tool-")) toolEvents += 1;
+      if (String(chunk.type).startsWith("tool-")) {
+        toolEvents += 1;
+        if (
+          toolTraceEvents.length < 100 &&
+          typeof chunk.toolName === "string"
+        ) {
+          toolTraceEvents.push({
+            type: String(chunk.type),
+            toolName: chunk.toolName,
+            toolCallId:
+              typeof chunk.toolCallId === "string" ? chunk.toolCallId : null,
+          });
+        }
+      }
     },
   });
-  const sequence = 100 + index;
+  const sequenceBase = 1000 + index * 200;
   const summary = responseText(result.responseMessage.parts);
-  await appendOperatingPackTrace({
-    id: traceId(workflow.executionId, sequence),
-    runId: workflow.executionId,
-    workspaceId: workflow.workspaceId,
-    sequence,
-    type: "agent.completed",
-    agentId: agent.qualifiedId,
-    summary: summary || `${agent.qualifiedId} completed`,
-    data: {
-      finishReason: result.finishReason,
-      toolEvents,
-      toolGrantIds: agent.tools,
-      usage: result.usage,
-    },
-  });
+  await Promise.all([
+    ...toolTraceEvents.map((event, eventIndex) =>
+      appendOperatingPackTrace({
+        id: traceId(workflow.executionId, sequenceBase + eventIndex),
+        runId: workflow.executionId,
+        workspaceId: workflow.workspaceId,
+        sequence: sequenceBase + eventIndex,
+        type: "tool.called",
+        agentId: agent.qualifiedId,
+        summary: `${event.toolName}: ${event.type}`,
+        data: event,
+      }),
+    ),
+    appendOperatingPackTrace({
+      id: traceId(workflow.executionId, sequenceBase + 199),
+      runId: workflow.executionId,
+      workspaceId: workflow.workspaceId,
+      sequence: sequenceBase + 199,
+      type: "agent.completed",
+      agentId: agent.qualifiedId,
+      summary: summary || `${agent.qualifiedId} completed`,
+      data: {
+        finishReason: result.finishReason,
+        toolEvents,
+        toolGrantIds: agent.tools,
+        usage: result.usage,
+      },
+    }),
+  ]);
   console.log(
     `[operating-pack] AGENT DONE execution=${workflow.executionId} agent=${agent.qualifiedId}`,
   );

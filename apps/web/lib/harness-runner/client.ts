@@ -49,6 +49,7 @@ export async function runHarnessTurnViaApi(
     modelId: input.modelId,
     instructions: input.instructions,
     permissionMode: input.permissionMode,
+    brokerContext: input.brokerContext,
   };
   const body = JSON.stringify(requestBody);
   const response = await fetch(

@@ -89,6 +89,7 @@ export type RunHarnessTurnInput = {
   modelId: string;
   instructions?: string;
   permissionMode?: "allow-reads" | "allow-edits" | "allow-all";
+  tools?: ToolSet;
   abortSignal?: AbortSignal;
   onChunk: (chunk: HarnessUIMessageChunk) => Promise<void> | void;
 };
@@ -535,7 +536,7 @@ export async function runHarnessTurn(
     instructions: input.instructions
       ? `${HARNESS_INSTRUCTIONS[input.harnessId]}\n\n${input.instructions}`
       : HARNESS_INSTRUCTIONS[input.harnessId],
-    tools: OPEN_AGENT_HARNESS_TOOLS,
+    tools: { ...OPEN_AGENT_HARNESS_TOOLS, ...input.tools },
     permissionMode: input.permissionMode ?? "allow-all",
     toolApproval: {
       ask_user_question: "user-approval",

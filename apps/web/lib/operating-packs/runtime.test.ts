@@ -54,6 +54,8 @@ describe("operating-pack runtime contract", () => {
         workflowId: "weekly_finance_review",
         harnessId: "claude-code",
         prompt: "Review this workspace",
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
         idempotencyKey: "request:12345678",
       }).success,
     ).toBe(true);
@@ -65,6 +67,8 @@ describe("operating-pack runtime contract", () => {
         workflowId: "weekly_finance_review",
         harnessId: "claude-code",
         prompt: "Review",
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
         idempotencyKey: "request:12345678",
         userId: "forged_user",
       }).success,

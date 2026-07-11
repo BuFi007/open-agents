@@ -22,6 +22,8 @@ export const startOperatingPackRunSchema = z
     workflowId: z.string().regex(/^[a-z][a-z0-9._-]{1,95}$/),
     harnessId: operatingPackHarnessSchema,
     prompt: z.string().trim().min(1).max(8000),
+    workspaceId: z.string().uuid(),
+    workspaceGrant: z.string().min(80).max(2048),
     idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,127}$/),
   })
   .strict();

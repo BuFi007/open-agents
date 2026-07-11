@@ -6,6 +6,7 @@ import type {
 } from "@open-agents/harness-runner";
 import type { SandboxState } from "@open-agents/sandbox";
 import { z } from "zod";
+import type { OperatingPackBrokerContext } from "@/lib/operating-packs/tool-broker";
 
 export type InternalHarnessRunRequest = {
   harnessId: ExternalHarnessId;
@@ -19,6 +20,7 @@ export type InternalHarnessRunRequest = {
   modelId: string;
   instructions?: string;
   permissionMode?: "allow-reads" | "allow-edits" | "allow-all";
+  brokerContext?: OperatingPackBrokerContext;
 };
 
 export type InternalHarnessRunEvent =
@@ -62,6 +64,19 @@ const internalHarnessRunRequestSchema = z
     instructions: z.string().min(1).max(32_000).optional(),
     permissionMode: z
       .enum(["allow-reads", "allow-edits", "allow-all"])
+      .optional(),
+    brokerContext: z
+      .object({
+        workspaceId: z.string().uuid(),
+        workspaceGrant: z.string().min(80).max(2048),
+        executionId: id,
+        allowedTools: z
+          .array(
+            z.enum(["knowledge_read", "workflow_run", "circle_get_balance"]),
+          )
+          .max(20),
+      })
+      .strict()
       .optional(),
   })
   .strict();

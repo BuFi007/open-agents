@@ -17,6 +17,7 @@ import {
   AGENT_HARNESS_BRIDGE_PORTS,
   DEFAULT_SANDBOX_PORTS,
 } from "@/lib/sandbox/config";
+import { createOperatingPackBrokerTools } from "@/lib/operating-packs/tool-broker";
 
 export const maxDuration = 800;
 
@@ -96,6 +97,9 @@ export async function POST(request: Request) {
             modelId: input.modelId,
             instructions: input.instructions,
             permissionMode: input.permissionMode,
+            ...(input.brokerContext
+              ? { tools: createOperatingPackBrokerTools(input.brokerContext) }
+              : {}),
             abortSignal: request.signal,
             onChunk: (chunk) => {
               send({ type: "chunk", chunk });

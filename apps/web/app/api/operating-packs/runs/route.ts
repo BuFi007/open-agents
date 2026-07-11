@@ -21,10 +21,6 @@ import {
 } from "@/app/api/chat/_lib/chat-context";
 import { runOperatingPackWorkflow } from "@/app/workflows/operating-pack";
 
-function workspaceId(sessionId: string): string {
-  return `ws_${createHash("sha256").update(sessionId).digest("hex").slice(0, 32)}`;
-}
-
 export async function GET() {
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth.response;
@@ -83,7 +79,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const scopedWorkspaceId = workspaceId(input.sessionId);
+  const scopedWorkspaceId = input.workspaceId;
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
@@ -91,6 +87,7 @@ export async function POST(request: Request) {
         workflowId: input.workflowId,
         harnessId: input.harnessId,
         prompt: input.prompt,
+        workspaceId: input.workspaceId,
       }),
     )
     .digest("hex");
@@ -145,6 +142,7 @@ export async function POST(request: Request) {
         requestOrigin: new URL(request.url).origin,
         modelId: owned.chat.modelId ?? APP_DEFAULT_MODEL_ID,
         approvalToken: getOperatingPackApprovalToken(executionId),
+        workspaceGrant: input.workspaceGrant,
       },
     ]);
     await attachOperatingPackWorkflowRun(executionId, run.runId);
