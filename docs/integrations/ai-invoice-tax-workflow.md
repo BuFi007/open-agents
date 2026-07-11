@@ -2,8 +2,9 @@
 
 BUFI's AI invoice composer can send its structured draft directly to
 `POST /api/bufi/tax-invoice`. The endpoint accepts either the canonical
-`TaxInvoiceDispatch` contract or `AiInvoiceArtifactDispatch` and normalizes the
-latter before starting the same durable workflow.
+`TaxInvoiceDispatch` contract, `AiInvoiceArtifactDispatch`, or the persisted
+invoice document returned by BUFI's `create_document(kind: "invoice")` tool.
+Both AI shapes are normalized before starting the same durable workflow.
 
 This integration does not make the model a tax authority:
 
@@ -19,6 +20,42 @@ This integration does not make the model a tax authority:
 - Starting a run is not approval. The Tax Automation Engine owns the frozen
   intent and its separate trusted user/accountant approval channels.
 - Reclaim proves readiness or a CAE fact. It never authorizes the invoice.
+
+## Chain from BUFI's AI invoice tool
+
+The assistant creates the invoice document first, then sends the exact persisted
+artifact to this ingress. No second model pass or client-side money remapping is
+required:
+
+```json
+{
+  "workspaceId": "11111111-1111-4111-8111-111111111111",
+  "actorId": "agent:tax",
+  "idempotencyKey": "tax-invoice:desk-document-1",
+  "issuancePath": "reclaim_copilot",
+  "document": {
+    "id": "desk-document-1",
+    "kind": "invoice",
+    "content": "{\"invoiceNumber\":\"INV-2026-001\",\"title\":\"July services\",\"customerName\":\"Foreign customer\",\"issueDate\":\"2026-07-11\",\"dueDate\":\"2026-08-10\",\"currency\":\"USD\",\"lineItems\":[{\"name\":\"Software services\",\"quantity\":1,\"price\":150000}],\"subtotal\":150000,\"total\":150000,\"status\":\"draft\"}"
+  },
+  "exportContext": {
+    "destinationCountry": "US",
+    "destinationCountryArcaCode": 200,
+    "pointOfSale": 4,
+    "paymentDate": "2026-07-11",
+    "sameCurrencyPayment": true,
+    "exchangeRate": null,
+    "consentVersion": "tax-consent-v1",
+    "unitCode": 7,
+    "observedAt": "2026-07-11T12:00:00.000Z"
+  }
+}
+```
+
+`exportContext` is trusted workspace state, not model output. The AI-created JSON
+is parsed with a strict invoice schema, reconciled in integer minor units, and
+hashed server-side. Unknown fields such as CAE, CUIT, Clave Fiscal, or authority
+status are rejected before a workflow can start.
 
 ## Request shape
 

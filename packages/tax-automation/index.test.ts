@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  AiInvoiceDocumentDispatchSchema,
   AiInvoiceArtifactDispatchSchema,
   TaxAutomationClient,
   advanceTaxInvoiceCase,
   dispatchFromAiInvoiceArtifact,
+  dispatchFromAiInvoiceDocument,
   prepareTaxInvoiceCase,
   taxRunIdFor,
   type TaxAutomationRun,
@@ -100,6 +102,83 @@ function response(value: unknown): Response {
 }
 
 describe("Tax Automation Engine agent bridge", () => {
+  test("chains the persisted BUFI AI invoice document into the durable workflow", () => {
+    const dispatch = dispatchFromAiInvoiceDocument({
+      workspaceId: aiArtifactInput.workspaceId,
+      actorId: aiArtifactInput.actorId,
+      idempotencyKey: "tax-invoice:desk-document-1",
+      issuancePath: "reclaim_copilot",
+      document: {
+        id: "desk-document-1",
+        kind: "invoice",
+        content: JSON.stringify({
+          invoiceNumber: "INV-2026-001",
+          title: "July software services",
+          customerName: "Foreign customer",
+          customerEmail: "billing@example.com",
+          issueDate: "2026-07-11",
+          dueDate: "2026-08-10",
+          currency: "USD",
+          lineItems: [
+            {
+              name: "Software services used abroad",
+              quantity: 1.5,
+              price: 100_000,
+            },
+          ],
+          subtotal: 150_000,
+          taxAmount: 0,
+          discountAmount: 0,
+          total: 150_000,
+          status: "draft",
+        }),
+      },
+      exportContext: aiArtifactInput.exportContext,
+    });
+
+    expect(dispatch).toMatchObject({
+      invoice: {
+        invoiceId: "desk-document-1",
+        total: { decimal: "1500.00", currency: "USD" },
+        foreignCustomerSafeLabel: "Foreign customer",
+      },
+    });
+    expect(dispatch.invoice.artifactHash).toHaveLength(64);
+  });
+
+  test("rejects authority fields and arithmetic drift in AI invoice documents", () => {
+    const base = {
+      workspaceId: aiArtifactInput.workspaceId,
+      actorId: aiArtifactInput.actorId,
+      idempotencyKey: "tax-invoice:desk-document-bad",
+      issuancePath: "reclaim_copilot" as const,
+      document: {
+        id: "desk-document-bad",
+        kind: "invoice" as const,
+        content: JSON.stringify({
+          invoiceNumber: "INV-BAD",
+          title: "Bad invoice",
+          customerName: "Foreign customer",
+          issueDate: "2026-07-11",
+          dueDate: "2026-08-10",
+          currency: "USD",
+          lineItems: [{ name: "Service", quantity: 1, price: 100_000 }],
+          subtotal: 100_000,
+          total: 99_999,
+          cae: "12345678901234",
+        }),
+      },
+      exportContext: aiArtifactInput.exportContext,
+    };
+    expect(() => dispatchFromAiInvoiceDocument(base)).toThrow();
+    expect(
+      AiInvoiceDocumentDispatchSchema.safeParse({
+        ...base,
+        document: { ...base.document, kind: "text" },
+      }).success,
+    ).toBe(false);
+  });
+
   test("turns an AI invoice artifact into exact, hash-bound tax evidence", () => {
     const first = dispatchFromAiInvoiceArtifact(aiArtifactInput);
     const replay = dispatchFromAiInvoiceArtifact({

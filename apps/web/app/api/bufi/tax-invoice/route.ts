@@ -1,8 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   AiInvoiceArtifactDispatchSchema,
+  AiInvoiceDocumentDispatchSchema,
   TaxInvoiceDispatchSchema,
   dispatchFromAiInvoiceArtifact,
+  dispatchFromAiInvoiceDocument,
   type TaxInvoiceDispatch,
 } from "@open-agents/tax-automation";
 import { eq } from "drizzle-orm";
@@ -58,7 +60,11 @@ export async function POST(request: NextRequest) {
   const aiArtifact = canonical.success
     ? null
     : AiInvoiceArtifactDispatchSchema.safeParse(body);
-  if (!canonical.success && !aiArtifact?.success)
+  const aiDocument =
+    canonical.success || aiArtifact?.success
+      ? null
+      : AiInvoiceDocumentDispatchSchema.safeParse(body);
+  if (!canonical.success && !aiArtifact?.success && !aiDocument?.success)
     return NextResponse.json(
       { error: "Invalid tax invoice workflow request" },
       { status: 400 },
@@ -68,6 +74,8 @@ export async function POST(request: NextRequest) {
     if (canonical.success) dispatch = canonical.data;
     else if (aiArtifact?.success)
       dispatch = dispatchFromAiInvoiceArtifact(aiArtifact.data);
+    else if (aiDocument?.success)
+      dispatch = dispatchFromAiInvoiceDocument(aiDocument.data);
     else throw new Error("unreachable invalid dispatch");
   } catch {
     return NextResponse.json(

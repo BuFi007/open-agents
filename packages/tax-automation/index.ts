@@ -108,6 +108,103 @@ export type AiInvoiceArtifactDispatch = z.infer<
   typeof AiInvoiceArtifactDispatchSchema
 >;
 
+const deskInvoiceDocumentSchema = z
+  .object({
+    invoiceNumber: z.string().trim().min(1).max(191),
+    title: z.string().trim().min(1).max(500),
+    customerName: z.string().trim().min(1).max(160),
+    customerEmail: z.email().optional(),
+    fromName: z.string().trim().min(1).max(160).optional(),
+    issueDate: isoDate,
+    dueDate: isoDate,
+    currency: z.string().regex(/^[A-Z]{3,10}$/),
+    lineItems: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1).max(500),
+            quantity: z.number().positive().finite(),
+            price: z.number().int().nonnegative().safe(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+    subtotal: z.number().int().nonnegative().safe(),
+    taxRate: z.number().nonnegative().finite().optional(),
+    taxAmount: z.number().int().nonnegative().safe().optional(),
+    discountPercent: z.number().nonnegative().max(100).finite().optional(),
+    discountAmount: z.number().int().nonnegative().safe().optional(),
+    total: z.number().int().nonnegative().safe(),
+    note: z.string().max(1_000).optional(),
+    status: z.enum(["draft", "sent", "paid"]).optional(),
+  })
+  .strict();
+
+export const AiInvoiceDocumentDispatchSchema = z
+  .object({
+    workspaceId: z.string().uuid(),
+    actorId: z.string().min(2).max(191),
+    idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,191}$/),
+    issuancePath: z.enum(["reclaim_copilot", "wsfex_delegated"]),
+    document: z
+      .object({
+        id: z.string().min(1).max(191),
+        kind: z.literal("invoice"),
+        content: z.string().min(2).max(100_000),
+      })
+      .strict(),
+    exportContext: AiInvoiceArtifactDispatchSchema.shape.exportContext,
+  })
+  .strict();
+
+export type AiInvoiceDocumentDispatch = z.infer<
+  typeof AiInvoiceDocumentDispatchSchema
+>;
+
+/**
+ * Converts the invoice document emitted by BUFI's `create_document` AI tool
+ * directly into the durable Tax Automation ingress. The document is parsed
+ * with a strict schema before the existing exact-money and server-hash checks.
+ */
+export function dispatchFromAiInvoiceDocument(
+  input: AiInvoiceDocumentDispatch,
+): TaxInvoiceDispatch {
+  const parsed = AiInvoiceDocumentDispatchSchema.parse(input);
+  let content: unknown;
+  try {
+    content = JSON.parse(parsed.document.content);
+  } catch {
+    throw new Error("AI invoice document is not valid JSON");
+  }
+  const invoice = deskInvoiceDocumentSchema.parse(content);
+  return dispatchFromAiInvoiceArtifact({
+    workspaceId: parsed.workspaceId,
+    actorId: parsed.actorId,
+    idempotencyKey: parsed.idempotencyKey,
+    issuancePath: parsed.issuancePath,
+    artifact: {
+      documentId: parsed.document.id,
+      invoiceNumber: invoice.invoiceNumber,
+      customerSafeLabel: invoice.customerName,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      currency: invoice.currency,
+      lineItems: invoice.lineItems.map((item) => ({
+        name: item.name,
+        quantityDecimal: String(item.quantity),
+        unitPriceCents: item.price,
+      })),
+      subtotalCents: invoice.subtotal,
+      taxAmountCents: invoice.taxAmount ?? 0,
+      discountAmountCents: invoice.discountAmount ?? 0,
+      totalCents: invoice.total,
+      note: invoice.note,
+    },
+    exportContext: parsed.exportContext,
+  });
+}
+
 export function dispatchFromAiInvoiceArtifact(
   input: AiInvoiceArtifactDispatch,
 ): TaxInvoiceDispatch {
