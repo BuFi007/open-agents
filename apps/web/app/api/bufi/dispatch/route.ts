@@ -19,6 +19,7 @@ import { db } from "@/lib/db/client";
 import { githubInstallations, users } from "@/lib/db/schema";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
 import { getAppOctokit } from "@/lib/github/app";
+import { DEFAULT_CHAT_HARNESS_ID } from "@/lib/chat-harnesses";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/models";
 
 const BUFI_BOT_USER_ID = "bufi-bridge-bot";
@@ -279,33 +280,33 @@ export async function POST(req: NextRequest) {
 
   let workflowRunId: string;
   try {
-    const run = await start(runAgentWorkflow, [
-      {
-        messages: [
-          {
-            id: messageId,
-            role: "user" as const,
-            parts: [{ type: "text" as const, text: body.prompt }],
-          },
-        ],
-        chatId: chat.id,
-        sessionId: session.id,
-        userId: botUserId,
-        requestUrl: req.url,
-        authSession: null,
-        autoCommitEnabled: true,
-        autoCreatePrEnabled: true,
-        // Trace correlation — sessionId/chatId are stamped by
-        // the workflow; the dispatch origin + Linear task id ride here.
-        agentOptions: {
-          telemetry: {
-            source: "bufi-dispatch",
-            linearTaskId: body.blueprint.taskId,
-            repo: `${body.repo.owner}/${body.repo.name}`,
-          },
+    const workflowOptions = {
+      messages: [
+        {
+          id: messageId,
+          role: "user" as const,
+          parts: [{ type: "text" as const, text: body.prompt }],
         },
-      } as Parameters<typeof runAgentWorkflow>[0],
-    ]);
+      ],
+      chatId: chat.id,
+      harnessId: DEFAULT_CHAT_HARNESS_ID,
+      sessionId: session.id,
+      userId: botUserId,
+      requestUrl: req.url,
+      authSession: null,
+      autoCommitEnabled: true,
+      autoCreatePrEnabled: true,
+      // Trace correlation — sessionId/chatId are stamped by
+      // the workflow; the dispatch origin + Linear task id ride here.
+      agentOptions: {
+        telemetry: {
+          source: "bufi-dispatch",
+          linearTaskId: body.blueprint.taskId,
+          repo: `${body.repo.owner}/${body.repo.name}`,
+        },
+      },
+    } satisfies Parameters<typeof runAgentWorkflow>[0];
+    const run = await start(runAgentWorkflow, [workflowOptions]);
     workflowRunId = run.runId;
 
     // Callback config (body.callback) is persisted on session row for a
