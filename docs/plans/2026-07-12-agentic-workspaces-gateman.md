@@ -167,3 +167,34 @@ short-lived Shiva agent token is therefore rejected by bufi-hyper's
 `/auth/whoami`. No tool event or wallet mutation was produced. This closes the
 Desk-side auth/signature/grant path but not a successful production
 `tool.called` execution. A real production Desk member grant remains required.
+
+## Production-configured Desk broker E2E — 2026-07-12 13:52 UTC
+
+The missing production broker secret was corrected in the Desk Vercel project
+(the prior production value was present but empty). A disposable, confirmed
+Supabase user and workspace were created in the production-configured database,
+the workspace membership was inserted, and a real Desk broker request was sent
+from the local Desk runtime loaded with production environment variables.
+
+The request completed the full non-mutating path:
+
+1. Desk accepted the HMAC request and verified the workspace grant.
+2. Desk verified the disposable member's workspace membership.
+3. Desk minted an HS256 Shiva agent PAT; Shiva's deployed production worker
+   accepted it after the explicit algorithm fix in `f4aa04620`.
+4. Desk reached `mcp.bu.finance` and returned HTTP `200` for
+   `circle_search_services`.
+5. The response included native `toolName`, `risk`, `approvalState`,
+   `workflowStep`, `workspaceId`, `traceId`, and `evidenceHash` metadata.
+
+The result was the expected `executor_not_configured` response because this
+disposable workspace has no Hermes/BUFI isolated wallet executor attached. No
+wallet was created, funded, deployed, or spent from. This closes the
+production-configured auth/grant/identity/dispatch boundary, but not executor
+provisioning, authenticated browser/Expo journeys, connector sandboxes,
+saturation, or the approval-gated mutation gate.
+
+The strict bucket-analysis baseline remains **82.7%**. The earlier **85.6%**
+figure is retained as a post-change implementation estimate, not a fresh strict
+score; this E2E result is evidence for the broker bucket only and must not be
+converted into 100% parity.

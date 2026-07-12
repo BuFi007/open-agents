@@ -305,3 +305,27 @@ The bridge returned `422` because the preview Supabase subject is not a
 production Shiva workspace subject, so the short-lived agent token was rejected
 by `/auth/whoami`. No wallet call or tool event was emitted. This is an
 environment-boundary result, not a successful production tool execution.
+
+## Production-configured Desk broker E2E — 2026-07-12 13:52 UTC
+
+The production `BUFI_AGENT_TOOL_BROKER_SECRET` had existed as an empty Vercel
+value; it was replaced with the same 64-character development/preview secret
+used by the signed broker contract. A disposable confirmed user and workspace
+were created in the production-configured Supabase project and removed after
+the run. The local Desk runtime was launched with Vercel production
+environment variables and sent a real, signed `circle_search_services` request.
+
+Observed result: HTTP `200` from Desk, successful grant and membership checks,
+successful Shiva HS256 PAT exchange, successful bufi-hyper dispatch, and a
+structured response containing the native trace/evidence metadata (`toolName`,
+`risk`, `approvalState`, `workflowStep`, `workspaceId`, `traceId`, and
+`evidenceHash`). The tool result was the expected
+`executor_not_configured` response for a workspace without a Hermes/BUFI
+isolated wallet executor. No wallet mutation or spend was attempted.
+
+This closes the production-configured broker identity/dispatch boundary. It
+does not close executor provisioning, non-zero `tool.called` wallet evidence,
+approval-gated mutation, authenticated Desk/Expo journeys, connector
+sandboxing, saturation, or the operating-week gate. The strict bucket baseline
+remains **82.7%**; the **85.6%** value is a post-change estimate, not a fresh
+strict bucket rerun, and 100% parity is still unproven.
