@@ -223,13 +223,21 @@ non-tax closure slice.
 
 ## Expo/Cleo simulator revalidation — 2026-07-12
 
-The `apps/expo` native target reaches a successful direct Xcode simulator
-build after installing the declared `react-native-worklets` peer in an isolated
-worktree. A runtime Metro request still fails closed because the Circle wallet
-adapter graph pulls the Node-only `node:util` module from
-`@circle-fin/smart-contract-platform`. The native binary build is therefore
-green, but no protected Expo/Cleo workflow was rendered; the device gate
-remains open until the wallet dependency is split or platform-guarded.
+The Expo wallet services now import the browser-safe Circle modular subpaths
+instead of the Node-only `@bu/circle` barrel. The iOS release bundle embeds
+successfully, and a direct Xcode Release simulator build succeeds. Installing
+that binary and launching it on iPhone 16 Pro simulator reached the app's JS
+runtime; the first launch exposed a second native defect where Hermes does not
+provide the browser `crypto.randomUUID` global. The app now uses the native
+`expo-crypto` UUID API for chat, workflow idempotency, and invoice IDs.
+
+After rebuilding, the simulator launches without the UUID abort. The launch
+then fails closed at the expected environment boundary (`supabaseUrl is
+required`) because this isolated worktree has no Supabase runtime credentials.
+This proves native build, embedded bundle, and crash-free startup through the
+UUID boundary; it does **not** prove an authenticated Expo/Cleo workflow,
+approval/cancellation journey, push delivery, or wallet mutation. Those remain
+open device gates and no credentials were added to the repository.
 
 ## Hosted Open Agents production redeploy — 2026-07-12
 
