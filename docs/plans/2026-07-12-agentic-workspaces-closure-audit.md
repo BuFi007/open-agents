@@ -160,6 +160,10 @@ current Streamable HTTP v3 client: app discovery returned QuickBooks and Xero
 Accounting OAuth apps, and scoped tool discovery returned 57 QuickBooks tools
 and 38 Xero tools. Conta Azul and Magic Inbox are not Pipedream catalog apps;
 they remain native/connector adapters and were not falsely marked as synced.
+An actual read-only QuickBooks options call reached the live tool and returned
+the user-consent account-connect flow; no token or URL was persisted and no
+accounting mutation was attempted. OAuth consent and replayable sync evidence
+remain the missing production step.
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.
