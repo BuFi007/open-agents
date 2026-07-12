@@ -71,8 +71,8 @@ Pass with follow-ups.
 - Fantasmita/tax-agent work remains out of this pass.
 
 Follow-up: run authorized Pipedream, Magic Inbox and accounting-provider
-sandboxes before production launch. The configured hosted Redis provider must
-also be replaced or repaired before the connector data plane can be certified.
+sandboxes before production launch. Railway Redis now passes the deployed
+relay/source path; broader hosted provider-load and chaos certification remains.
 
 ## 5. Reliability and performance review
 
@@ -82,28 +82,38 @@ Pass with follow-ups.
 - Queue plan and BullMQ profile contracts encode concurrency, workspace fairness, retry classes and sanitized DLQ metadata.
 - Production gate contract records migration replay, tenant isolation, restart loss, p95 latency, recall and chaos criteria.
 
-Fresh production-target evidence is red, not absent: the configured Upstash
-endpoint closes TLS before handshake, and eight BullMQ/outbox/worker cases fail.
-Local isolated Redis kill/restart evidence remains green but is not a substitute.
+The original Upstash endpoint still closes TLS before handshake, but it is no
+longer the active worker target. Separate Railway relay and canonical-source
+services now pass health checks and process a real Neon outbox artifact through
+Railway Redis. Local isolated Redis kill/restart evidence remains green; the same
+chaos and saturation matrix has not yet run against Railway.
 
-Follow-up: repair the hosted Redis target, then execute the mixed workload,
-kill/restart/redrive and provider-load tests against that target and export queue
-SLOs from the deployed workers. The authenticated payload-free ingress, ordered
-trace persistence and queue cockpit now pass locally and against live Neon.
+Follow-up: execute the mixed workload, kill/restart/redrive and provider-load
+tests against Railway Redis and configure the payload-free alert webhook. The
+authenticated payload-free ingress, ordered trace persistence and queue cockpit
+now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
 `dpl_Gg7YQdjYVhy2V9jwGAHfZ2UtH5dX`: first acceptance persisted sequence 2,
 exact replay returned the same sequence, and one payload-free SLO trace remained
 in Neon. The reusable `queue:certify:hosted` command creates and cleans its own
-fixture. Delivery from the actual deployed relay/worker topology remains open.
+fixture. Delivery from the deployed relay/source topology now also passes.
 
-The missing process boundary is now implemented as a standalone Railway-ready
+The process boundary is implemented as a standalone Railway-ready
 image with isolated relay, canonical-source and knowledge-AI modes, fail-closed
 readiness, bounded workspace/run telemetry, optional payload-free SLO webhook
 delivery and graceful shutdown. The image builds. A real `all`-mode process
 reported both worker profiles ready and a fresh relay cycle against live Neon
-plus isolated Redis, then exited cleanly on SIGINT. Hosted rollout onto a
-replacement Redis remains the follow-up; this local process proof is not counted
-as a hosted worker claim.
+plus isolated Redis, then exited cleanly on SIGINT. Railway deployments
+`c3d2bd2c-2cc4-4e29-990b-1807ea0192b7` (relay) and
+`045d547f-a09e-405d-8d8f-259af1cc2d2b` (source) now pass `/readyz`. A disposable
+certification fixture proved Neon artifact/outbox → Railway Redis → source worker
+→ canonical KG entity → protected Vercel telemetry, with queued and completed
+facts and zero fixture rows after cleanup. Railway deployment
+`08e50274-f9ba-440f-97dc-e24a86537898` also passes `/readyz` in knowledge-AI mode.
+The upgraded fixture proved enrichment, a real 1,536-dimension AI Gateway
+embedding and a matching hosted Typesense 30.2 projection/receipt, then removed
+all Postgres and external-index fixture state. Hosted repair/redrive, alert
+delivery and chaos/load remain follow-ups.
 
 ## 6. Product and UX contract review
 
@@ -132,16 +142,16 @@ These are not hidden failures; they are external/live-certification requirements
 - Claude Code login/credits; its live handshake reports not authenticated.
 - macOS Accessibility and Screen Recording grants for CuaDriver. The binary and
   MCP session are healthy, but TCC capabilities are denied.
-- Supabase, Redis, Typesense, Pipedream, Gmail/Outlook and accounting-provider sandbox matrices.
+- Supabase load, hosted queue/Typesense chaos, Pipedream, Gmail/Outlook and accounting-provider sandbox matrices.
 - Authenticated Desk and physical-device Expo E2E.
 
 ## 8. Decision
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **80.5%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **81.7%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
-provider parity is not certified while hosted Redis, provider sandboxes,
+provider parity is not certified while hosted load/chaos, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.
 
 Risk rating: **Medium-high for general availability**; **medium for guarded

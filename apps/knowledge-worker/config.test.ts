@@ -9,6 +9,7 @@ const base = {
     "https://open-agents.test/api/internal/queue-telemetry",
   OPEN_AGENTS_QUEUE_TELEMETRY_SECRET:
     "telemetry-secret-at-least-thirty-two-characters",
+  VERCEL_AUTOMATION_BYPASS_SECRET: "vercel-automation-bypass-secret",
   KNOWLEDGE_WORKSPACE_IDS: "workspace-a,workspace-b",
   TYPESENSE_URL: "https://typesense.test",
   TYPESENSE_API_KEY: "typesense-key-at-least-sixteen",
@@ -27,6 +28,7 @@ describe("knowledge worker configuration", () => {
       mode: "relay",
       workspaceIds: ["workspace-a", "workspace-b"],
       typesenseUrl: null,
+      deploymentProtectionBypassSecret: "vercel-automation-bypass-secret",
     });
     expect(
       parseKnowledgeWorkerConfig({
@@ -70,5 +72,11 @@ describe("knowledge worker configuration", () => {
     expect(() =>
       parseKnowledgeWorkerConfig({ ...base, REDIS_URL: "http://redis.test" }),
     ).toThrow("protocol");
+    expect(() =>
+      parseKnowledgeWorkerConfig({
+        ...base,
+        VERCEL_AUTOMATION_BYPASS_SECRET: "invalid\nheader",
+      }),
+    ).toThrow("VERCEL_AUTOMATION_BYPASS_SECRET");
   });
 });

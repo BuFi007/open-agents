@@ -34,6 +34,8 @@ const telemetry = createQueueTelemetryReporter({
   sink: createQueueTelemetryHttpSink({
     endpoint: config.telemetryUrl,
     secret: config.telemetrySecret,
+    deploymentProtectionBypassSecret:
+      config.deploymentProtectionBypassSecret ?? undefined,
   }),
   policy: {
     queueWaitSloMs: 5_000,

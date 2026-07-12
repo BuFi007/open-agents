@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 80.5%.** The repository has strong contracts and a growing
+**Production parity: 81.7%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -16,13 +16,13 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 85% | 10.2 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. A standalone relay/source/knowledge worker image, readiness gate and bounded telemetry reporter now build and run against live Neon plus isolated Redis. Protected hosted telemetry delivery passes; configured Upstash TCP readiness and an actual hosted worker rollout still fail. |
+| BullMQ data plane and workload isolation | 12 | 95% | 11.4 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. Separate relay, canonical-source and knowledge-AI services now run on Railway Redis and pass `/readyz`; one disposable Neon artifact completed all four hosted stages through AI Gateway and Typesense with payload-free telemetry. Hosted kill/restart/load, repair/redrive and alert-webhook certification remain open. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 85% | 8.5 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Focused suites and a forced real Vercel preview build pass; authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 85% | 6.0 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Expo web export and a clean external install/import of the public adapter pass; authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **80.5%** |  |
+| **Total** | **100** |  | **81.7%** |  |
 
 ## Newly proven in this pass
 
@@ -148,10 +148,12 @@ provider, rendered client, production worker, or live evidence path.
   existing Circle agent-wallet inventory/balance read. Mutation and spend remain
   denied without approval. Claude Code reports no authenticated login and
   CuaDriver reports missing Accessibility and Screen Recording TCC grants.
-- A fresh hosted-infrastructure rerun passes ten live Neon/connector/RLS/search/
-  pgvector/AI Gateway cases. The configured Upstash endpoint closes TLS before
-  handshake, producing eight honest BullMQ/outbox/worker failures; local Redis
-  success is not substituted for this production-provider failure.
+- A fresh hosted-infrastructure rerun originally passed ten live Neon/connector/
+  RLS/search/pgvector/AI Gateway cases while the former Upstash endpoint closed
+  the TLS handshake. That endpoint is now retired from the worker path: Railway
+  Redis passes the deployed relay, canonical-source and knowledge-AI
+  certification. Provider saturation and kill/restart evidence remain open and
+  are not inferred from connectivity plus one successful fixture.
 - The configured hosted Typesense provider also passed a unique-collection live
   test: create, two idempotent upserts, tenant-filtered retrieval of exactly one
   document and cleanup. The larger recall/latency/freshness-repair load gate is
@@ -201,18 +203,38 @@ provider, rendered client, production worker, or live evidence path.
   reported both worker profiles healthy and a fresh successful relay cycle, and
   SIGINT performed a clean telemetry/runtime/database shutdown. Full CI now
   passes 178 isolated files and 18 package typechecks.
+- Railway deployment `c3d2bd2c-2cc4-4e29-990b-1807ea0192b7` runs the isolated
+  relay and deployment `045d547f-a09e-405d-8d8f-259af1cc2d2b` runs the
+  canonical-source worker against Railway Redis. Both images passed `/readyz`.
+  The repeatable `queue:certify:worker-plane` fixture committed one signed
+  Pipedream/Magic-Inbox-shaped SourceArtifact to Neon, observed its outbox row
+  published through the relay, observed a version-1 `SourceArtifact` entity
+  created by the separate worker, and received three hosted queue traces with
+  queued=1, completed=1 and no artifact key or storage reference. Cleanup left
+  zero run, trace, entity and source-artifact rows. Protected Vercel delivery
+  uses a validated server-only automation-bypass header; Deployment Protection
+  remains enabled and neither secret is logged or persisted by the certifier.
+- Railway deployment `08e50274-f9ba-440f-97dc-e24a86537898` runs the isolated
+  knowledge-AI worker. The upgraded disposable certifier observed four published
+  outbox stages and four hosted completions: canonical entity version 1,
+  deterministic `pdf-document` enrichment, a 1,536-dimension AI Gateway
+  embedding bound to source version 1, and a matching `workspace_knowledge`
+  Typesense document plus Postgres projection receipt. Typesense 30.2 runs on a
+  persistent Railway volume with a collection-scoped create/upsert key; the
+  worker never receives the admin key. Cleanup left zero certification artifacts,
+  entities, enrichments, embeddings, projections, outbox rows, runs and external
+  documents. The diagnostic DLQ entry was purged after key rotation.
 
 ## Must-have gaps before 100%
 
-1. Replace or repair the configured Redis/Upstash TCP provider and run the same
-   mixed workload against that production target. A local isolated Redis pass is
-   evidence for the runtime, not the hosted provider.
-2. Roll out the new relay/source/knowledge image to a hosted worker platform,
-   configure the replacement Redis and payload-free alert webhook, then repeat
-   crash-after-effect against the hosted alternate-index provider and deployed
-   topology. Image build, process startup, readiness, live-Neon relay cycle,
-   protected telemetry ingress, ordered trace persistence and clean shutdown
-   pass; the actual hosted worker rollout remains open.
+1. Run the mixed quiet/noisy workload, Redis kill/restart and redrive suite
+   against the now-working Railway Redis target. Relay/source hosted processing
+   passes, but connectivity plus one canonical job is not a saturation or chaos
+   certification.
+2. Configure the payload-free alert webhook, then repeat repair/redrive and
+   crash-after-effect against the hosted alternate-index provider. Relay,
+   canonical-source, enrichment, AI Gateway embedding and Typesense projection
+   are certified; hosted repair plus alert delivery are not.
 3. Run clean migration replay, multi-tenant load, larger combined-recall and
    latency benchmarks, scheduled freshness repair and Redis/worker kill-restart
    certification.

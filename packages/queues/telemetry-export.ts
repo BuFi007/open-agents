@@ -89,6 +89,7 @@ export type QueueTelemetryExportSink = {
 export function createQueueTelemetryHttpSink(options: {
   endpoint: string;
   secret: string;
+  deploymentProtectionBypassSecret?: string;
   fetchImpl?: Fetch;
 }): QueueTelemetryExportSink {
   const endpoint = new URL(options.endpoint);
@@ -101,6 +102,15 @@ export function createQueueTelemetryHttpSink(options: {
     throw new Error("Queue telemetry endpoint must use HTTPS");
   if (options.secret.length < 32)
     throw new Error("Queue telemetry secret is not configured");
+  const deploymentProtectionBypassSecret =
+    options.deploymentProtectionBypassSecret;
+  if (
+    deploymentProtectionBypassSecret !== undefined &&
+    (deploymentProtectionBypassSecret.length < 16 ||
+      deploymentProtectionBypassSecret.length > 4_096 ||
+      hasHeaderControlCharacter(deploymentProtectionBypassSecret))
+  )
+    throw new Error("Deployment protection bypass secret is invalid");
   const fetchImpl = options.fetchImpl ?? fetch;
   return {
     async send(candidate) {
@@ -111,6 +121,11 @@ export function createQueueTelemetryHttpSink(options: {
           accept: "application/json",
           authorization: `Bearer ${options.secret}`,
           "content-type": "application/json",
+          ...(deploymentProtectionBypassSecret
+            ? {
+                "x-vercel-protection-bypass": deploymentProtectionBypassSecret,
+              }
+            : {}),
         },
         body: JSON.stringify(exported),
         redirect: "error",
@@ -135,6 +150,13 @@ export function createQueueTelemetryHttpSink(options: {
       };
     },
   };
+}
+
+function hasHeaderControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
 }
 
 export function createQueueTelemetryExport(input: {

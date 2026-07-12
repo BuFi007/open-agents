@@ -99,6 +99,7 @@ describe("queue telemetry export", () => {
     const sink = createQueueTelemetryHttpSink({
       endpoint: "https://open-agents.test/api/internal/queue-telemetry",
       secret: "queue-telemetry-secret-at-least-thirty-two-chars",
+      deploymentProtectionBypassSecret: "vercel-automation-bypass-secret",
       fetchImpl: async (input, init) => {
         captured =
           input instanceof Request
@@ -112,6 +113,9 @@ describe("queue telemetry export", () => {
       sequence: 42,
     });
     expect(captured?.headers.get("authorization")).toStartWith("Bearer ");
+    expect(captured?.headers.get("x-vercel-protection-bypass")).toBe(
+      "vercel-automation-bypass-secret",
+    );
     expect(await captured?.json()).toEqual(exported);
   });
 
@@ -122,6 +126,13 @@ describe("queue telemetry export", () => {
         secret: "queue-telemetry-secret-at-least-thirty-two-chars",
       }),
     ).toThrow("must use HTTPS");
+    expect(() =>
+      createQueueTelemetryHttpSink({
+        endpoint: "https://open-agents.test/api/internal/queue-telemetry",
+        secret: "queue-telemetry-secret-at-least-thirty-two-chars",
+        deploymentProtectionBypassSecret: "weak\nheader",
+      }),
+    ).toThrow("bypass secret is invalid");
     const sink = createQueueTelemetryHttpSink({
       endpoint: "https://open-agents.test/api/internal/queue-telemetry",
       secret: "queue-telemetry-secret-at-least-thirty-two-chars",

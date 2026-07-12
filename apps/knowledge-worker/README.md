@@ -23,6 +23,11 @@ Agents. A failed telemetry delivery is retained for bounded retry without
 changing job semantics. The optional alert webhook receives only structured SLO
 alerts, never job payloads or provider error details.
 
+When telemetry targets a protected Vercel preview, configure the project-scoped
+`VERCEL_AUTOMATION_BYPASS_SECRET`. The worker sends it only in Vercel's
+`x-vercel-protection-bypass` header; it is never included in traces, readiness
+responses, alert payloads or logs. Deployment Protection remains enabled.
+
 Relay deployments currently require an explicit `KNOWLEDGE_WORKSPACE_IDS`
 allowlist. This is deliberate: a shared worker must not enumerate tenant IDs
 through a broad database credential. Add workspaces through deployment config

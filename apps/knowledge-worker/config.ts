@@ -16,6 +16,7 @@ export type KnowledgeWorkerConfig = Readonly<{
   relayBatchSize: number;
   telemetryUrl: string;
   telemetrySecret: string;
+  deploymentProtectionBypassSecret: string | null;
   telemetryIntervalMs: number;
   typesenseUrl: string | null;
   typesenseApiKey: string | null;
@@ -55,6 +56,10 @@ export function parseKnowledgeWorkerConfig(
   const telemetrySecret = environment.OPEN_AGENTS_QUEUE_TELEMETRY_SECRET ?? "";
   if (telemetrySecret.length < 32)
     throw new Error("OPEN_AGENTS_QUEUE_TELEMETRY_SECRET is not configured");
+  const deploymentProtectionBypassSecret = optionalHeaderSecret(
+    environment.VERCEL_AUTOMATION_BYPASS_SECRET,
+    "VERCEL_AUTOMATION_BYPASS_SECRET",
+  );
 
   const needsKnowledge = mode === "knowledge" || mode === "all";
   const typesenseUrl = environment.TYPESENSE_URL
@@ -110,6 +115,7 @@ export function parseKnowledgeWorkerConfig(
     relayBatchSize: integer(environment.OUTBOX_RELAY_BATCH_SIZE, 100, 1, 1_000),
     telemetryUrl,
     telemetrySecret,
+    deploymentProtectionBypassSecret,
     telemetryIntervalMs: integer(
       environment.QUEUE_TELEMETRY_INTERVAL_MS,
       15_000,
@@ -124,6 +130,27 @@ export function parseKnowledgeWorkerConfig(
     alertWebhookUrl,
     alertWebhookSecret,
   };
+}
+
+function optionalHeaderSecret(
+  value: string | undefined,
+  name: string,
+): string | null {
+  if (value === undefined || value === "") return null;
+  if (
+    value.length < 16 ||
+    value.length > 4_096 ||
+    hasHeaderControlCharacter(value)
+  )
+    throw new Error(`${name} is invalid`);
+  return value;
+}
+
+function hasHeaderControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
 }
 
 function uniqueIds(value: string): readonly string[] {
