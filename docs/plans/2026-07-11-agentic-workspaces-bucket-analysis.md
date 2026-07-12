@@ -381,3 +381,11 @@ wallet executor provisioning/approved spend, authorized connector sandboxes,
 resource saturation, authenticated Desk browser/Expo device journeys, or the
 internal operating-week report. The baseline therefore remains 82.7% rather
 than claiming an unsupported 100%.
+
+The authenticated Desk browser gate is now partially closed: PR #546 commit
+`727ffaf17` fixes password-auth post-setup redirect, and Playwright observed a
+disposable production-configured user reaching the wallet setup gate and
+receiving HTTP `200` from `/api/agent-workspaces/grant`. This is authenticated
+Desk evidence, but not a complete hosted browser launch/approve/cancel/trace
+journey; Expo physical-device evidence and Desk type-debt remediation remain
+open.
