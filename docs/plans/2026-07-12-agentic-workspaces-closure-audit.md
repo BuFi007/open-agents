@@ -56,6 +56,15 @@ out of scope for this audit.
   until the production Desk endpoint has service-token wiring and a real member
   grant.
 
+- The live bufi-hyper MCP manifest currently exposes 117 tools, including the
+  complete Circle Agent Wallet registry. A fresh Desk preview deployment
+  (`dpl_4xKAH8euYUVusRho3hFQ6fhAugd7`) built successfully with 298 static pages
+  and the `/api/internal/agent-tools` route. An unsigned request returned 401;
+  an HMAC-signed Open Agents-shaped `circle_search_services` request was
+  accepted by the strict schema and rejected only at the deliberately invalid
+  grant with 403. This proves deployment and protocol-shape parity, not a real
+  member or wallet execution.
+
 ## Verification
 
 The non-tax package sweep is green:
@@ -105,6 +114,9 @@ expired`. This proves runtime secret injection and signature verification withou
 using a real member, workspace, or wallet. The route is not promoted to Desk
 production because the current production build still has unrelated pre-existing
 contract type debt, and the preview URL is not a durable production broker.
+The latest forced preview is `desk-v1-g0h2lqhs7-bu-finance-007.vercel.app`
+(`dpl_4xKAH8euYUVusRho3hFQ6fhAugd7`) and is READY; it repeats the same 401/403
+boundary probe after the full Circle bridge and runtime-env whitelist landed.
 
 The broker contract was corrected in Desk commit `dfbfc8d44`: strict request
 validation accepts Open Agents' `agentRunId` and `traceId`, and knowledge
