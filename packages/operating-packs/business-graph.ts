@@ -49,7 +49,10 @@ const RESERVED_FIELDS = new Set([
   "version",
   "evidenceRefs",
 ]);
-const SAFE_NAME = /^[a-zA-Z][a-zA-Z0-9_.-]{1,95}$/;
+// Workspace IDs are externally issued and may be UUIDs (which start with a
+// digit). Keep the same bounded, punctuation-safe alphabet while accepting
+// both human-readable BUFI IDs and canonical UUIDs.
+const SAFE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,95}$/;
 
 export type BusinessEntity = {
   id: string;
