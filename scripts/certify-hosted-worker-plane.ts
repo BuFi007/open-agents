@@ -228,7 +228,7 @@ try {
       queued,
       completed,
     };
-  }, 120_000);
+  }, 120_000, "initial four-stage worker plane");
   entityId = result.entity.id;
 
   const serializedTelemetry = JSON.stringify(result.telemetry);
@@ -237,6 +237,58 @@ try {
     serializedTelemetry.includes(artifact.safeStorageRef)
   )
     throw new Error("Hosted worker telemetry leaked source artifact detail");
+
+  // Prove the low-priority repair route against the deployed worker and hosted
+  // alternate index. Delete only the external projection, enqueue the same
+  // repair event twice, and require one idempotent event to restore it.
+  await deleteTypesenseDocument(result.entity.id);
+  const repairOutboxId = `worker-cert-repair-${suffix}`;
+  const repairInput = {
+    externalKey: artifact.artifactKey,
+    kind: "SourceArtifact",
+    name: result.entity.name,
+    outbox: {
+      id: repairOutboxId,
+      topic: "knowledge.repair",
+      schemaVersion: 1,
+      payload: {
+        artifactKey: artifact.artifactKey,
+        sourceRevision: artifact.sourceRevision,
+        connectionId,
+        traceId: runId,
+        stage: "repair",
+      },
+    },
+  } as const;
+  const repairFirst = await knowledge
+    .forWorkspace(workspaceId)
+    .resolveAndEnqueue(repairInput);
+  const repairReplay = await knowledge
+    .forWorkspace(workspaceId)
+    .resolveAndEnqueue(repairInput);
+  if (
+    repairFirst.event.id !== repairReplay.event.id ||
+    repairFirst.entity.id !== repairReplay.entity.id
+  )
+    throw new Error("Hosted repair enqueue is not idempotent");
+  outboxIds = [...outboxIds, repairOutboxId];
+  const repaired = await waitFor(async () => {
+    const [event] = await inspection<
+      { status: string; published_at: Date | null }[]
+    >`
+      SELECT status, published_at FROM knowledge_outbox
+      WHERE id = ${repairOutboxId}
+    `;
+    const document = await readTypesenseDocument(result.entity.id);
+    if (event?.status !== "published" || !event.published_at || !document)
+      return null;
+    return { event, document };
+  }, 120_000, "idempotent hosted repair");
+  if (
+    repaired.document.workspaceId !== workspaceId ||
+    repaired.document.inputHash !== result.projection.inputHash
+  )
+    throw new Error("Hosted repair restored the wrong projection");
 
   console.log(
     JSON.stringify(
@@ -274,6 +326,13 @@ try {
           queued: result.queued,
           completed: result.completed,
           payloadFree: true,
+        },
+        repair: {
+          outboxId: repairOutboxId,
+          replayedEnqueue: true,
+          published: true,
+          restoredExternalDocument: repaired.document.id,
+          inputHashStable: true,
         },
       },
       null,
@@ -397,6 +456,7 @@ function identifier(value: string, name: string): string {
 async function waitFor<T>(
   inspect: () => Promise<T | null>,
   timeoutMs: number,
+  label: string,
 ): Promise<T> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -404,5 +464,5 @@ async function waitFor<T>(
     if (result) return result;
     await Bun.sleep(1_000);
   }
-  throw new Error("Hosted worker plane did not converge before the deadline");
+  throw new Error(`${label} did not converge before the deadline`);
 }
