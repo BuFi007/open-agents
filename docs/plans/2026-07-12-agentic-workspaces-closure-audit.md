@@ -297,3 +297,11 @@ certifiers all passed and cleaned their fixtures. Railway maxima during the
 20-minute window were 0.5197 CPU units and 113.6 MB memory. This closes the
 semantic-provider and larger lexical-recall subgates, but deliberately remains
 bounded-envelope evidence rather than a saturation ceiling claim.
+
+The latest hosted Desk probe closes the preview auth path: a disposable
+confirmed user received a real workspace grant (`200`), the locally verified
+HMAC signature passed the broker, and the call reached the bufi-hyper bridge.
+The bridge returned `422` because the preview Supabase subject is not a
+production Shiva workspace subject, so the short-lived agent token was rejected
+by `/auth/whoami`. No wallet call or tool event was emitted. This is an
+environment-boundary result, not a successful production tool execution.

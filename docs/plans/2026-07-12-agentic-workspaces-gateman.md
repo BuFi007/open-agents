@@ -152,3 +152,18 @@ larger lexical-recall subgates are now green; the resource result is still a
 bounded envelope, not saturation proof. The verdict remains **85.6%, not 100%**
 until authorized connectors, authenticated clients, wallet-spend, and operating
 week evidence are attached.
+
+## Hosted broker probe — 2026-07-12 12:20 UTC
+
+The clean Desk preview was redeployed after replacing stale branch-scoped
+preview secrets with one encrypted preview value. A disposable, confirmed
+Supabase user and workspace exercised the real grant endpoint: the grant
+returned `200`, its HMAC verified locally against the preview/development
+secret, and the broker request signature passed Desk authentication and
+workspace membership checks. The request reached the bufi-hyper bridge and
+returned `422 BUFI hyper agent tool failed` because the disposable preview
+Supabase subject is not a production Shiva workspace subject; the minted
+short-lived Shiva agent token is therefore rejected by bufi-hyper's
+`/auth/whoami`. No tool event or wallet mutation was produced. This closes the
+Desk-side auth/signature/grant path but not a successful production
+`tool.called` execution. A real production Desk member grant remains required.
