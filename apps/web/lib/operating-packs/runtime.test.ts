@@ -35,7 +35,7 @@ describe("operating-pack runtime contract", () => {
     ).toContainEqual({ id: "finance_scorecard", kind: "kpi" });
   });
 
-  test("validates manifest-owned Desk composition items and excludes tax", () => {
+  test("validates manifest-owned Desk composition items, including tax", () => {
     expect(
       validateOperatingPackComposition([
         {
@@ -58,19 +58,21 @@ describe("operating-pack runtime contract", () => {
         },
       ]).map((item) => item.packId),
     ).toEqual(["finance_ops", "grant_ops"]);
-    expect(() =>
+    expect(
       validateOperatingPackComposition([
         {
           instanceId: "canvas:tax",
           packId: "tax_automation",
-          widgetId: "tax_readiness",
+          widgetId: "factura_e_workflow",
           kind: "workflow",
           enabled: true,
           order: 0,
           width: "full",
         },
       ]),
-    ).toThrow("Unsupported composition pack");
+    ).toMatchObject([
+      { packId: "tax_automation", widgetId: "factura_e_workflow" },
+    ]);
   });
 
   test("installs dependencies in deterministic topological order", () => {

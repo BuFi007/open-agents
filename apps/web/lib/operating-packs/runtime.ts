@@ -166,8 +166,7 @@ export function validateOperatingPackComposition(
   const items = operatingPackCompositionSchema.parse(input);
   for (const item of items) {
     const pack = packRegistry.get(item.packId);
-    if (!pack || pack.taxImplementation)
-      throw new Error(`Unsupported composition pack: ${item.packId}`);
+    if (!pack) throw new Error(`Unsupported composition pack: ${item.packId}`);
     const widget = pack.deskWidgets.find(
       (candidate) => candidate.id === item.widgetId,
     );

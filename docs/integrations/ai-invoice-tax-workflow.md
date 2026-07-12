@@ -8,6 +8,13 @@ Both AI shapes are normalized before starting the same durable workflow.
 
 This integration does not make the model a tax authority:
 
+The durable run is orchestrated by the BUFI Tax Agent specialist DAG. Evidence,
+jurisdiction and accounting-context specialists fan out in parallel, join on a
+hash-bound economic event, and then call the external engine. The specialists
+are read-only; the engine remains the sole deterministic tax authority and the
+trusted approval channel remains outside the agent runtime. See
+[`tax-agent-workflow.md`](./tax-agent-workflow.md).
+
 - AI may propose customer, line-item and service-description fields.
 - `exportContext` must come from confirmed workspace/tax-profile state and
   effective-dated rules. The model must not invent destination ARCA codes,

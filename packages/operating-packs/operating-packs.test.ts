@@ -160,6 +160,16 @@ describe("Horizontal AI ERP operating packs", () => {
     expect(compiled.workflows).toContainEqual(
       expect.objectContaining({ id: "ai_invoice_to_factura_e", risk: "high" }),
     );
+    expect(
+      compiled.agents
+        .filter((agent) => agent.packId === "tax_automation")
+        .map((agent) => agent.agentId),
+    ).toEqual([
+      "tax_evidence",
+      "tax_jurisdiction",
+      "tax_accounting",
+      "tax_orchestrator",
+    ]);
     expect(() =>
       compileOperatingPacks({
         graph,

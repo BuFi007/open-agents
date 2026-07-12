@@ -7,6 +7,11 @@ import {
   type TaxInvoiceCheckpoint,
   type TaxInvoiceDispatch,
 } from "@open-agents/tax-automation";
+import {
+  buildEvidenceReport,
+  validateArgentinaExport,
+  type TaxEvidenceReport,
+} from "@open-agents/tax-agent";
 import { getWorkflowMetadata, sleep } from "workflow";
 import {
   appendOperatingPackTrace,
@@ -18,6 +23,90 @@ export type TaxInvoiceWorkflowInput = Readonly<{
   executionId: string;
   dispatch: TaxInvoiceDispatch;
 }>;
+
+async function evidenceSpecialistStep(
+  input: TaxInvoiceWorkflowInput,
+): Promise<TaxEvidenceReport> {
+  "use step";
+  const dispatch = TaxInvoiceDispatchSchema.parse(input.dispatch);
+  // The engine will append this same source as accepted evidence. The
+  // specialist returns only a hash-bound reference; connector/ERP evidence is
+  // joined by the engine from its canonical workspace graph.
+  return buildEvidenceReport(dispatch, [
+    {
+      evidenceId: `bufi-invoice:${dispatch.invoice.invoiceId}`,
+      sourceKind: "bufi_invoice",
+      evidenceHash: dispatch.invoice.artifactHash,
+      economicEventId: dispatch.invoice.economicEventId,
+      period: {
+        start: dispatch.invoice.issueDate,
+        end: dispatch.invoice.paymentDate,
+      },
+      observedAt: dispatch.invoice.observedAt,
+      freshness: "fresh",
+      confidence: 1,
+      consentVersion: dispatch.invoice.consentVersion,
+      accountantReviewStatus: "pending",
+    },
+  ]);
+}
+
+async function jurisdictionSpecialistStep(input: TaxInvoiceWorkflowInput) {
+  "use step";
+  return validateArgentinaExport(
+    TaxInvoiceDispatchSchema.parse(input.dispatch),
+  );
+}
+
+async function accountingSpecialistStep(input: TaxInvoiceWorkflowInput) {
+  "use step";
+  const dispatch = TaxInvoiceDispatchSchema.parse(input.dispatch);
+  return {
+    version: "tax-accounting-context-v1" as const,
+    workspaceId: dispatch.workspaceId,
+    economicEventId: dispatch.invoice.economicEventId,
+    providers: ["quickbooks", "xero", "contaazul", "contabilium"] as const,
+    writes: false as const,
+    source: "workspace-accounting-connectors" as const,
+    period: {
+      start: dispatch.invoice.issueDate,
+      end: dispatch.invoice.paymentDate,
+    },
+    freshness: "fresh" as const,
+    confidence: 1 as const,
+    consentScope: dispatch.invoice.consentVersion,
+    evidenceHash: dispatch.invoice.sourceEventHash,
+    accountantReviewStatus: "pending" as const,
+  };
+}
+
+async function persistFanoutStep(
+  input: TaxInvoiceWorkflowInput,
+  evidence: TaxEvidenceReport,
+  jurisdiction: ReturnType<typeof validateArgentinaExport>,
+  accounting: Awaited<ReturnType<typeof accountingSpecialistStep>>,
+): Promise<void> {
+  "use step";
+  await appendOperatingPackTrace({
+    id: `${input.executionId}:2`,
+    runId: input.executionId,
+    workspaceId: input.dispatch.workspaceId,
+    sequence: 2,
+    type: "specialists.joined",
+    agentId: "tax_automation:tax_orchestrator",
+    summary: "Tax evidence and jurisdiction specialists joined",
+    data: {
+      evidenceRoot: evidence.evidenceRoot,
+      evidenceCount: evidence.references.length,
+      missingEvidence: evidence.missing,
+      accountantReviewStatus: evidence.accountantReviewStatus,
+      jurisdiction: jurisdiction.jurisdiction,
+      regime: jurisdiction.regime,
+      accountingProviders: accounting.providers,
+      accountingWrites: accounting.writes,
+    },
+  });
+}
 
 function client(): TaxAutomationClient {
   return new TaxAutomationClient({
@@ -203,6 +292,12 @@ export async function runTaxInvoiceWorkflow(input: TaxInvoiceWorkflowInput) {
   const { workflowRunId } = getWorkflowMetadata();
   await markStartedStep(input, workflowRunId);
   try {
+    const [evidence, jurisdiction, accounting] = await Promise.all([
+      evidenceSpecialistStep(input),
+      jurisdictionSpecialistStep(input),
+      accountingSpecialistStep(input),
+    ]);
+    await persistFanoutStep(input, evidence, jurisdiction, accounting);
     let checkpoint = await prepareStep(input);
     await persistCheckpointStep(input, checkpoint);
     for (let poll = 0; poll < 487 && !checkpoint.terminal; poll += 1) {

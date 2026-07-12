@@ -442,6 +442,16 @@ export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
       tools: ["knowledge_read", "tax_invoice_case_read"],
     },
     {
+      id: "tax_jurisdiction",
+      role: "tax_jurisdiction",
+      tools: ["knowledge_read"],
+    },
+    {
+      id: "tax_accounting",
+      role: "tax_accounting",
+      tools: ["tax_invoice_case_read"],
+    },
+    {
       id: "tax_orchestrator",
       role: "tax_orchestrator",
       tools: ["tax_invoice_prepare", "tax_invoice_case_read"],
@@ -451,7 +461,12 @@ export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
     {
       id: "ai_invoice_to_factura_e",
       title: "AI invoice to reconciled Factura E",
-      agentIds: ["tax_evidence", "tax_orchestrator"],
+      agentIds: [
+        "tax_evidence",
+        "tax_jurisdiction",
+        "tax_accounting",
+        "tax_orchestrator",
+      ],
       requiredApproval: false,
       risk: "high",
       crossPack: false,

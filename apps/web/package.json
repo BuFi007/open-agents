@@ -31,6 +31,7 @@
     "@open-agents/queues": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
     "@open-agents/shared": "workspace:*",
+    "@open-agents/tax-agent": "workspace:*",
     "@open-agents/tax-automation": "workspace:*",
     "@open-agents/traces": "workspace:*",
     "@pierre/diffs": "^1.0.10",
