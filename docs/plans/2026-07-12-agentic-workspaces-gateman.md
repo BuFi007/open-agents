@@ -304,3 +304,29 @@ accepted the explicit rejection and reached `rejected`. The resulting trace
 contained `approval.requested` and `approval.rejected`; no payment, wallet
 write, or external mutation occurred. Temporary rows and the bridge user were
 removed after the run.
+
+## Authenticated Desk command-center browser dogfood — 2026-07-12
+
+Playwright used the existing confirmed Hermes test account and a freshly minted
+Supabase magic-link session against the production-configured Desk preview. The
+real `/agent-workspaces` page rendered the pack catalog, Circle grant matrix,
+launch controls, recent operations, specialist roster, workflow timeline, trace
+count, and evidence-context panel.
+
+The browser launched `finance_ops / weekly_finance_review` through the rendered
+form. Desk returned `202`, materialized two agents, and the timeline rendered
+`workflow.started`, `artifact.emitted`, and two `agent.started` traces. The
+workflow was then cancelled through the rendered **Cancel** control; the browser
+observed the POST action and HTTP `200`, and the authenticated run resolver
+returned terminal `cancelled` with a persisted `run.cancelled` trace. No wallet
+or payment mutation occurred.
+
+The dogfood also exposed a real rate-limit interaction: the previous 2-second
+poll loop exhausted the sensitive endpoint while a run was open. Desk commit
+`73d775f9e` changes active polling to 10 seconds and terminal polling to 30
+seconds, leaving explicit controls available for the human. This closes the
+authenticated browser launch/cancel/timeline trace slice, but not the complete
+approve/reject/citation journey: the finance run was cancelled before a
+knowledge-backed evidence packet, and the separate high-risk launch was
+rate-limited before creating a new approval request. Wallet execution remains
+deliberately unconfigured.
