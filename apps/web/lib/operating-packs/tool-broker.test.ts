@@ -62,6 +62,9 @@ describe("operating-pack host tool broker", () => {
           tool: "knowledge_read",
           agentRunId: context.agentRunId,
         });
+        expect(JSON.parse(String(init?.body)).traceId).toMatch(
+          /^op_test:knowledge_read:/,
+        );
         return Response.json({ result: packet });
       },
     );
