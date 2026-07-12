@@ -39,6 +39,11 @@ Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
 policy with retry traces; mutation-capable agents are explicitly non-retryable.
 The policy suite passes 3 tests and the web typecheck passes.
 
+The worker-plane resource gate was strengthened with eight concurrent hosted
+certifiers: all eight completed and cleaned up, with observed maxima of 1.4%
+CPU and 0.4% memory. Gateman still treats this as bounded-envelope evidence,
+not saturation evidence.
+
 ## Required production follow-ups
 
 - Run authorized Pipedream, Magic Inbox, QuickBooks, Xero, Conta Azul, and
