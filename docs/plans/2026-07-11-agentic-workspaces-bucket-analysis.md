@@ -419,3 +419,15 @@ An authenticated packet resolver returned HTTP 200 with 10 references and 10
 citation handles. The selected finance citation-row browser assertion remains
 open because disposable probes exhausted the preview sensitive-operation rate
 limiter; no 100% claim is made.
+
+## Fresh strict-gate delta — 2026-07-12
+
+The authenticated fixed-preview Desk browser run now proves launch, approval
+rejection, cancellation, timeline traces, and populated citation rendering.
+This closes the remaining authenticated command-center criteria in the Desk
+bucket (weight 10), moving that bucket from 88% to 100% and adding **+1.2
+weighted points** to the July 11 strict baseline: **83.9% conservative strict
+parity**. This is not a completion claim. Expo/Cleo authenticated device and
+push, authorized provider sandboxes, Circle executor/mutation, production
+capacity ceilings, Claude/TCC, and operating-week evidence remain unproven and
+continue to hold the overall bucket analysis below 100%.
