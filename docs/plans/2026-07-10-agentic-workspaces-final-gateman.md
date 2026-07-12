@@ -90,6 +90,11 @@ Follow-up: repair the hosted Redis target, then execute the mixed workload,
 kill/restart/redrive and provider-load tests against that target and export queue
 SLOs from the deployed workers. The authenticated payload-free ingress, ordered
 trace persistence and queue cockpit now pass locally and against live Neon.
+Protected hosted delivery is also certified through Vercel deployment
+`dpl_Gg7YQdjYVhy2V9jwGAHfZ2UtH5dX`: first acceptance persisted sequence 2,
+exact replay returned the same sequence, and one payload-free SLO trace remained
+in Neon. The reusable `queue:certify:hosted` command creates and cleans its own
+fixture. Delivery from the actual deployed relay/worker topology remains open.
 
 ## 6. Product and UX contract review
 
@@ -125,7 +130,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **79.9%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **80.1%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted Redis, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.

@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 79.9%.** The repository has strong contracts and a growing
+**Production parity: 80.1%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -16,13 +16,13 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 80% | 9.6 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. An authenticated payload-free telemetry ingress and queue-SLO cockpit now pass, including live Neon sequencing; configured Upstash TCP readiness still fails. |
+| BullMQ data plane and workload isolation | 12 | 82% | 9.8 | Real BullMQ/Redis tests prove global workspace slots, retries, permanent-error discard, deadlines, compact DLQ, crash recovery and concrete canonical, enrichment, embedding, projection and repair workers. An authenticated payload-free telemetry ingress and queue-SLO cockpit now pass end to end on a protected Vercel preview with live Neon persistence and idempotent replay; configured Upstash TCP readiness still fails. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 85% | 8.5 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Focused suites and a forced real Vercel preview build pass; authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 85% | 6.0 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Expo web export and a clean external install/import of the public adapter pass; authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **79.9%** |  |
+| **Total** | **100** |  | **80.1%** |  |
 
 ## Newly proven in this pass
 
@@ -181,6 +181,14 @@ provider, rendered client, production worker, or live evidence path.
   queue/process p95, retries, dead letters and SLO alerts while malformed trace
   data stays hidden. Nine focused tests, both package/app typechecks and a live
   Neon concurrency/tenant-mismatch test pass.
+- The repeatable `queue:certify:hosted` harness created a temporary real
+  operating-pack run in Neon and delivered one integrity-bound snapshot through
+  protected preview deployment `dpl_Gg7YQdjYVhy2V9jwGAHfZ2UtH5dX`. The first
+  request returned `accepted=true`, `replayed=false`, sequence 2; an exact second
+  delivery returned `replayed=true` at the same sequence. Neon contained exactly
+  one `queue.telemetry` trace with three SLO alerts, and the persisted data
+  contained neither the synthetic job ID nor provider error detail. The fixture
+  was deleted after certification.
 
 ## Must-have gaps before 100%
 
@@ -190,8 +198,9 @@ provider, rendered client, production worker, or live evidence path.
 2. Deploy the outbox relay and concrete workers, wire them to the now-shipped
    authenticated queue-telemetry ingress, then repeat crash-after-effect against
    the hosted alternate-index provider and deployed worker topology. The
-   payload-free exporter, ordered trace persistence and cockpit rendering pass;
-   deployed worker delivery and an external alert channel remain open.
+   payload-free exporter, protected hosted ingress, ordered live-Neon trace
+   persistence and cockpit rendering pass; deployed worker delivery and an
+   external alert channel remain open.
 3. Run clean migration replay, multi-tenant load, larger combined-recall and
    latency benchmarks, scheduled freshness repair and Redis/worker kill-restart
    certification.
