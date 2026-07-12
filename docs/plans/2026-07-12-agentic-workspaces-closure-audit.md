@@ -146,6 +146,20 @@ passed (8 assertions). Commits `8de6f6d6` make both integration tests discover
 reached the real AI Gateway but was rejected with `A positive credit balance is
 required for all requests`, so that provider-backed embedding claim remains
 open.
+
+The hosted worker-plane certifier was also rerun with the configured Postgres
+and Typesense resources (endpoint normalized to HTTPS) and timed out waiting
+for the initial four-stage worker completion. Its bounded cleanup path removed
+the temporary fixture. This is current evidence that the deployed worker
+resource path is not presently certifiable from this environment; prior
+successful Railway runs remain historical evidence, not a replacement for a
+fresh pass.
+
+The Desk Pipedream Connect configuration was exercised read-only through the
+current Streamable HTTP v3 client: app discovery returned QuickBooks and Xero
+Accounting OAuth apps, and scoped tool discovery returned 57 QuickBooks tools
+and 38 Xero tools. Conta Azul and Magic Inbox are not Pipedream catalog apps;
+they remain native/connector adapters and were not falsely marked as synced.
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.
