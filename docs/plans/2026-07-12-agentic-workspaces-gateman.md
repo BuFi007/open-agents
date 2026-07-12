@@ -32,10 +32,13 @@ preview is not production and no valid member grant was exercised.
 
 Desk commit `dfbfc8d44` closes the request-shape mismatch with Open Agents by
 accepting and preserving `agentRunId`/`traceId` in the strict broker schema and
-persisting the exact incoming trace identity on knowledge packets. Its focused
-authorization suite passes 8 tests and 21 assertions. The fix is isolated on a
-clean current-development branch in Desk PR #546; the superseded PR #545 was
-closed to remove unrelated accounting scope.
+persisting the exact incoming trace identity on knowledge packets. Commit
+`dfe772eae` also binds supplied workflow/agent/trace identity into the
+append-only context-packet artifact hash (without exposing it in the packet
+payload), preventing immutable dedupe from retaining stale trace linkage. The
+focused Desk suite now passes 16 tests and 43 assertions. The fix is isolated
+on a clean current-development branch in Desk PR #546; the superseded PR #545
+was closed to remove unrelated accounting scope.
 
 Desk commit `fa912e800` extends the route to the complete Circle registry and
 the bufi-hyper MCP bridge. The route verifies the grant scope per tool, uses a

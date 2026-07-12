@@ -123,7 +123,11 @@ validation accepts Open Agents' `agentRunId` and `traceId`, and knowledge
 packets preserve both identities instead of substituting the grant subject or
 dropping the incoming trace. The refreshed preview accepted the full signed
 Open Agents-shaped request before rejecting only its deliberately invalid grant;
-the focused Desk authorization suite is green (8 tests, 21 assertions).
+the focused Desk authorization suite is green. Commit `dfe772eae` additionally
+binds supplied workflow/agent/trace identity into the immutable context-packet
+artifact hash, without exposing identity in the public packet payload, so
+duplicate persistence cannot retain stale trace linkage. The combined Desk
+context-packet, broker, and grant suite is green (16 tests, 43 assertions).
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.
