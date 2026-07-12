@@ -412,6 +412,22 @@ Executor provisioning and approved wallet mutation, authorized connector
 sandbox runs, saturation/noisy-neighbor evidence, complete authenticated
 Desk/Expo journeys, and the operating-week dogfood report remain open.
 
+## Pipedream Connect runtime probe — 2026-07-12
+
+Using the existing production-configured Desk credentials (without printing or
+persisting them), the Pipedream Connect client successfully:
+
+- issued a short-lived Connect token for a disposable external user ID;
+- queried connected accounts with the same tenant binding and returned zero
+  accounts without manufacturing a connection; and
+- searched the live app catalog, returning `quickbooks`, `quickbooks_sandbox`,
+  `xero_accounting_api`, and `xero_payroll` for the relevant queries.
+
+The probe confirms credential loading, SDK authentication, tenant-bound account
+lookup, token expiry handling, and catalog access. It does **not** claim an
+authorized QuickBooks/Xero/Conta Azul/Contabilium or Magic Inbox sandbox
+connection; no production account was created or mutated.
+
 ## Expo web build revalidation — 2026-07-12
 
 The Expo/Cleo workflow inbox branch exposed a real monorepo dependency defect:
