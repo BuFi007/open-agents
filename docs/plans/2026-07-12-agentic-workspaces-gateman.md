@@ -365,3 +365,15 @@ returned terminal `rejected` with `approval.requested` and
 Expo/Cleo authenticated device and push, real Circle wallet executor, provider
 sandbox, production capacity-ceiling, Claude/TCC, and operating-week evidence
 gates remain open. Wallet execution remains deliberately unconfigured.
+
+## Expo authenticated-environment simulator attempt — 2026-07-12
+
+The iOS release bundle was rebuilt with the existing Supabase public URL/key and
+the fixed Desk preview as `EXPO_PUBLIC_BACKEND_URL`; Metro embedded the bundle
+and Xcode Release build completed with `BUILD SUCCEEDED`. The installed
+`com.bufinance.bufi` simulator app launched and accepted a `bufi://` auth deep
+link far enough to display the native “Open in BUFI?” confirmation. The local
+Computer Use native pipe was unavailable, so the system confirmation could not
+be pressed. This is stronger native configuration evidence, but it does not
+close authenticated mobile workflow, approval/cancellation, push, or physical
+device gates.
