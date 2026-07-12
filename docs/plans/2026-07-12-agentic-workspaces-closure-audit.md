@@ -147,9 +147,10 @@ The following gates remain required before claiming 100%:
 9. authenticated Desk browser launch/approve/reject/cancel/traces/citations
    and a current hosted citation path beyond the authenticated catalog GET.
 
-The latest audit also confirmed that the public Open Agents alias can be stale
-for route probes (cached 404/HTML on unauthenticated paths); route certification
-must use an authenticated deployment URL and deployment ID, not infer health
-from the public profile page.
+The latest alias probe now returns `401 Unauthorized` for the operations API and
+`307` to the authenticated UI route. Earlier cached 404/HTML observations were
+deployment-staleness artifacts; route certification should still use an
+authenticated deployment URL and deployment ID rather than infer health from an
+unauthenticated page.
 
 These are evidence/deployment gates, not reasons to weaken the code contract.
