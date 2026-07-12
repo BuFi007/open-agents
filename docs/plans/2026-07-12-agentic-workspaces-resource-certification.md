@@ -150,3 +150,15 @@ strengthens the bounded-envelope evidence and narrows the remaining capacity
 work to provider latency, database/connection ceilings, admission fairness, and
 classification of the four failed certifiers. No customer workspace, wallet,
 or payment state was touched.
+
+## Telemetry retry redeploy rerun — 2026-07-12
+
+The telemetry HTTP sink now retries transient `408`, `425`, `429`, and `5xx`
+responses with a bounded three-attempt exponential budget; the focused queue
+suite passes 9 tests and 30 assertions. A clean worker deployment
+`fa1b30e3-9d61-4e42-a05d-8b7a0c7e9096` was promoted to the production
+`agentic-knowledge-ai` service and the 64-concurrent probe was repeated.
+Result: **61 completed, 3 failed**. This is a one-run improvement, not a pass:
+the remaining failures still coincide with telemetry delivery pressure and
+require a durable ingress/backpressure decision before the capacity gate can
+close.

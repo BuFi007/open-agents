@@ -375,6 +375,13 @@ deadline. Railway recorded 0.5958 vCPU maximum of 24 and 145.9 MB maximum of
 not CPU/memory saturation and not a pass. Provider latency, database/connection
 ceilings, admission fairness, and failure classification remain open.
 
+The telemetry sink was then hardened with bounded transient retries (focused
+suite: 9 tests / 30 assertions) and deployed cleanly to Railway deployment
+`fa1b30e3-9d61-4e42-a05d-8b7a0c7e9096`. Repeating the same 64-concurrent probe
+improved completion from 60/64 to **61/64**, but three certifiers still failed
+with telemetry delivery pressure. Gateman verdict: improvement verified;
+capacity gate still open.
+
 ## Expo authenticated-environment simulator attempt — 2026-07-12
 
 The iOS release bundle was rebuilt with the existing Supabase public URL/key and
