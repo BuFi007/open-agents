@@ -411,3 +411,18 @@ remains **82.7%** (the **85.6%** value is only a post-change estimate).
 Executor provisioning and approved wallet mutation, authorized connector
 sandbox runs, saturation/noisy-neighbor evidence, complete authenticated
 Desk/Expo journeys, and the operating-week dogfood report remain open.
+
+## Expo web build revalidation — 2026-07-12
+
+The Expo/Cleo workflow inbox branch exposed a real monorepo dependency defect:
+NativeWind 4 resolves the hoisted Tailwind 4 package even though Expo requires
+Tailwind 3. A clean dependency install failed before Metro bundling with
+`NativeWind only supports Tailwind CSS v3`.
+
+Desk commit `1907657db` fixes this without changing the web Tailwind 4
+surfaces: Expo owns a `tailwindcss-v3` alias, NativeWind's Tailwind imports are
+patched in an isolated patch directory, and the root install hook applies that
+patch deterministically. A fresh clean install followed by
+`bunx expo export --platform web` completed successfully, bundling 9 web
+bundles and 9,622 modules. This closes the Expo web-build gate; physical-device
+authentication and native push delivery remain open.
