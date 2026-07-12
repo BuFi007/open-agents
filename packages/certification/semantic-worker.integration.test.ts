@@ -12,7 +12,11 @@ import {
 import postgres from "postgres";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
-const redisUrl = process.env.QUEUE_REDIS_TEST_URL?.trim();
+const redisUrl = (
+  process.env.QUEUE_REDIS_TEST_URL ??
+  process.env.REDIS_QUEUE_URL ??
+  process.env.REDIS_URL
+)?.trim();
 const enabled =
   process.env.RUN_LIVE_SEMANTIC_WORKER === "1" &&
   Boolean(databaseUrl) &&

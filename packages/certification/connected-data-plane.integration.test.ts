@@ -25,7 +25,11 @@ import {
 import postgres from "postgres";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
-const redisUrl = process.env.QUEUE_REDIS_TEST_URL?.trim();
+const redisUrl = (
+  process.env.QUEUE_REDIS_TEST_URL ??
+  process.env.REDIS_QUEUE_URL ??
+  process.env.REDIS_URL
+)?.trim();
 const enabled = process.env.RUN_CONNECTED_PIPELINE_INTEGRATION === "1";
 const liveTest = enabled && databaseUrl && redisUrl ? test : test.skip;
 const suffix = randomUUID().replaceAll("-", "");
