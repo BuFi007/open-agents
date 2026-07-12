@@ -34,6 +34,10 @@ Desk commit `253b72167` closes the request-shape mismatch with Open Agents by
 accepting and preserving `agentRunId`/`traceId` in the strict broker schema. Its
 focused authorization suite passes 8 tests and 21 assertions.
 
+Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
+policy with retry traces; mutation-capable agents are explicitly non-retryable.
+The policy suite passes 3 tests and the web typecheck passes.
+
 ## Required production follow-ups
 
 - Run authorized Pipedream, Magic Inbox, QuickBooks, Xero, Conta Azul, and

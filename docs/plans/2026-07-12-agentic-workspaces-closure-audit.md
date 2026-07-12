@@ -105,6 +105,13 @@ The refreshed preview accepted the full signed Open Agents-shaped request before
 rejecting only its deliberately invalid grant; the focused Desk authorization
 suite is green (8 tests, 21 assertions).
 
+Open Agents commit `70701f36` adds a durable per-agent execution envelope:
+bounded cancellation (`BUFI_AGENT_STEP_TIMEOUT_MS`), bounded attempts
+(`BUFI_AGENT_MAX_ATTEMPTS`), explicit `agent.retry` traces, and attempt-aware
+message/trace identities. Automatic retries are restricted to read-only agents;
+wallet writes and payments remain single-attempt to prevent duplicated external
+effects. The policy tests and the web package typecheck pass.
+
 PR #495 is already merged and its subagent-usage accounting tests are in this
 branch. PR #438 is closed and dirty; its auto-commit polling behavior is
 already represented by the current `useAutoCommitStatus` hook, so cherry-picking
