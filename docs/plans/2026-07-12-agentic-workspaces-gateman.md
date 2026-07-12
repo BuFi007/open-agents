@@ -348,7 +348,20 @@ are recorded. The prior production-configured preview independently returned
 HTTP 200 for 15 authenticated context-packet fetches, including a populated
 packet with 10 references/citations; its old panel selected a later empty
 packet and displayed `0 citations`, which is the defect the new commit fixes.
-Hosted citation rendering therefore remains open until the fixed preview is
-redeployed with the broker/runtime environment. Expo/Cleo authenticated device,
-Circle wallet executor, provider sandbox, and capacity-ceiling gates remain
-open. Wallet execution remains deliberately unconfigured.
+The fixed preview was subsequently redeployed with the existing shared BUFI
+broker secret at deployment `dpl_BNwRHbUrNj1mDJc5iUVBqZWvFRLu`
+(`desk-v1-20jt8uyxh-bu-finance-007.vercel.app`). A fresh authenticated browser
+run fetched 15 packet responses, including populated packets with 5, 10, and
+17 citations, and rendered `Verified ContextPacket`, `10 citations`, and
+`[c1]`–`[c10]` in the panel. The hosted citation gate is now closed.
+
+The same fixed preview launched a new high-risk wallet onboarding run with the
+Claude Code harness (`op_eUuHVidgE1iCN61pjBbKdugy`), returned `202`, reached
+`awaiting_approval`, and rendered the approval controls. Rejecting through the
+rendered control returned HTTP `200`; a fresh authenticated resolver then
+returned terminal `rejected` with `approval.requested` and
+`approval.rejected` traces. No wallet mutation occurred.
+
+Expo/Cleo authenticated device and push, real Circle wallet executor, provider
+sandbox, production capacity-ceiling, Claude/TCC, and operating-week evidence
+gates remain open. Wallet execution remains deliberately unconfigured.
