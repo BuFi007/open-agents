@@ -260,3 +260,21 @@ authenticated deployment URL and deployment ID rather than infer health from an
 unauthenticated page.
 
 These are evidence/deployment gates, not reasons to weaken the code contract.
+
+## Final reconciliation — 2026-07-12 10:45 UTC
+
+The chronological interim observations above remain for auditability. Current
+authoritative evidence supersedes their interim provider failures: the healthy
+Desk `REDIS_QUEUE_URL` mixed BullMQ run (22 assertions), connected
+Postgres→BullMQ pipeline (8 assertions), Railway four-stage worker plus repair
+replay, eight concurrent bounded hosted certifiers, and three-boundary queue
+kill/recovery gate all pass. The local semantic worker reaches the real AI
+Gateway but is rejected for insufficient credits, so that provider gate stays
+open. Desk PR #546 Greptile and focused broker/context tests pass; its GitHub
+Validate and Claude Review reruns terminate in 2–4 seconds with zero steps and
+are recorded as runner-infrastructure failures, not code-green evidence.
+
+The conservative non-tax parity score remains **85.6%**. It must not be
+promoted to 100% until the authorized connector, semantic-provider,
+saturation/recall, authenticated Desk/Expo, wallet-spend, and operating-week
+gates are attached to the evidence ledger.

@@ -120,3 +120,16 @@ Agents runtime. Neither should be cherry-picked into this non-tax slice.
 
 Until those are attached to the evidence ledger, the correct status is
 **production-ready code slice with open certification gates**, not 100% parity.
+
+## Final reconciliation — 2026-07-12 10:45 UTC
+
+Chronological interim failures above are retained for auditability. Current
+evidence is green for healthy Desk Redis BullMQ, connected Postgres→BullMQ,
+Railway worker processing plus repair replay, eight concurrent bounded hosted
+certifiers, and three-boundary queue kill recovery. The local semantic worker
+reaches AI Gateway but is credit-blocked. Desk PR #546's Greptile and focused
+broker/context suite pass, while GitHub Validate/Claude Review reruns terminate
+with zero steps and remain runner-infrastructure failures. The conservative
+non-tax verdict is therefore **85.6%, not 100%**; external connector,
+provider, saturation, authenticated Desk/Expo, wallet-spend, and operating-week
+gates remain open.
