@@ -257,6 +257,23 @@ describe("Desk B2B operations API", () => {
     expect(JSON.stringify(await response.json())).not.toContain(workspaceGrant);
   });
 
+  test("accepts Codex as a grant-bound harness", async () => {
+    const response = await POST(
+      request({
+        action: "start",
+        workspaceId: run.workspaceId,
+        workspaceGrant,
+        packId: "finance_ops",
+        workflowId: "weekly_finance_review",
+        harnessId: "codex",
+        prompt: "Review workspace evidence",
+        idempotencyKey: "desk-command:codex1234",
+      }),
+    );
+    expect(response.status).toBe(202);
+    expect(startCalls).toBe(1);
+  });
+
   test("resumes approval as the derived Desk actor and cancels idempotently", async () => {
     expect(
       (

@@ -54,7 +54,7 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("start"),
     packId: z.string().regex(/^[a-z][a-z0-9._-]{1,95}$/),
     workflowId: z.string().regex(/^[a-z][a-z0-9._-]{1,95}$/),
-    harnessId: z.enum(["claude-code", "pi"]),
+    harnessId: z.enum(["codex", "claude-code", "pi"]),
     prompt: z.string().trim().min(1).max(8000),
     idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,127}$/),
   }),
