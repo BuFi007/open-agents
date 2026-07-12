@@ -59,6 +59,7 @@ mock.module("@/lib/operating-packs/desk-grant", () => ({
       ? {
           subject: "22222222-2222-4222-8222-222222222222",
           workspaceId: run.workspaceId,
+          scopes: ["knowledge.read", "agent-wallet.read", "agent-wallet.spend"],
         }
       : null,
 }));

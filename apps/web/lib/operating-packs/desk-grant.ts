@@ -11,7 +11,12 @@ const grantPayloadSchema = z
     nonce: z.string().uuid(),
     scopes: z
       .array(
-        z.enum(["knowledge.read", "agent-wallet.read", "tax.invoice.prepare"]),
+        z.enum([
+          "knowledge.read",
+          "agent-wallet.read",
+          "agent-wallet.spend",
+          "tax.invoice.prepare",
+        ]),
       )
       .min(1)
       .max(3)

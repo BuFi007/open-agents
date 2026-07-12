@@ -112,6 +112,16 @@ function authorizeGrant(input: {
   });
 }
 
+function requiredOperationScope(input: {
+  packId: string;
+  workflowId: string;
+}): "agent-wallet.read" | "agent-wallet.spend" | null {
+  if (input.packId !== "agent_wallet") return null;
+  return input.workflowId === "agent_wallet_service_discovery"
+    ? "agent-wallet.read"
+    : "agent-wallet.spend";
+}
+
 async function runDetail(
   run: NonNullable<Awaited<ReturnType<typeof getWorkspaceOperatingPackRun>>>,
 ) {
@@ -392,14 +402,21 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, status: "cancelled" });
   }
 
+  let selectedWorkflow;
   try {
-    resolveOperatingPackWorkflow({
+    selectedWorkflow = resolveOperatingPackWorkflow({
       packId: input.packId,
       workflowId: input.workflowId,
     });
   } catch {
     return Response.json({ error: "Unknown workflow" }, { status: 404 });
   }
+  const requiredScope = requiredOperationScope(input);
+  if (requiredScope && !grant.scopes.includes(requiredScope))
+    return Response.json(
+      { error: `Workspace grant requires ${requiredScope}` },
+      { status: 403 },
+    );
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
