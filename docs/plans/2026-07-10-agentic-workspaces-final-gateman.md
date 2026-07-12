@@ -128,6 +128,12 @@ Pass with follow-ups.
   dead-letter and SLO-alert snapshots without job payloads.
 - The public Circle kit includes a BUFI-branded terminal theme.
 - Client policy duplication is avoided at the contract boundary.
+- Desk's internal broker enforces the grant scope required by each exposed tool,
+  and its mobile citation route independently requires `knowledge.read` before
+  opening an admin client. Open Agents packet hashes are adapted to Desk's
+  64-hex storage constraint and revalidated on retrieval. Nineteen focused tests,
+  intelligence typecheck, and forced deployment
+  `dpl_8xhfT9gB74pmLNcJjMaxzxhCRFHP` pass.
 
 Follow-up: exercise the already-implemented surfaces through an authenticated
 signed Desk browser journey and a physical Expo device journey. A forced Desk
@@ -152,7 +158,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **82.0%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **82.3%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted load/chaos, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.
