@@ -460,12 +460,12 @@ async function runAgentStep(input: {
     },
   });
   const messageId = `${workflow.executionId}:${agent.agentId}:attempt-${attempt}`;
-  const workspaceGrant = await getOperatingPackWorkspaceGrant(
-    workflow.executionId,
-    workflow.workspaceId,
-  );
   let result;
   try {
+    const workspaceGrant = await getOperatingPackWorkspaceGrant(
+      workflow.executionId,
+      workflow.workspaceId,
+    );
     assertAgentToolBrokerConfigured(agent);
     result = await runHarnessTurnViaApi({
       harnessId: workflow.harnessId,
