@@ -627,8 +627,7 @@ async function runAgentWithPolicy(input: {
         ),
         runId: input.workflow.executionId,
         workspaceId: input.workflow.workspaceId,
-        sequence:
-          1000 + input.index * 1000 + (nextAttempt - 1) * 300 - 1,
+        sequence: 1000 + input.index * 1000 + (nextAttempt - 1) * 300 - 1,
         type: "agent.retry",
         agentId: input.agent.qualifiedId,
         summary: `${input.agent.qualifiedId} retry ${nextAttempt}/${policy.maxAttempts}`,
