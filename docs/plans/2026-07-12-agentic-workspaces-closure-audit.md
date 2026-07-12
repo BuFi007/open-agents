@@ -64,12 +64,24 @@ blocked by macOS Screen Recording/TCC. Circle wallet read-only and bufi-hyper
 tools/list passed. The configured live BullMQ Redis run still fails with
 `Connection is closed`; its certification teardown is now bounded so an
 unavailable provider does not leave the test process hanging for a minute.
-The current production alias was redeployed as
-`dpl_J9i8U3EE8LTJVpQvMT21N1WFuYMK`; an authenticated workspace-grant GET to
-`/api/bufi/operations` returned 200 and exposed the `agent_wallet` pack with
-17 tool grants and three workflows. The production broker secret was
-provisioned as a sensitive Vercel environment variable; its value is not
-stored in this repository or audit output.
+The current production alias was redeployed after the UUID and grant-scope
+fixes; an authenticated workspace-grant GET to `/api/bufi/operations` returned
+200 and exposed the `agent_wallet` pack with 17 tool grants and three
+workflows. A hosted read-only `agent_wallet_service_discovery` run also
+completed durably, but emitted **zero tool events**: the model returned a
+summary without invoking the declared tools. This is explained by the
+production configuration having no `BUFI_AGENT_TOOL_BROKER_URL`; the direct
+`mcp.bu.finance/mcp` endpoint is not a compatible broker protocol and returns
+`agent_wallet_auth_required` without a signed workspace session. The broker
+secret is provisioned as a sensitive Vercel environment variable; its value is
+not stored in this repository or audit output. Therefore the hosted catalog is
+certified, while hosted tool execution is not.
+
+PR #495 is already merged and its subagent-usage accounting tests are in this
+branch. PR #438 is closed and dirty; its auto-commit polling behavior is
+already represented by the current `useAutoCommitStatus` hook, so cherry-picking
+it would add no missing Agentic Workspaces capability and would create a
+conflict surface.
 
 ## Honest parity status
 
@@ -92,7 +104,9 @@ The following gates remain required before claiming 100%:
 6. a funded Claude account and macOS Accessibility/Screen Recording approval;
 7. one connected internal operating-week report with three workflows, five
    KPIs, trace links, and zero unexpected spend;
-8. authenticated Desk browser launch/approve/reject/cancel/traces/citations
+8. an authenticated, protocol-compatible broker endpoint and a hosted wallet
+   run with non-zero `tool.called` traces;
+9. authenticated Desk browser launch/approve/reject/cancel/traces/citations
    and a current hosted citation path beyond the authenticated catalog GET.
 
 These are evidence/deployment gates, not reasons to weaken the code contract.

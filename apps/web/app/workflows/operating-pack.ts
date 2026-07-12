@@ -405,6 +405,17 @@ function responseText(parts: readonly Record<string, unknown>[]): string {
   );
 }
 
+function assertAgentToolBrokerConfigured(agent: PreparedAgent): void {
+  if (agent.tools.length === 0) return;
+  const brokerUrl = process.env.BUFI_AGENT_TOOL_BROKER_URL?.trim();
+  const brokerSecret = process.env.BUFI_AGENT_TOOL_BROKER_SECRET?.trim();
+  if (!brokerUrl || !brokerSecret || brokerSecret.length < 32) {
+    throw new Error(
+      `Agent ${agent.qualifiedId} declares brokered tools, but the BUFI agent tool broker is not configured`,
+    );
+  }
+}
+
 async function runAgentStep(input: {
   workflow: OperatingPackWorkflowInput;
   runtime: Pick<PreparedRuntime, "sandboxState" | "workingDirectory">;
@@ -445,6 +456,7 @@ async function runAgentStep(input: {
   );
   let result;
   try {
+    assertAgentToolBrokerConfigured(agent);
     result = await runHarnessTurnViaApi({
       harnessId: workflow.harnessId,
       sandboxState: runtime.sandboxState,
