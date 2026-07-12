@@ -35,6 +35,28 @@ spend-capable broker call.
 | Lifecycle trace coverage | 3/3 runs | Each run emitted terminal lifecycle evidence; the read-only run also emitted tool-call evidence. |
 | Disposable-fixture cleanup | 3/3 runs | Temporary workspace/run/bridge fixtures were removed after each probe. |
 
+## Fresh authenticated browser-to-harness probe — 2026-07-12 16:25 UTC
+
+The stale cancelled Desk previews were replaced with a READY preview from the
+Expo remediation branch:
+
+- Desk deployment: `dpl_DSXFzhm4V9ZLpswiaFMHjh4icTSP`
+- Preview: `https://desk-v1-a68ra6c6g-bu-finance-007.vercel.app`
+- Auth callback: HTTP `200`, final route `/teams/setup/wallets`
+- Authenticated Desk workspace grant: HTTP `200`
+- Open Agents start: HTTP `202`
+- Open Agents terminal state: `completed`
+- Trace sequence: `workflow.started → artifact.emitted → agent.started →
+  tool.called ×4 → agent.completed → run.completed → notification.skipped`
+- Cleanup verification: `operating_pack_runs=0`, bridge user rows `=0`
+- Redacted evidence summary hash:
+  `sha256:54ce676fd7e5dd1ec3b565ee6734a6a78e962b98645117f681a4f9433a719ee9`
+
+This closes the current authenticated Desk grant and browser-to-harness
+read-only workflow boundary. It still does not prove wallet executor
+provisioning, approved spend, authorized connector accounts, saturation, or a
+week-long operating report.
+
 ## Evidence boundaries
 
 This report proves the hosted durable workflow, non-zero read-only tool-call,
