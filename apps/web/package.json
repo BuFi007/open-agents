@@ -24,6 +24,7 @@
     "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "@open-agents/agent": "workspace:*",
+    "@open-agents/agent-wallet": "workspace:*",
     "@open-agents/harness-runner": "workspace:*",
     "@open-agents/knowledge": "workspace:*",
     "@open-agents/operating-packs": "workspace:*",

@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { CIRCLE_AGENT_WALLET_TOOL_NAMES } from "@open-agents/agent-wallet";
 import {
   type ContextPacket,
   validateContextPacket,
@@ -9,23 +10,7 @@ import { z } from "zod";
 export const OPERATING_PACK_TOOL_NAMES = [
   "knowledge_read",
   "workflow_run",
-  "circle_get_balance",
-  "circle_login",
-  "circle_logout",
-  "fetch_setup_skill",
-  "fetch_sub_skill",
-  "circle_list_wallets",
-  "circle_create_wallet",
-  "circle_deploy_wallet",
-  "circle_wallet_fund",
-  "circle_fund_fiat",
-  "circle_get_gateway_balance",
-  "circle_search_services",
-  "circle_inspect_service",
-  "fetch_service",
-  "call_free_service",
-  "circle_pay_service",
-  "circle_gateway_deposit",
+  ...CIRCLE_AGENT_WALLET_TOOL_NAMES,
 ] as const;
 
 export type OperatingPackToolName = (typeof OPERATING_PACK_TOOL_NAMES)[number];

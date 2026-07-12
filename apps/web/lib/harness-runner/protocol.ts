@@ -4,6 +4,7 @@ import type {
   HarnessUIMessage,
   HarnessUIMessageChunk,
 } from "@open-agents/harness-runner";
+import { CIRCLE_AGENT_WALLET_TOOL_NAMES } from "@open-agents/agent-wallet";
 import type { SandboxState } from "@open-agents/sandbox";
 import { z } from "zod";
 import type { OperatingPackBrokerContext } from "@/lib/operating-packs/tool-broker";
@@ -38,6 +39,11 @@ export type InternalHarnessRunEvent =
     };
 
 const id = z.string().min(1).max(191);
+const brokerToolNames = [
+  "knowledge_read",
+  "workflow_run",
+  ...CIRCLE_AGENT_WALLET_TOOL_NAMES,
+] as const;
 const messageSchema = z
   .object({
     id,
@@ -73,27 +79,7 @@ const internalHarnessRunRequestSchema = z
         agentRunId: id,
         allowedTools: z
           .array(
-            z.enum([
-              "knowledge_read",
-              "workflow_run",
-              "circle_get_balance",
-              "circle_login",
-              "circle_logout",
-              "fetch_setup_skill",
-              "fetch_sub_skill",
-              "circle_list_wallets",
-              "circle_create_wallet",
-              "circle_deploy_wallet",
-              "circle_wallet_fund",
-              "circle_fund_fiat",
-              "circle_get_gateway_balance",
-              "circle_search_services",
-              "circle_inspect_service",
-              "fetch_service",
-              "call_free_service",
-              "circle_pay_service",
-              "circle_gateway_deposit",
-            ]),
+            z.enum(brokerToolNames),
           )
           .max(20),
       })
