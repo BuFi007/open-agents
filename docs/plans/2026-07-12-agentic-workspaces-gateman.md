@@ -366,6 +366,15 @@ Expo/Cleo authenticated device and push, real Circle wallet executor, provider
 sandbox, production capacity-ceiling, Claude/TCC, and operating-week evidence
 gates remain open. Wallet execution remains deliberately unconfigured.
 
+## Production worker ceiling probe — 2026-07-12
+
+A bounded 64-concurrent certifier flood against the isolated production
+certification workspace completed 60 runs and failed 4 at the five-minute
+deadline. Railway recorded 0.5958 vCPU maximum of 24 and 145.9 MB maximum of
+24,576 MB. Gateman classification: this is real backpressure/deadline evidence,
+not CPU/memory saturation and not a pass. Provider latency, database/connection
+ceilings, admission fairness, and failure classification remain open.
+
 ## Expo authenticated-environment simulator attempt — 2026-07-12
 
 The iOS release bundle was rebuilt with the existing Supabase public URL/key and

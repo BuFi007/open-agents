@@ -130,3 +130,23 @@ because the deployed worker's explicit production workspace allowlist contains
 only the certification workspace. This validates that the allowlist is active,
 not that the provider or database saturated. The certifier's cleanup path ran,
 and no result from this attempt is used in the parity score.
+
+## Bounded 64-concurrent ceiling probe — 2026-07-12
+
+Using the live Railway Redis/Postgres/Typesense worker plane and the isolated
+certification workspace, 64 concurrent certifiers were launched with five-
+minute initial and repair deadlines. **60 completed and 4 failed**. The run is
+not a pass: the four failures are a real deadline/backpressure signal that
+needs error classification and an explicit capacity policy. Railway metrics for
+the one-hour window containing the flood were:
+
+| Measure | Maximum observed | Service limit |
+| --- | ---: | ---: |
+| CPU | 0.5958 vCPU | 24 vCPU |
+| Memory | 145.9 MB | 24,576 MB |
+
+The low resource maxima show that this run did not saturate CPU or memory. It
+strengthens the bounded-envelope evidence and narrows the remaining capacity
+work to provider latency, database/connection ceilings, admission fairness, and
+classification of the four failed certifiers. No customer workspace, wallet,
+or payment state was touched.
