@@ -105,3 +105,27 @@ while unrelated authenticated Desk APIs returned `200`. Therefore the
 browser-render gate passes, but hosted launch/trace/approval/citation E2E is
 still open until preview auth/session handling is corrected. This is recorded as
 a blocker rather than a false pass; the strict score remains below 100%.
+
+## Hosted ingress and approval rerun — 2026-07-12 18:00 UTC
+
+Desk preview `dpl_GzR6n6k2wvpK36zetGJc8EsJfCrq`
+(`https://desk-v1-mqqukmi8r-bu-finance-007.vercel.app`) was redeployed with the
+production Open Agents ingress secret and the shared broker secret. The
+authenticated command-center launch reached Open Agents with HTTP `202` and
+entered `awaiting_approval`. Desk commit `26337c928` now issues the
+`agent-wallet.spend` scope only for an explicit high-risk wallet launch; the
+workflow remains approval-gated.
+
+The hosted workflow probes then recorded:
+
+- a human rejection (`200`, decision `rejected`);
+- a second payment run reaching `awaiting_approval`, then cancellation (`200`)
+  with final `cancelled` state and `run.cancelled` trace;
+- a read-only service-discovery run completing with six `tool.called` traces
+  and `run.completed`.
+
+No wallet was created, funded, deployed, or spent. This closes the hosted
+ingress, explicit spend-scope, read-only execution, approval rejection, and
+cancellation boundaries. It does not close the external provider, device,
+saturation, or operating-week gates listed above, so the strict score remains
+below 100%.
