@@ -175,6 +175,12 @@ remained 1, and the post-effect replay preserved entity identity without a
 duplicate effect. The QueueKillCertification table was verified clean after
 the run.
 
+Eight concurrent copies of the corrected hosted certifier then completed with
+exit code 0. Railway's five-minute worker window measured maximum 1.1% CPU and
+0.4% memory, and the post-run database check found zero certification
+deployments, artifacts, runs, and outbox rows. This is refreshed bounded
+envelope evidence, not a saturation claim.
+
 The Desk Pipedream Connect configuration was exercised read-only through the
 current Streamable HTTP v3 client: app discovery returned QuickBooks and Xero
 Accounting OAuth apps, and scoped tool discovery returned 57 QuickBooks tools

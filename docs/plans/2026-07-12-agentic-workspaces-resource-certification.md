@@ -62,3 +62,13 @@ The worker freshness and telemetry slices are now live-certified. Do not count
 the low-volume resource sample as the missing saturation proof, and do not
 claim 100% parity until the remaining provider, authenticated Desk/Expo, and
 capacity-envelope evidence is attached.
+
+## Current redeploy rerun
+
+After synchronizing the worker/Typesense API key, eight concurrent copies of
+the certifier completed with exit code 0. Railway's five-minute
+`agentic-knowledge-ai` window reported a maximum of 1.1% CPU utilization and
+0.4% memory utilization; the post-run database check found zero certification
+deployments, artifacts, runs, and outbox rows. This refreshes the bounded
+envelope evidence on deployment `4a879e44-e692-4291-be6b-1c85dddf543e`, but it
+still does not claim saturation or noisy-neighbor capacity.
