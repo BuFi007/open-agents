@@ -351,3 +351,33 @@ plane (credentials were used out-of-band and never persisted):
 These results close the semantic-provider and larger lexical-recall subgates;
 they do not close authorized connector accounts, authenticated Desk/Expo
 journeys, wallet-spend execution, or production saturation.
+
+## Evidence addendum — 2026-07-12 hosted workflow closure slice
+
+The strict July 11 score remains **82.7%** until every bucket criterion is
+remapped and re-scored; the following evidence is additive and does not turn
+partial external-provider criteria into complete ones:
+
+- Open Agents production deployment `dpl_HAxSnCsvYDvrSMBGSTdCdBCKKLY9` is
+  READY at `https://open-agents-bay.vercel.app`. The production build passed
+  migration, sandbox prewarm, workflow compilation, TypeScript, and static
+  generation after Postgres persistence was isolated behind
+  `apps/web/app/workflows/operating-pack-persistence.ts`.
+- The live `/api/bufi/operations` route returns `401` unsigned and `200` for a
+  disposable signed read-only grant, exposing the Agent Wallet/Circle catalog.
+- A hosted `agent_wallet_service_discovery` run with the `pi` harness returned
+  `202` and completed with durable `workflow.started`, `artifact.emitted`,
+  `agent.started`, four `tool.called` events (including Circle service
+  discovery input/output), `agent.completed`, `run.completed`, and mobile
+  notification lifecycle traces. Temporary rows and bridge users were removed.
+- A hosted high-risk `agent_wallet_payment` run accepted an explicit rejection
+  at the approval boundary and reached `rejected` with `approval.requested`
+  and `approval.rejected`; a separate run reached `cancelled` with
+  `run.cancelled`. No wallet or payment mutation occurred.
+
+These runs close the hosted durable workflow, trace, read-only tool-call,
+approval-rejection, and cancellation evidence gates. They do not close real
+wallet executor provisioning/approved spend, authorized connector sandboxes,
+resource saturation, authenticated Desk browser/Expo device journeys, or the
+internal operating-week report. The baseline therefore remains 82.7% rather
+than claiming an unsupported 100%.
