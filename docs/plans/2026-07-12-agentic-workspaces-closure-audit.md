@@ -136,6 +136,16 @@ reproduced `Connection is closed` in both the BullMQ runtime and the connected
 Postgres→BullMQ pipeline. Commit `16e36eb1` bounds connected-pipeline teardown
 so this provider failure exits in roughly 25 seconds instead of hanging the
 process. This improves failure hygiene but is not production queue evidence.
+
+The same live gates were then rerun against the healthy `REDIS_QUEUE_URL`
+already configured for the BUFI Desk worker (without printing or persisting its
+credential): the mixed BullMQ workload passed (22 assertions) and the full
+Postgres→BullMQ source→canonical→enrichment→embedding→projection pipeline
+passed (8 assertions). Commits `8de6f6d6` make both integration tests discover
+`REDIS_QUEUE_URL`/`REDIS_URL` as standard fallbacks. The semantic-worker gate
+reached the real AI Gateway but was rejected with `A positive credit balance is
+required for all requests`, so that provider-backed embedding claim remains
+open.
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.

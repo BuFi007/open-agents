@@ -69,6 +69,12 @@ certifiers: all eight completed and cleaned up, with observed maxima of 1.4%
 CPU and 0.4% memory. Gateman still treats this as bounded-envelope evidence,
 not saturation evidence.
 
+The live queue/data-plane gate was rerun against the healthy BUFI Desk worker
+Redis configuration: the mixed BullMQ workload passed 22 assertions and the
+connected Postgres→BullMQ pipeline passed 8 assertions. The semantic-worker
+variant reached AI Gateway but was rejected for insufficient credits, so its
+embedding-provider claim remains conditional.
+
 The two tangential Desk attempts were evaluated before closure: #495's guarded
 wallet tools were consolidated into the still-open #540 boundary, while #438's
 monorepo-wide AI SDK/artifact migration was superseded by the isolated Open
