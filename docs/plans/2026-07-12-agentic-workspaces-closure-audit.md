@@ -278,3 +278,16 @@ The conservative non-tax parity score remains **85.6%**. It must not be
 promoted to 100% until the authorized connector, semantic-provider,
 saturation/recall, authenticated Desk/Expo, wallet-spend, and operating-week
 gates are attached to the evidence ledger.
+
+## Provider-gate update — 2026-07-12 10:55 UTC
+
+The previously credit-blocked semantic gate was rerun with the deployed
+knowledge worker's AI Gateway credentials and now passes: one live test, 14
+assertions, real embeddings, tenant isolation, stale-write rejection, HNSW
+index verification, and combined recall. Live Postgres knowledge certification
+also passes 8 tests/46 assertions, including a 2,000-entity lexical corpus;
+live Typesense passes 4 tests/15 assertions. Sixteen concurrent hosted worker
+certifiers all passed and cleaned their fixtures. Railway maxima during the
+20-minute window were 0.5197 CPU units and 113.6 MB memory. This closes the
+semantic-provider and larger lexical-recall subgates, but deliberately remains
+bounded-envelope evidence rather than a saturation ceiling claim.

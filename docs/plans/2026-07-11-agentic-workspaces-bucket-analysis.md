@@ -326,3 +326,28 @@ The architecture is coherent and the new KG/queue slice moves two major buckets
 from reference contracts to real infrastructure. **100% parity is not yet true**;
 BU-214/216/218–231/276/277/279/280 must remain open or in review until their
 live and rendered acceptance criteria are demonstrated.
+
+## Evidence addendum — 2026-07-12 10:55 UTC
+
+The following fresh provider-backed gates now pass against the Railway worker
+plane (credentials were used out-of-band and never persisted):
+
+- `packages/knowledge/semantic.integration.test.ts`: 1 pass, 14 assertions;
+  real AI Gateway embeddings, tenant isolation, stale-write rejection, HNSW
+  index plan, and combined recall all passed.
+- `packages/knowledge/search-projection.test.ts`: 4 pass, 15 assertions;
+  real Typesense create/upsert/retrieval and tenant filtering passed.
+- `packages/knowledge/postgres.integration.test.ts`: 8 pass, 46 assertions;
+  live RLS, GIN recall with 2,000 filler entities, stable cursors, enrichment,
+  context packets, leases/dead-letter, and payload rejection passed.
+- Sixteen concurrent hosted worker-plane certifiers all exited zero. Each
+  completed canonical write, deterministic enrichment, 1,536-dimensional
+  embedding, Typesense projection, payload-free telemetry, and idempotent repair
+  replay; every fixture was cleaned up. Railway `agentic-knowledge-ai` measured
+  a 0.5197 CPU-unit maximum and 113.6 MB maximum memory in the 20-minute window
+  (24 CPU units / 24,576 MB service limits). This is stronger bounded-envelope
+  evidence, but it is still not a saturation or noisy-neighbor ceiling test.
+
+These results close the semantic-provider and larger lexical-recall subgates;
+they do not close authorized connector accounts, authenticated Desk/Expo
+journeys, wallet-spend execution, or production saturation.

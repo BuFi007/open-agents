@@ -133,3 +133,16 @@ with zero steps and remain runner-infrastructure failures. The conservative
 non-tax verdict is therefore **85.6%, not 100%**; external connector,
 provider, saturation, authenticated Desk/Expo, wallet-spend, and operating-week
 gates remain open.
+
+## Provider-gate update — 2026-07-12 10:55 UTC
+
+Gateman evidence is strengthened by fresh live runs: semantic retrieval passed
+with the deployed AI Gateway credential (1 test/14 assertions), live Postgres
+knowledge passed 8 tests/46 assertions including 2,000 lexical filler entities,
+and live Typesense passed 4 tests/15 assertions. Sixteen concurrent hosted
+worker-plane certifiers all completed and cleaned up. Railway maxima were 0.5197
+CPU units and 113.6 MB memory in the 20-minute window. The semantic-provider and
+larger lexical-recall subgates are now green; the resource result is still a
+bounded envelope, not saturation proof. The verdict remains **85.6%, not 100%**
+until authorized connectors, authenticated clients, wallet-spend, and operating
+week evidence are attached.

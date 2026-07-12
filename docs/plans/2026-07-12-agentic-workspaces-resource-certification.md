@@ -72,3 +72,20 @@ the certifier completed with exit code 0. Railway's five-minute
 deployments, artifacts, runs, and outbox rows. This refreshes the bounded
 envelope evidence on deployment `4a879e44-e692-4291-be6b-1c85dddf543e`, but it
 still does not claim saturation or noisy-neighbor capacity.
+
+## Sixteen-concurrent provider rerun
+
+On 2026-07-12, sixteen concurrent copies of the certifier ran against the
+same deployed worker plane. All sixteen exited zero; each completed the four
+published stages, payload-free telemetry, and idempotent repair replay, and
+each removed its temporary database and Typesense state. Railway's
+`agentic-knowledge-ai` metrics over the 20-minute window reported:
+
+| Measure | Maximum observed | Service limit |
+| --- | ---: | ---: |
+| CPU units | 0.5197 | 24 |
+| Memory | 113.6 MB | 24,576 MB |
+
+This is the strongest current bounded-envelope sample, but the values remain
+far below the service ceiling. It does not substitute for a deliberate
+saturation/noisy-neighbor/connection-limit test.
