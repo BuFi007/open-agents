@@ -53,6 +53,13 @@ reached READY and passed the unsigned 401 plus signed-invalid-grant 403 probes.
 That is deployment and schema evidence only; no real member grant or wallet
 call has been claimed.
 
+The latest local live certification rerun produced report hash
+`sha256:723a8595a48ae7b68dc7d88b7d5417124125132396d82a607582919a2edc7b5c`.
+It confirms Open Agents dispatch, Hermes, Codex, Circle wallet read-only, and
+Hyper manifest checks. Claude exits with `Credit balance is too low`; Computer
+Use doctor reports missing Accessibility and Screen Recording grants. These
+are honest external blockers, not substituted contract evidence.
+
 Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
 policy with retry traces; mutation-capable agents are explicitly non-retryable.
 The policy suite passes 3 tests and the web typecheck passes.

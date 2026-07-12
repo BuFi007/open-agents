@@ -84,14 +84,16 @@ The monorepo typecheck is green across 19 targets. Focused checks also pass:
 - agentic workspaces and horizontal ERP contract E2E
 - agent-wallet pack, grant-scope enforcement, and hosted catalog contract
 
-The corrected live harness report was generated with report hash
-`sha256:ca43e116b57ff7d261b2aa0968725114c0ef278d213d8b03c448f94aee34271b`.
-Open Agents passed its target-specific matrix; Hermes and Codex handshakes
-passed; Claude Code remained blocked by account credit; Computer Use remained
-blocked by macOS Screen Recording/TCC. Circle wallet read-only and bufi-hyper
-tools/list passed. The configured live BullMQ Redis run still fails with
-`Connection is closed`; its certification teardown is now bounded so an
-unavailable provider does not leave the test process hanging for a minute.
+The latest live harness report was generated on 2026-07-12 with report hash
+`sha256:723a8595a48ae7b68dc7d88b7d5417124125132396d82a607582919a2edc7b5c`.
+Open Agents passed its target-specific matrix; the live Open Agents dispatch,
+Hermes handshake, Codex handshake, Circle wallet read-only check, and
+bufi-hyper tools/list all passed. Claude Code remains blocked by the local
+`Credit balance is too low` response; Computer Use remains blocked by macOS
+Accessibility and Screen Recording/TCC. The configured live BullMQ Redis run
+still fails with `Connection is closed`; its certification teardown is now
+bounded so an unavailable provider does not leave the test process hanging for
+a minute.
 The current production alias was redeployed after the UUID, grant-scope, and
 fail-closed broker fixes (`dpl_4hczh3YXgimg1knn3mRJ2f5ZNUy1`); an authenticated
 workspace-grant GET to `/api/bufi/operations` returned
