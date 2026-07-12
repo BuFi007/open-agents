@@ -46,6 +46,11 @@ export {
   type QueueTelemetryExportSink,
 } from "./telemetry-export";
 export {
+  createQueueTelemetryReporter,
+  type QueueTelemetryReport,
+  type QueueTelemetryReporter,
+} from "./telemetry-reporter";
+export {
   relayKnowledgeOutbox,
   type KnowledgeOutboxRelayResult,
 } from "./outbox-relay";

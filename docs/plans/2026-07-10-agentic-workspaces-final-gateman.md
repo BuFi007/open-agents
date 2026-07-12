@@ -41,7 +41,7 @@ Passed:
 - `bun run --cwd packages/workflow typecheck && bun test packages/workflow packages/certification`
 - `bun run test:isolated`
 - `bun run typecheck`
-- Full repository CI: 176 isolated test files, 17 package typechecks, 125
+- Full repository CI: 178 isolated test files, 18 package typechecks, 125
   generated workflow steps across five workflows and twelve classes, with
   migrations in sync.
 - Fresh live Neon connector/RLS/lexical/pgvector/AI Gateway suite: ten tests.
@@ -96,6 +96,15 @@ exact replay returned the same sequence, and one payload-free SLO trace remained
 in Neon. The reusable `queue:certify:hosted` command creates and cleans its own
 fixture. Delivery from the actual deployed relay/worker topology remains open.
 
+The missing process boundary is now implemented as a standalone Railway-ready
+image with isolated relay, canonical-source and knowledge-AI modes, fail-closed
+readiness, bounded workspace/run telemetry, optional payload-free SLO webhook
+delivery and graceful shutdown. The image builds. A real `all`-mode process
+reported both worker profiles ready and a fresh relay cycle against live Neon
+plus isolated Redis, then exited cleanly on SIGINT. Hosted rollout onto a
+replacement Redis remains the follow-up; this local process proof is not counted
+as a hosted worker claim.
+
 ## 6. Product and UX contract review
 
 Pass with follow-ups.
@@ -130,7 +139,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **80.1%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **80.5%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted Redis, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.
