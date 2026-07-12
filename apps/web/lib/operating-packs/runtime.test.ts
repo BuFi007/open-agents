@@ -12,6 +12,7 @@ describe("operating-pack runtime contract", () => {
   test("publishes the external-engine tax pack alongside the horizontal packs", () => {
     const catalog = listOperatingPackCatalog();
     expect(catalog.map((pack) => pack.id)).toEqual([
+      "agent_wallet",
       "finance_ops",
       "grant_ops",
       "product_ops",

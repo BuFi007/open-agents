@@ -1,4 +1,5 @@
 import {
+  AGENT_WALLET_PACK,
   BUFI_INTERNAL_OPS_PACK,
   FINANCE_OPS_PACK,
   GRANT_OPS_PACK,
@@ -82,6 +83,7 @@ export type OperatingPackCompositionItem = z.infer<
 
 const packRegistry = new Map<string, OperatingPackManifest>(
   [
+    AGENT_WALLET_PACK,
     FINANCE_OPS_PACK,
     GRANT_OPS_PACK,
     PRODUCT_OPS_PACK,

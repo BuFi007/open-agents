@@ -68,3 +68,7 @@ export {
   STARTER_OPERATING_PACKS,
   TAX_AUTOMATION_PACK,
 } from "./starter-packs";
+export {
+  AGENT_WALLET_PACK,
+  AGENT_WALLET_TOOL_NAMES,
+} from "./agent-wallet-pack";
