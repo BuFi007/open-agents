@@ -11,6 +11,12 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
+This is the July 11 baseline. The July 12 closure audit raises the conservative
+post-change estimate to **85.6%** after the bounded execution policy, hosted
+worker evidence, clean Desk broker slice, and exact broker trace propagation;
+the remaining external-provider, authenticated-client, saturation, and harness
+gates below are still intentionally excluded from a 100% claim.
+
 | Must-have bucket | Weight | Proven completion | Weighted result | Authoritative evidence |
 | --- | ---: | ---: | ---: | --- |
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
