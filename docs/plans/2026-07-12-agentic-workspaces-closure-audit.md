@@ -90,13 +90,20 @@ not stored in this repository or audit output. Therefore the hosted catalog is
 certified, while hosted tool execution is not.
 
 The Desk-side signed broker route was deployed to a fresh preview from the
-merged Agentic Workspaces backend (`desk-v1-o5g0fgakk-bu-finance-007.vercel.app`).
+merged Agentic Workspaces backend (`desk-v1-hd63pvrmf-bu-finance-007.vercel.app`).
 An unsigned request returned `401 Unauthorized`; a correctly signed HMAC request
 then reached grant verification and returned `403 Workspace grant is invalid or
 expired`. This proves runtime secret injection and signature verification without
 using a real member, workspace, or wallet. The route is not promoted to Desk
 production because the current production build still has unrelated pre-existing
 contract type debt, and the preview URL is not a durable production broker.
+
+The broker contract was corrected in Desk commit `253b72167`: strict request
+validation now accepts Open Agents' `agentRunId` and `traceId`, and knowledge
+packets preserve the agent-run identity instead of substituting the grant subject.
+The refreshed preview accepted the full signed Open Agents-shaped request before
+rejecting only its deliberately invalid grant; the focused Desk authorization
+suite is green (8 tests, 21 assertions).
 
 PR #495 is already merged and its subagent-usage accounting tests are in this
 branch. PR #438 is closed and dirty; its auto-commit polling behavior is

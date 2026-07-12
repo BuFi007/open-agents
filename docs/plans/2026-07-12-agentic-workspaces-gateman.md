@@ -23,12 +23,16 @@ provider, device, hosted-route, and resource evidence listed at the end.
 | AI behavior | CONDITIONAL | Open Agents target-specific matrix passes, and the production `agent_wallet` catalog exposes 17 grant-bound tools. A hosted read-only wallet workflow completed durably but emitted zero `tool.called` events because no compatible broker URL is configured. Hermes/Codex handshakes pass. Claude is credit-blocked; Computer Use is TCC-blocked. |
 
 The Desk broker boundary has an additional live preview probe: the fresh
-deployment `desk-v1-o5g0fgakk-bu-finance-007.vercel.app` returned `401` for an
+deployment `desk-v1-hd63pvrmf-bu-finance-007.vercel.app` returned `401` for an
 unsigned request and `403 Workspace grant is invalid or expired` for a correctly
 HMAC-signed request with a deliberately invalid grant. This demonstrates runtime
 secret injection and signature verification while preserving the no-real-user
 and no-real-wallet test boundary. It does not close hosted tool E2E because the
 preview is not production and no valid member grant was exercised.
+
+Desk commit `253b72167` closes the request-shape mismatch with Open Agents by
+accepting and preserving `agentRunId`/`traceId` in the strict broker schema. Its
+focused authorization suite passes 8 tests and 21 assertions.
 
 ## Required production follow-ups
 
