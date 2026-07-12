@@ -47,6 +47,14 @@ out of scope for this audit.
   secret is present on Vercel, and the live certification accepted one export
   plus an exact replay while persisting one payload-free trace with three SLO
   alerts. See the [resource certification](./2026-07-12-agentic-workspaces-resource-certification.md).
+- Desk's internal broker now accepts the complete Circle Agent Wallet registry
+  and forwards granted Circle calls to the bufi-hyper MCP through a short-lived
+  Shiva agent token. Read and spend scopes are explicit; spend grants require
+  explicit confirmation and expire after 15 minutes. The clean Desk
+  authorization suite now passes 11 tests and 31 assertions, including read
+  forwarding and read-only spend denial. Hosted execution remains uncertified
+  until the production Desk endpoint has service-token wiring and a real member
+  grant.
 
 ## Verification
 
@@ -107,6 +115,15 @@ the focused Desk authorization suite is green (8 tests, 21 assertions).
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.
+
+Desk commit `fa912e800` extends that boundary to the complete Circle registry:
+the route enforces `agent-wallet.read` versus `agent-wallet.spend`, mints a
+short-lived user PAT through Shiva, and invokes the matching bufi-hyper MCP
+tool with workspace/run/trace headers. Its test fixture covers the full grant
+and MCP response shape without persisting credentials or provider payloads.
+The same commit whitelists the required GoCardless environment variables in
+Turbo's app build task; a local production build now reaches the repository's
+pre-existing contract/type debt instead of failing during env loading.
 
 Open Agents commit `70701f36` adds a durable per-agent execution envelope:
 bounded cancellation (`BUFI_AGENT_STEP_TIMEOUT_MS`), bounded attempts

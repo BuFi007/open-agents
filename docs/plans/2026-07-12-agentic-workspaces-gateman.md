@@ -37,6 +37,13 @@ authorization suite passes 8 tests and 21 assertions. The fix is isolated on a
 clean current-development branch in Desk PR #546; the superseded PR #545 was
 closed to remove unrelated accounting scope.
 
+Desk commit `fa912e800` extends the route to the complete Circle registry and
+the bufi-hyper MCP bridge. The route verifies the grant scope per tool, uses a
+15-minute Shiva PAT for the workspace member, forwards only bounded tool input,
+and denies spend calls without `agent-wallet.spend`. Eleven focused tests and
+31 assertions pass; this is still a local/contract gate until a real production
+member grant exercises the hosted path.
+
 Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
 policy with retry traces; mutation-capable agents are explicitly non-retryable.
 The policy suite passes 3 tests and the web typecheck passes.
@@ -56,9 +63,9 @@ Agents runtime. Neither should be cherry-picked into this non-tax slice.
 - Run authorized Pipedream, Magic Inbox, QuickBooks, Xero, Conta Azul, and
   Contabilium sandbox events through the deployed connector and scheduler.
 - Configure the signed, protocol-compatible agent-tool broker and repeat a
-  hosted wallet workflow that proves at least one read tool call and one
-  approval-gated mutation path; a durable run with a natural-language summary
-  alone is not tool E2E evidence.
+  hosted wallet workflow against Desk's new bufi-hyper bridge that proves at
+  least one read tool call and one approval-gated mutation path; a durable run
+  with a natural-language summary alone is not tool E2E evidence.
 - Run Redis/Postgres/Typesense saturation, noisy-neighbor, and kill/restart
   tests with resource metrics and a larger retrieval corpus.
 - The four-fixture resource sample and five Railway metric samples are
