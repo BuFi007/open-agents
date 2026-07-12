@@ -55,6 +55,30 @@ describe("Desk workspace grants", () => {
     ).toBeNull();
   });
 
+  test("accepts a least-privilege invoice preparation grant", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ scopes: ["tax.invoice.prepare"] }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toMatchObject({
+      workspaceId,
+      scopes: ["tax.invoice.prepare"],
+    });
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({
+          scopes: ["tax.invoice.prepare", "tax.invoice.prepare"],
+        }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toBeNull();
+  });
+
   test("rejects tampering, future grants, extra fields and weak configuration", () => {
     const valid = grant();
     expect(

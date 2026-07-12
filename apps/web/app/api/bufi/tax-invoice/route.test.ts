@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 let grantValid = true;
 let grantSubject = "22222222-2222-4222-8222-222222222222";
+let grantScopes = ["tax.invoice.prepare"];
 let existingRun = false;
 let started = 0;
 let createdUserId: string | undefined;
@@ -10,7 +11,7 @@ let runUserId: string | undefined;
 
 mock.module("@/lib/operating-packs/desk-grant", () => ({
   verifyDeskWorkspaceGrant: () =>
-    grantValid ? { subject: grantSubject } : null,
+    grantValid ? { subject: grantSubject, scopes: grantScopes } : null,
 }));
 
 mock.module("@/lib/operating-packs/desk-bridge-user", () => ({
@@ -116,6 +117,7 @@ beforeEach(() => {
   process.env.OPEN_AGENTS_BUFI_INGRESS_SECRET = secret;
   grantValid = true;
   grantSubject = dispatch.actorId;
+  grantScopes = ["tax.invoice.prepare"];
   existingRun = false;
   started = 0;
   createdUserId = undefined;
@@ -137,6 +139,12 @@ describe("BUFI AI invoice Tax Automation ingress", () => {
     expect((await POST(request(dispatch, ""))).status).toBe(403);
     grantValid = true;
     grantSubject = "44444444-4444-4444-8444-444444444444";
+    expect((await POST(request(dispatch))).status).toBe(403);
+    expect(started).toBe(0);
+  });
+
+  test("requires the invoice preparation scope", async () => {
+    grantScopes = ["knowledge.read"];
     expect((await POST(request(dispatch))).status).toBe(403);
     expect(started).toBe(0);
   });

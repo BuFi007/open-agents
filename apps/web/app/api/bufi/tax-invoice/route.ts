@@ -65,7 +65,11 @@ export async function POST(request: NextRequest) {
     token: workspaceGrant,
     workspaceId: dispatch.workspaceId,
   });
-  if (!grant || grant.subject !== dispatch.actorId)
+  if (
+    !grant ||
+    grant.subject !== dispatch.actorId ||
+    !grant.scopes.includes("tax.invoice.prepare")
+  )
     return NextResponse.json(
       { error: "Invalid workspace grant" },
       { status: 403 },

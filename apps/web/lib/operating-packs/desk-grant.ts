@@ -9,10 +9,13 @@ const grantPayloadSchema = z
     issuedAt: z.number().int().positive(),
     expiresAt: z.number().int().positive(),
     nonce: z.string().uuid(),
-    scopes: z.tuple([
-      z.literal("knowledge.read"),
-      z.literal("agent-wallet.read"),
-    ]),
+    scopes: z
+      .array(
+        z.enum(["knowledge.read", "agent-wallet.read", "tax.invoice.prepare"]),
+      )
+      .min(1)
+      .max(3)
+      .refine((scopes) => new Set(scopes).size === scopes.length),
   })
   .strict();
 

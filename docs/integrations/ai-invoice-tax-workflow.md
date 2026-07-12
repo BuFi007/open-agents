@@ -27,6 +27,13 @@ The assistant creates the invoice document first, then sends the exact persisted
 artifact to this ingress. No second model pass or client-side money remapping is
 required:
 
+Desk exposes the authenticated server proxy
+`POST /api/agent-workspaces/tax-invoice`. It loads the invoice by document and
+team ID, so the browser cannot replace the persisted AI artifact, then forwards
+it with a five-minute grant scoped only to `tax.invoice.prepare`. The Open
+Agents ingress rejects otherwise valid workspace grants without that scope.
+The browser never receives the B2B ingress secret or signed grant.
+
 ```json
 {
   "workspaceId": "11111111-1111-4111-8111-111111111111",
