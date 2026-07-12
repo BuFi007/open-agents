@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionChats } from "@/hooks/use-session-chats";
 import { useSessions } from "@/hooks/use-sessions";
+import { QueueTelemetryPanel } from "./queue-telemetry-panel";
 
 type Pack = {
   id: string;
@@ -538,6 +539,8 @@ export function OperationsCommandCenter() {
                   )}
                 </CardContent>
               </Card>
+
+              <QueueTelemetryPanel traces={traces} />
             </div>
 
             {detail?.approval ? (

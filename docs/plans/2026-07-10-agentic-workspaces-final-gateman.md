@@ -41,7 +41,7 @@ Passed:
 - `bun run --cwd packages/workflow typecheck && bun test packages/workflow packages/certification`
 - `bun run test:isolated`
 - `bun run typecheck`
-- Full repository CI: 172 isolated test files, 17 package typechecks, 125
+- Full repository CI: 176 isolated test files, 17 package typechecks, 125
   generated workflow steps across five workflows and twelve classes, with
   migrations in sync.
 - Fresh live Neon connector/RLS/lexical/pgvector/AI Gateway suite: ten tests.
@@ -88,7 +88,8 @@ Local isolated Redis kill/restart evidence remains green but is not a substitute
 
 Follow-up: repair the hosted Redis target, then execute the mixed workload,
 kill/restart/redrive and provider-load tests against that target and export queue
-SLOs into the trace cockpit.
+SLOs from the deployed workers. The authenticated payload-free ingress, ordered
+trace persistence and queue cockpit now pass locally and against live Neon.
 
 ## 6. Product and UX contract review
 
@@ -96,6 +97,8 @@ Pass with follow-ups.
 
 - Desk command center, pack composer, Team Cockpit and Expo inbox consume the
   same workflow/harness/trace/approval/entity model.
+- The Open Agents command center now renders validated queue p95, retry,
+  dead-letter and SLO-alert snapshots without job payloads.
 - The public Circle kit includes a BUFI-branded terminal theme.
 - Client policy duplication is avoided at the contract boundary.
 
@@ -122,7 +125,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **79.0%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **79.9%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted Redis, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.

@@ -13,7 +13,8 @@
   "dependencies": {
     "@open-agents/knowledge": "workspace:*",
     "bullmq": "^5.58.5",
-    "ioredis": "^5.9.2"
+    "ioredis": "^5.9.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@open-agents/tsconfig": "workspace:*",

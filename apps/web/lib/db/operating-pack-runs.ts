@@ -1,5 +1,5 @@
 import { redactTraceData, sanitizeTraceText } from "@open-agents/traces";
-import { and, asc, desc, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   type NewOperatingPackRun,
@@ -226,6 +226,56 @@ export async function appendOperatingPackTrace(input: {
     .onConflictDoNothing({
       target: [operatingPackTraces.runId, operatingPackTraces.sequence],
     });
+}
+
+export async function appendOperatingPackTraceNext(input: {
+  id: string;
+  runId: string;
+  workspaceId: string;
+  type: string;
+  agentId?: string;
+  summary?: string;
+  data?: Readonly<Record<string, unknown>>;
+}): Promise<{ replayed: boolean; sequence: number }> {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9:_./-]{1,191}$/.test(input.id))
+    throw new Error("Operating-pack trace id is invalid");
+  return db.transaction(async (transaction) => {
+    await transaction.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.runId}, 0))`,
+    );
+    const existing = await transaction
+      .select({ sequence: operatingPackTraces.sequence })
+      .from(operatingPackTraces)
+      .where(eq(operatingPackTraces.id, input.id))
+      .limit(1);
+    if (existing[0]) return { replayed: true, sequence: existing[0].sequence };
+    const run = await transaction
+      .select({ workspaceId: operatingPackRuns.workspaceId })
+      .from(operatingPackRuns)
+      .where(eq(operatingPackRuns.id, input.runId))
+      .limit(1);
+    if (!run[0] || run[0].workspaceId !== input.workspaceId)
+      throw new Error("Operating-pack trace run is outside the workspace");
+    const latest = await transaction
+      .select({ sequence: operatingPackTraces.sequence })
+      .from(operatingPackTraces)
+      .where(eq(operatingPackTraces.runId, input.runId))
+      .orderBy(desc(operatingPackTraces.sequence))
+      .limit(1);
+    const sequence = (latest[0]?.sequence ?? 0) + 1;
+    if (!Number.isSafeInteger(sequence) || sequence > 2_147_483_647)
+      throw new Error("Operating-pack trace sequence is exhausted");
+    await transaction.insert(operatingPackTraces).values({
+      ...input,
+      sequence,
+      agentId: input.agentId ?? null,
+      summary: input.summary
+        ? sanitizeTraceText(input.summary).slice(0, 1000)
+        : null,
+      data: redactTraceData(input.data) ?? null,
+    });
+    return { replayed: false, sequence };
+  });
 }
 
 export async function listOwnedOperatingPackTraces(input: {

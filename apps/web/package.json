@@ -27,6 +27,7 @@
     "@open-agents/harness-runner": "workspace:*",
     "@open-agents/knowledge": "workspace:*",
     "@open-agents/operating-packs": "workspace:*",
+    "@open-agents/queues": "workspace:*",
     "@open-agents/sandbox": "workspace:*",
     "@open-agents/shared": "workspace:*",
     "@open-agents/tax-automation": "workspace:*",

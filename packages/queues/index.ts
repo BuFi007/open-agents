@@ -38,6 +38,14 @@ export {
   type QueueTelemetrySnapshot,
 } from "./observability";
 export {
+  createQueueTelemetryExport,
+  createQueueTelemetryHttpSink,
+  parseQueueTelemetryExport,
+  QueueTelemetryExportSchema,
+  type QueueTelemetryExport,
+  type QueueTelemetryExportSink,
+} from "./telemetry-export";
+export {
   relayKnowledgeOutbox,
   type KnowledgeOutboxRelayResult,
 } from "./outbox-relay";
