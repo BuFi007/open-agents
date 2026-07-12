@@ -94,7 +94,7 @@ stable version-1 entity and no committed-job loss. Resource saturation remains
 open.
 
 Follow-up: execute schema-validated DLQ redrive and provider-resource saturation
-against Railway, then configure the payload-free alert webhook. The
+against Railway. The
 authenticated payload-free ingress, ordered trace persistence and queue cockpit
 now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
@@ -118,8 +118,10 @@ facts and zero fixture rows after cleanup. Railway deployment
 The upgraded fixture proved enrichment, a real 1,536-dimension AI Gateway
 embedding and a matching hosted Typesense 30.2 projection/receipt, then removed
 all Postgres and external-index fixture state. A later live repair event restored
-a deliberately deleted Typesense document with the same input hash. DLQ redrive,
-alert delivery and saturation/load remain follow-ups.
+a deliberately deleted Typesense document with the same input hash. A deployed
+worker also delivered a real DLQ SLO violation through the protected webhook
+into one payload-free `queue.alert` trace. DLQ redrive and saturation/load remain
+follow-ups.
 
 ## 6. Product and UX contract review
 
