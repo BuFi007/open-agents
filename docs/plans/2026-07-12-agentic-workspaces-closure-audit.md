@@ -498,3 +498,21 @@ finance run renders non-empty `[cN]` citation rows remains open because the
 preview's sensitive operation rate limiter was exhausted by the disposable
 dogfood probes; the packet API and broker path are proven independently. No
 wallet or external payment mutation occurred.
+
+## Fixed-preview citation and approval closure — 2026-07-12
+
+The Desk preview was redeployed with the existing shared BUFI broker secret at
+`dpl_BNwRHbUrNj1mDJc5iUVBqZWvFRLu`.
+An authenticated Hermes browser session fetched 15 context packets, including
+populated packets with 5, 10, and 17 citations, and rendered
+`Verified ContextPacket`, `10 citations`, and `[c1]` through `[c10]` in the
+Evidence Context panel. This closes the hosted citation-rendering gate.
+
+The same preview launched `agent_wallet_onboarding` with Claude Code as
+`op_eUuHVidgE1iCN61pjBbKdugy`, returned `202`, reached `awaiting_approval`,
+and rendered the approval controls. Rejecting through the rendered control
+returned HTTP `200`; a fresh resolver returned `rejected` with
+`approval.requested` and `approval.rejected` traces. No wallet mutation
+occurred. The strict score remains below 100% because the external provider,
+physical Expo/Cleo, Circle executor, capacity, Claude/TCC, and operating-week
+gates are still unproven.
