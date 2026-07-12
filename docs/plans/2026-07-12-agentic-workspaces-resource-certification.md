@@ -168,3 +168,26 @@ classification at `dpl_9vYHG2uSY75a8fHu4YJPtWJSfeHr`. A post-deploy 16-concurren
 probe completed **16/16** with no telemetry failures. The lower-load pass
 confirms the remaining failures are isolated to the higher-concurrency
 ceiling, not a baseline configuration or authentication defect.
+
+## Queue-telemetry export ledger fix and ceiling rerun — 2026-07-12
+
+The ingress diagnostic identified the remaining persistence defect precisely:
+background repair telemetry uses `trace-repair-*` identifiers that are not
+operating-pack run IDs. Open Agents commit `ef196076` adds the migration
+`0053_queue_telemetry_exports` and a redacted, workspace/run-bound export ledger.
+Queue telemetry now replays idempotently outside the operating-pack trace table,
+while ordinary traces still require a real workspace-owned run. Route tests
+(3 tests / 10 assertions), Biome, the web TypeScript check, and a clean Vercel
+production build all passed; the migration applied during deployment
+`dpl_Brp3mzphTaS9R6y2rahr4f8JSzWg`.
+
+The controlled hosted worker certifier then completed all four stages, payload-
+free telemetry, repair replay, and cleanup with **1/1** success. A fresh
+five-minute 64-concurrent flood completed **62/64** (two initial convergence
+deadlines). This is an improvement over the prior 61/64 result and materially
+narrows the remaining issue to high-concurrency ingress/provider backpressure;
+it is not a capacity pass. Railway worker logs showed no new ingress persistence
+classification after the ledger deployment, while the bounded probe still
+recorded telemetry delivery pressure at the ceiling. CPU/memory saturation was
+not demonstrated, so the capacity gate remains open pending connection,
+provider-latency, and admission-fairness evidence.

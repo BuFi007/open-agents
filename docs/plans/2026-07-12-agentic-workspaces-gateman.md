@@ -388,6 +388,23 @@ The Open Agents telemetry ingress diagnostic deployment
 confirms the remaining failure boundary is high-concurrency ingress/backpressure,
 not baseline configuration.
 
+## Telemetry repair-ledger remediation — 2026-07-12
+
+The diagnostic ingress logs isolated the original persistence error to repair
+trace IDs that do not correspond to operating-pack runs. Open Agents commit
+`ef196076` adds `queue_telemetry_exports` with redacted metadata, workspace/run
+binding, replay idempotency, and migration `0053_queue_telemetry_exports`.
+Focused ingress tests (3/3), Biome, TypeScript, and a clean production build
+passed; deployment `dpl_Brp3mzphTaS9R6y2rahr4f8JSzWg` applied the migration.
+
+The post-deploy worker certifier passed 1/1 under the five-minute bounded
+configuration. The fresh 64-concurrent run completed **62/64**, improving the
+previous 61/64 result. Gateman classification: the repair persistence defect
+is fixed and the lower-load path is green, but the absolute capacity gate is
+still open because two high-concurrency runs missed initial convergence and
+telemetry delivery pressure remains observable. No wallet, payment, customer,
+or tax-agent state was touched.
+
 ## Expo authenticated-environment simulator attempt — 2026-07-12
 
 The iOS release bundle was rebuilt with the existing Supabase public URL/key and

@@ -431,3 +431,17 @@ parity**. This is not a completion claim. Expo/Cleo authenticated device and
 push, authorized provider sandboxes, Circle executor/mutation, production
 capacity ceilings, Claude/TCC, and operating-week evidence remain unproven and
 continue to hold the overall bucket analysis below 100%.
+
+## Strict-gate delta — telemetry export ledger and worker ceiling — 2026-07-12
+
+The queue-telemetry diagnostic found and fixed a real non-tax persistence gap:
+repair exports were incorrectly routed through the operating-pack run table.
+Commit `ef196076` adds an isolated, redacted `queue_telemetry_exports` ledger
+with migration `0053_queue_telemetry_exports`; route tests, TypeScript, and the
+production build passed. The hosted worker certifier is green at controlled
+load (1/1), and the fresh five-minute 64-way ceiling probe improved from 61/64
+to **62/64**. This strengthens the BullMQ/knowledge-worker bucket but does not
+close its production-ceiling criterion: two certifiers still missed initial
+convergence, and telemetry delivery pressure remains visible at the ceiling.
+The conservative strict score therefore stays **83.9%**, with no unsupported
+weighted-point increase.
