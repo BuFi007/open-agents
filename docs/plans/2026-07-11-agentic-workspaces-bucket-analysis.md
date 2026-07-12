@@ -16,7 +16,7 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves zero-loss/idempotent recovery, and a deployed worker delivered a real DLQ SLO alert through the protected webhook into one Eve trace. Resource saturation and schema-validated DLQ redrive remain open. |
+| BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves zero-loss recovery, a deployed worker delivered a real DLQ SLO alert into Eve, and hash-verified redrive rejects tampering then replays idempotently. Production resource saturation remains open. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 96% | 9.6 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval, external-document repair and immutable ContextPacket persistence pass. Native client rendering, scheduled repair and larger load/freshness testing remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 88% | 8.8 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Tool-specific grant scopes, mobile citation scope, and hash-prefixed packet persistence now fail closed; 19 focused tests and a forced real Vercel preview build pass. Authenticated browser E2E is still uncertified. |
@@ -263,6 +263,12 @@ provider, rendered client, production worker, or live evidence path.
   `DEAD_LETTERS_PRESENT` through Vercel protection and persisted exactly one
   payload-free `queue.alert` Eve trace. The reusable certifier removed its
   entity, outbox, run and DLQ fixtures and exited zero on a second run.
+- The real Railway Redis mixed-workload gate now exercises the complete compact
+  DLQ lifecycle. Redrive requires the original versioned job envelope, verifies
+  profile/workspace/queue identity and the stored SHA-256 payload hash, rejects a
+  tampered payload, re-enqueues the stable BullMQ job once, removes the DLQ row
+  and records a seven-day idempotency marker. Repeating the same redrive returns
+  the same BullMQ ID with `replayed=true`; purge removes marker state.
 - Desk PR #542 commit `376d31acb` closes the review-discovered broker scope and
   packet-storage defects. `knowledge_read` now requires `knowledge.read`, Circle
   balance reads require `agent-wallet.read`, and a mobile citation grant without
@@ -283,10 +289,9 @@ provider, rendered client, production worker, or live evidence path.
    Railway Redis redeploy, recovery of all three worker modes, a full
    post-restart four-stage fixture and the three-boundary in-flight SIGKILL gate
    now pass; deployment-level saturation telemetry remains open.
-2. Certify the schema-validated DLQ redrive lifecycle. Relay, canonical-source,
-   enrichment, AI Gateway embedding, Typesense projection, hosted
-   external-document repair and payload-free alert delivery are certified;
-   DLQ redrive is not.
+2. Run the remaining production CPU/memory/DB/provider saturation matrix across
+   the deployed worker profiles. Queue repair, alert delivery and DLQ redrive are
+   now live-certified but do not substitute for resource-envelope evidence.
 3. Run clean migration replay, multi-tenant load, larger combined-recall and
    latency benchmarks, scheduled freshness repair and Redis/worker kill-restart
    certification.

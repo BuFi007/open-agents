@@ -93,8 +93,7 @@ after the effect but before BullMQ acknowledgement; both recovered with one
 stable version-1 entity and no committed-job loss. Resource saturation remains
 open.
 
-Follow-up: execute schema-validated DLQ redrive and provider-resource saturation
-against Railway. The
+Follow-up: execute provider-resource saturation against Railway. The
 authenticated payload-free ingress, ordered trace persistence and queue cockpit
 now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
@@ -120,8 +119,9 @@ embedding and a matching hosted Typesense 30.2 projection/receipt, then removed
 all Postgres and external-index fixture state. A later live repair event restored
 a deliberately deleted Typesense document with the same input hash. A deployed
 worker also delivered a real DLQ SLO violation through the protected webhook
-into one payload-free `queue.alert` trace. DLQ redrive and saturation/load remain
-follow-ups.
+into one payload-free `queue.alert` trace. Hash-verified redrive then rejected a
+tampered envelope, completed the original job once and replayed idempotently.
+Saturation/load remains a follow-up.
 
 ## 6. Product and UX contract review
 
