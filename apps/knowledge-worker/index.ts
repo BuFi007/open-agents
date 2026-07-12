@@ -224,6 +224,12 @@ async function deliverAlerts(exported: QueueTelemetryExport): Promise<void> {
       headers: {
         authorization: `Bearer ${config.alertWebhookSecret}`,
         "content-type": "application/json",
+        ...(config.deploymentProtectionBypassSecret
+          ? {
+              "x-vercel-protection-bypass":
+                config.deploymentProtectionBypassSecret,
+            }
+          : {}),
       },
       body: JSON.stringify({
         schemaVersion: 1,
