@@ -3,7 +3,10 @@ import IORedis from "ioredis";
 import postgres from "postgres";
 import { createPostgresKnowledgeRepository } from "@open-agents/knowledge";
 
-type Boundary = "queued-before-claim" | "active-before-effect" | "effect-before-ack";
+type Boundary =
+  | "queued-before-claim"
+  | "active-before-effect"
+  | "effect-before-ack";
 type Payload = Readonly<{
   workspaceId: string;
   externalKey: string;
@@ -33,7 +36,8 @@ const boundaries: readonly Boundary[] = [
 ];
 const results = [];
 
-for (const boundary of boundaries) results.push(await certifyBoundary(boundary));
+for (const boundary of boundaries)
+  results.push(await certifyBoundary(boundary));
 
 console.log(
   JSON.stringify(
@@ -60,7 +64,10 @@ async function certifyBoundary(boundary: Boundary) {
   const workspaceId = `kill-cert-workspace-${suffix}-${boundary}`;
   const externalKey = `kill-cert:${suffix}:${boundary}`;
   const connection = redis();
-  const queue = new Queue<Payload>(queueName, { connection, prefix: namespace });
+  const queue = new Queue<Payload>(queueName, {
+    connection,
+    prefix: namespace,
+  });
   const eventsConnection = redis();
   const queueEvents = new QueueEvents(queueName, {
     connection: eventsConnection,
@@ -79,7 +86,9 @@ async function certifyBoundary(boundary: Boundary) {
         queueName,
         markerKey,
         pauseAt:
-          boundary === "active-before-effect" ? "before-effect" : "after-effect",
+          boundary === "active-before-effect"
+            ? "before-effect"
+            : "after-effect",
       });
       await waitForMarker(markerConnection, markerKey, "ready", boundary);
     }
@@ -110,7 +119,12 @@ async function certifyBoundary(boundary: Boundary) {
       initial = null;
     }
 
-    recovery = spawnWorker({ namespace, queueName, markerKey, pauseAt: "none" });
+    recovery = spawnWorker({
+      namespace,
+      queueName,
+      markerKey,
+      pauseAt: "none",
+    });
     await waitForMarker(markerConnection, markerKey, "ready", boundary);
     await job.waitUntilFinished(queueEvents, 30_000);
 
@@ -197,7 +211,11 @@ async function runWorker(): Promise<never> {
     queueName,
     async (job: Job<Payload>) => {
       const { boundary, workspaceId, externalKey } = job.data;
-      await mark(markers, markerKey, { type: "started", boundary, atMs: Date.now() });
+      await mark(markers, markerKey, {
+        type: "started",
+        boundary,
+        atMs: Date.now(),
+      });
       if (pauseAt === "before-effect") await Bun.sleep(60_000);
       const entity = await knowledge.forWorkspace(workspaceId).resolve({
         externalKey,

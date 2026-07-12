@@ -75,7 +75,10 @@ describe("queue alert ingress", () => {
     expect(
       (
         await POST(
-          request({ ...payload, alerts: Array.from({ length: 501 }, () => payload.alerts[0]) }) as never,
+          request({
+            ...payload,
+            alerts: Array.from({ length: 501 }, () => payload.alerts[0]),
+          }) as never,
         )
       ).status,
     ).toBe(400);
@@ -89,6 +92,9 @@ describe("queue alert ingress", () => {
     }));
     const response = await POST(request(payload) as never);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ replayed: true, sequence: 7 });
+    expect(await response.json()).toMatchObject({
+      replayed: true,
+      sequence: 7,
+    });
   });
 });

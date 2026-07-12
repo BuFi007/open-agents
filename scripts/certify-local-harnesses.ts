@@ -360,8 +360,7 @@ async function main() {
     ]),
   ) as Record<HarnessCertificationTarget, boolean>;
 
-  const allEvidence: HarnessCertificationEvidence[] = [];
-  allEvidence.push(
+  const allEvidence: HarnessCertificationEvidence[] = [
     evidence(
       "contract_open_agents",
       "open-agents",
@@ -383,7 +382,7 @@ async function main() {
       circleWallet,
       circleWalletPassed ? ["circleWalletReadOnly"] : [],
     ),
-  );
+  ];
   for (const target of targets) {
     allEvidence.push(
       evidence(

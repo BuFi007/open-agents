@@ -402,9 +402,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, status: "cancelled" });
   }
 
-  let selectedWorkflow;
   try {
-    selectedWorkflow = resolveOperatingPackWorkflow({
+    resolveOperatingPackWorkflow({
       packId: input.packId,
       workflowId: input.workflowId,
     });

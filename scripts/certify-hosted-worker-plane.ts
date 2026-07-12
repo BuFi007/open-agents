@@ -144,91 +144,95 @@ try {
   });
   outboxIds = persisted.outboxIds;
 
-  const result = await waitFor(async () => {
-    const entity = await knowledge
-      .forWorkspace(workspaceId)
-      .getByExternalKey("SourceArtifact", artifact.artifactKey);
-    const enrichment = entity
-      ? await knowledge
-          .forWorkspace(workspaceId)
-          .getEnrichment(entity.id, "source-artifact-rules.v1")
-      : undefined;
-    const projection = entity
-      ? await knowledge.forWorkspace(workspaceId).getSearchProjection({
-          entityId: entity.id,
-          provider: "typesense",
-          collection: typesenseCollection,
-        })
-      : undefined;
-    const embeddings = entity
-      ? await inspection<{ dimensions: number; source_version: number }[]>`
+  const result = await waitFor(
+    async () => {
+      const entity = await knowledge
+        .forWorkspace(workspaceId)
+        .getByExternalKey("SourceArtifact", artifact.artifactKey);
+      const enrichment = entity
+        ? await knowledge
+            .forWorkspace(workspaceId)
+            .getEnrichment(entity.id, "source-artifact-rules.v1")
+        : undefined;
+      const projection = entity
+        ? await knowledge.forWorkspace(workspaceId).getSearchProjection({
+            entityId: entity.id,
+            provider: "typesense",
+            collection: typesenseCollection,
+          })
+        : undefined;
+      const embeddings = entity
+        ? await inspection<{ dimensions: number; source_version: number }[]>`
           SELECT vector_dims(embedding)::int AS dimensions, source_version
           FROM knowledge_embeddings
           WHERE workspace_id = ${workspaceId} AND entity_id = ${entity.id}
             AND model = 'openai/text-embedding-3-small'
             AND input_version = 'entity-search.v1'
         `
-      : [];
-    const typesenseDocument = entity
-      ? await readTypesenseDocument(entity.id)
-      : null;
-    const outbox = await inspection<
-      { id: string; status: string; published_at: Date | null }[]
-    >`
+        : [];
+      const typesenseDocument = entity
+        ? await readTypesenseDocument(entity.id)
+        : null;
+      const outbox = await inspection<
+        { id: string; status: string; published_at: Date | null }[]
+      >`
       SELECT id, status, published_at FROM knowledge_outbox
       WHERE id IN ${inspection([...persisted.outboxIds])}
     `;
-    const traces = await db
-      .select({
-        sequence: operatingPackTraces.sequence,
-        type: operatingPackTraces.type,
-        summary: operatingPackTraces.summary,
-        data: operatingPackTraces.data,
-      })
-      .from(operatingPackTraces)
-      .where(eq(operatingPackTraces.runId, runId));
-    const telemetry = traces.filter(
-      (trace) => trace.type === "queue.telemetry",
-    );
-    const metrics = telemetry.flatMap((trace) => {
-      const data = trace.data as { metrics?: unknown } | null;
-      return Array.isArray(data?.metrics) ? data.metrics : [];
-    }) as Array<{ queued?: number; completed?: number; queue?: string }>;
-    const queued = metrics.reduce(
-      (total, metric) => total + (metric.queued ?? 0),
-      0,
-    );
-    const completed = metrics.reduce(
-      (total, metric) => total + (metric.completed ?? 0),
-      0,
-    );
-    if (
-      !entity ||
-      !enrichment ||
-      !projection ||
-      embeddings.length !== 1 ||
-      embeddings[0]?.dimensions !== 1_536 ||
-      embeddings[0]?.source_version !== entity.version ||
-      typesenseDocument?.id !== entity.id ||
-      typesenseDocument.workspaceId !== workspaceId ||
-      typesenseDocument.inputHash !== projection.inputHash ||
-      outbox.some((event) => event.status !== "published") ||
-      queued < 4 ||
-      completed < 4
-    )
-      return null;
-    return {
-      entity,
-      enrichment,
-      projection,
-      embeddings,
-      typesenseDocument,
-      outbox,
-      telemetry,
-      queued,
-      completed,
-    };
-  }, 120_000, "initial four-stage worker plane");
+      const traces = await db
+        .select({
+          sequence: operatingPackTraces.sequence,
+          type: operatingPackTraces.type,
+          summary: operatingPackTraces.summary,
+          data: operatingPackTraces.data,
+        })
+        .from(operatingPackTraces)
+        .where(eq(operatingPackTraces.runId, runId));
+      const telemetry = traces.filter(
+        (trace) => trace.type === "queue.telemetry",
+      );
+      const metrics = telemetry.flatMap((trace) => {
+        const data = trace.data as { metrics?: unknown } | null;
+        return Array.isArray(data?.metrics) ? data.metrics : [];
+      }) as Array<{ queued?: number; completed?: number; queue?: string }>;
+      const queued = metrics.reduce(
+        (total, metric) => total + (metric.queued ?? 0),
+        0,
+      );
+      const completed = metrics.reduce(
+        (total, metric) => total + (metric.completed ?? 0),
+        0,
+      );
+      if (
+        !entity ||
+        !enrichment ||
+        !projection ||
+        embeddings.length !== 1 ||
+        embeddings[0]?.dimensions !== 1_536 ||
+        embeddings[0]?.source_version !== entity.version ||
+        typesenseDocument?.id !== entity.id ||
+        typesenseDocument.workspaceId !== workspaceId ||
+        typesenseDocument.inputHash !== projection.inputHash ||
+        outbox.some((event) => event.status !== "published") ||
+        queued < 4 ||
+        completed < 4
+      )
+        return null;
+      return {
+        entity,
+        enrichment,
+        projection,
+        embeddings,
+        typesenseDocument,
+        outbox,
+        telemetry,
+        queued,
+        completed,
+      };
+    },
+    120_000,
+    "initial four-stage worker plane",
+  );
   entityId = result.entity.id;
 
   const serializedTelemetry = JSON.stringify(result.telemetry);
@@ -272,18 +276,22 @@ try {
   )
     throw new Error("Hosted repair enqueue is not idempotent");
   outboxIds = [...outboxIds, repairOutboxId];
-  const repaired = await waitFor(async () => {
-    const [event] = await inspection<
-      { status: string; published_at: Date | null }[]
-    >`
+  const repaired = await waitFor(
+    async () => {
+      const [event] = await inspection<
+        { status: string; published_at: Date | null }[]
+      >`
       SELECT status, published_at FROM knowledge_outbox
       WHERE id = ${repairOutboxId}
     `;
-    const document = await readTypesenseDocument(result.entity.id);
-    if (event?.status !== "published" || !event.published_at || !document)
-      return null;
-    return { event, document };
-  }, 120_000, "idempotent hosted repair");
+      const document = await readTypesenseDocument(result.entity.id);
+      if (event?.status !== "published" || !event.published_at || !document)
+        return null;
+      return { event, document };
+    },
+    120_000,
+    "idempotent hosted repair",
+  );
   if (
     repaired.document.workspaceId !== workspaceId ||
     repaired.document.inputHash !== result.projection.inputHash
