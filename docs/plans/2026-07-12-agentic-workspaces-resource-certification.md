@@ -162,3 +162,9 @@ Result: **61 completed, 3 failed**. This is a one-run improvement, not a pass:
 the remaining failures still coincide with telemetry delivery pressure and
 require a durable ingress/backpressure decision before the capacity gate can
 close.
+
+The Open Agents ingress was then redeployed with sanitized persistence-failure
+classification at `dpl_9vYHG2uSY75a8fHu4YJPtWJSfeHr`. A post-deploy 16-concurrent
+probe completed **16/16** with no telemetry failures. The lower-load pass
+confirms the remaining failures are isolated to the higher-concurrency
+ceiling, not a baseline configuration or authentication defect.

@@ -382,6 +382,12 @@ improved completion from 60/64 to **61/64**, but three certifiers still failed
 with telemetry delivery pressure. Gateman verdict: improvement verified;
 capacity gate still open.
 
+The Open Agents telemetry ingress diagnostic deployment
+`dpl_9vYHG2uSY75a8fHu4YJPtWJSfeHr` was healthy, and a post-deploy
+16-concurrent certifier probe completed 16/16. The clean lower-load result
+confirms the remaining failure boundary is high-concurrency ingress/backpressure,
+not baseline configuration.
+
 ## Expo authenticated-environment simulator attempt — 2026-07-12
 
 The iOS release bundle was rebuilt with the existing Supabase public URL/key and
