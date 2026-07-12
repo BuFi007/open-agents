@@ -35,6 +35,11 @@ import {
   type OperatingPackControlCheckpoint,
 } from "@/lib/operating-packs/control-token";
 import { createWorkspaceHarness } from "@open-agents/harness-runner";
+import {
+  resolveAgentExecutionPolicy,
+  shouldRetryAgent,
+  type AgentExecutionPolicy,
+} from "@/lib/operating-packs/agent-execution-policy";
 
 export type OperatingPackWorkflowInput = {
   executionId: string;
@@ -421,9 +426,11 @@ async function runAgentStep(input: {
   runtime: Pick<PreparedRuntime, "sandboxState" | "workingDirectory">;
   agent: PreparedAgent;
   index: number;
+  attempt: number;
+  policy: AgentExecutionPolicy;
 }) {
   "use step";
-  const { workflow, runtime, agent, index } = input;
+  const { workflow, runtime, agent, index, attempt, policy } = input;
   console.log(
     `[operating-pack] AGENT START execution=${workflow.executionId} agent=${agent.qualifiedId}`,
   );
@@ -435,7 +442,7 @@ async function runAgentStep(input: {
     packetHash?: string;
   }> = [];
   const toolNames = new Map<string, string>();
-  const sequenceBase = 1000 + index * 200;
+  const sequenceBase = 1000 + index * 1000 + (attempt - 1) * 300;
   await appendOperatingPackTrace({
     id: traceId(workflow.executionId, sequenceBase),
     runId: workflow.executionId,
@@ -447,9 +454,12 @@ async function runAgentStep(input: {
     data: {
       harnessId: workflow.harnessId,
       toolGrantIds: agent.tools,
+      attempt,
+      maxAttempts: policy.maxAttempts,
+      timeoutMs: policy.timeoutMs,
     },
   });
-  const messageId = `${workflow.executionId}:${agent.agentId}`;
+  const messageId = `${workflow.executionId}:${agent.agentId}:attempt-${attempt}`;
   const workspaceGrant = await getOperatingPackWorkspaceGrant(
     workflow.executionId,
     workflow.workspaceId,
@@ -486,6 +496,7 @@ async function runAgentStep(input: {
       // the isolated harness sandbox to execute the already-granted tool call.
       permissionMode:
         workflow.harnessId === "codex" ? "allow-all" : "allow-reads",
+      abortSignal: AbortSignal.timeout(policy.timeoutMs),
       brokerContext: {
         workspaceId: workflow.workspaceId,
         workspaceGrant,
@@ -545,6 +556,7 @@ async function runAgentStep(input: {
       summary: `${agent.qualifiedId} failed during harness execution`,
       data: {
         harnessId: workflow.harnessId,
+        attempt,
         error: sanitizeTraceText(
           error instanceof Error ? error.message : String(error),
         ),
@@ -576,6 +588,9 @@ async function runAgentStep(input: {
       summary: summary || `${agent.qualifiedId} completed`,
       data: {
         finishReason: result.finishReason,
+        attempt,
+        maxAttempts: policy.maxAttempts,
+        timeoutMs: policy.timeoutMs,
         toolEvents,
         toolGrantIds: agent.tools,
         usage: result.usage,
@@ -590,6 +605,47 @@ async function runAgentStep(input: {
     finishReason: result.finishReason,
     summary,
   };
+}
+
+async function runAgentWithPolicy(input: {
+  workflow: OperatingPackWorkflowInput;
+  runtime: Pick<PreparedRuntime, "sandboxState" | "workingDirectory">;
+  agent: PreparedAgent;
+  index: number;
+}) {
+  const policy = resolveAgentExecutionPolicy(input.agent.tools);
+  for (let attempt = 1; attempt <= policy.maxAttempts; attempt += 1) {
+    try {
+      return await runAgentStep({ ...input, attempt, policy });
+    } catch (error) {
+      if (!shouldRetryAgent(policy, attempt)) throw error;
+      const nextAttempt = attempt + 1;
+      await appendOperatingPackTrace({
+        id: traceId(
+          input.workflow.executionId,
+          1000 + input.index * 1000 + (nextAttempt - 1) * 300 - 1,
+        ),
+        runId: input.workflow.executionId,
+        workspaceId: input.workflow.workspaceId,
+        sequence:
+          1000 + input.index * 1000 + (nextAttempt - 1) * 300 - 1,
+        type: "agent.retry",
+        agentId: input.agent.qualifiedId,
+        summary: `${input.agent.qualifiedId} retry ${nextAttempt}/${policy.maxAttempts}`,
+        data: {
+          attempt,
+          nextAttempt,
+          maxAttempts: policy.maxAttempts,
+          retryable: policy.retryable,
+          error: sanitizeTraceText(
+            error instanceof Error ? error.message : String(error),
+          ),
+        },
+      });
+      await sleep("1s");
+    }
+  }
+  throw new Error("Agent execution policy exhausted");
 }
 
 async function persistCompletedStep(
@@ -677,7 +733,7 @@ export async function runOperatingPackWorkflow(
     await pauseAtSafeCheckpoint(input, "before_agents", 100);
     const results = await Promise.all(
       runtime.agents.map((agent, index) =>
-        runAgentStep({ workflow: input, runtime, agent, index }),
+        runAgentWithPolicy({ workflow: input, runtime, agent, index }),
       ),
     );
     await pauseAtSafeCheckpoint(input, "before_join", 9_000);
