@@ -119,6 +119,32 @@ describe("queue telemetry export", () => {
     expect(await captured?.json()).toEqual(exported);
   });
 
+  test("retries transient telemetry endpoint failures with a bounded budget", async () => {
+    const exported = createQueueTelemetryExport({
+      facts: [fact("queued", 1_000)],
+      policy,
+      generatedAtMs: 2_000,
+    });
+    let attempts = 0;
+    const sink = createQueueTelemetryHttpSink({
+      endpoint: "https://open-agents.test/api/internal/queue-telemetry",
+      secret: "queue-telemetry-secret-at-least-thirty-two-chars",
+      maxAttempts: 3,
+      retryDelayMs: 0,
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts < 3)
+          return Response.json({ error: "busy" }, { status: 503 });
+        return Response.json({ accepted: true, replayed: false, sequence: 9 });
+      },
+    });
+    await expect(sink.send(exported)).resolves.toEqual({
+      replayed: false,
+      sequence: 9,
+    });
+    expect(attempts).toBe(3);
+  });
+
   test("rejects unsafe transport and malformed acknowledgements", async () => {
     expect(() =>
       createQueueTelemetryHttpSink({

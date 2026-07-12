@@ -90,6 +90,8 @@ export function createQueueTelemetryHttpSink(options: {
   endpoint: string;
   secret: string;
   deploymentProtectionBypassSecret?: string;
+  maxAttempts?: number;
+  retryDelayMs?: number;
   fetchImpl?: Fetch;
 }): QueueTelemetryExportSink {
   const endpoint = new URL(options.endpoint);
@@ -104,6 +106,12 @@ export function createQueueTelemetryHttpSink(options: {
     throw new Error("Queue telemetry secret is not configured");
   const deploymentProtectionBypassSecret =
     options.deploymentProtectionBypassSecret;
+  const maxAttempts = options.maxAttempts ?? 3;
+  const retryDelayMs = options.retryDelayMs ?? 250;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5)
+    throw new Error("Queue telemetry maxAttempts must be between 1 and 5");
+  if (!Number.isInteger(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 5_000)
+    throw new Error("Queue telemetry retryDelayMs must be between 0 and 5000");
   if (
     deploymentProtectionBypassSecret !== undefined &&
     (deploymentProtectionBypassSecret.length < 16 ||
@@ -115,41 +123,72 @@ export function createQueueTelemetryHttpSink(options: {
   return {
     async send(candidate) {
       const exported = parseQueueTelemetryExport(candidate);
-      const response = await fetchImpl(endpoint, {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          authorization: `Bearer ${options.secret}`,
-          "content-type": "application/json",
-          ...(deploymentProtectionBypassSecret
-            ? {
-                "x-vercel-protection-bypass": deploymentProtectionBypassSecret,
-              }
-            : {}),
-        },
-        body: JSON.stringify(exported),
-        redirect: "error",
-        signal: AbortSignal.timeout(10_000),
-      });
-      const body = (await response.json().catch(() => null)) as {
-        accepted?: unknown;
-        replayed?: unknown;
-        sequence?: unknown;
-      } | null;
-      if (
-        !response.ok ||
-        body?.accepted !== true ||
-        typeof body.replayed !== "boolean" ||
-        !Number.isSafeInteger(body.sequence) ||
-        (body.sequence as number) < 1
-      )
-        throw new Error(`Queue telemetry export failed (${response.status})`);
-      return {
-        replayed: body.replayed,
-        sequence: body.sequence as number,
-      };
+      let lastError: Error | null = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        let response: Response;
+        try {
+          response = await fetchImpl(endpoint, {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              authorization: `Bearer ${options.secret}`,
+              "content-type": "application/json",
+              ...(deploymentProtectionBypassSecret
+                ? {
+                    "x-vercel-protection-bypass": deploymentProtectionBypassSecret,
+                  }
+                : {}),
+            },
+            body: JSON.stringify(exported),
+            redirect: "error",
+            signal: AbortSignal.timeout(10_000),
+          });
+        } catch (error) {
+          lastError = new Error("Queue telemetry export request failed", {
+            cause: error,
+          });
+          if (attempt < maxAttempts) {
+            await delay(retryDelayMs, attempt);
+            continue;
+          }
+          throw lastError;
+        }
+        const body = (await response.json().catch(() => null)) as {
+          accepted?: unknown;
+          replayed?: unknown;
+          sequence?: unknown;
+        } | null;
+        if (
+          response.ok &&
+          body?.accepted === true &&
+          typeof body.replayed === "boolean" &&
+          Number.isSafeInteger(body.sequence) &&
+          (body.sequence as number) >= 1
+        )
+          return {
+            replayed: body.replayed,
+            sequence: body.sequence as number,
+          };
+        lastError = new Error(
+          `Queue telemetry export failed (${response.status})`,
+        );
+        if (attempt === maxAttempts || !isTransientStatus(response.status))
+          throw lastError;
+        await delay(retryDelayMs, attempt);
+      }
+      throw lastError ?? new Error("Queue telemetry export failed");
     },
   };
+}
+
+function isTransientStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+async function delay(baseMs: number, attempt: number): Promise<void> {
+  const duration = baseMs * 2 ** (attempt - 1);
+  if (duration > 0)
+    await new Promise<void>((resolve) => setTimeout(resolve, duration));
 }
 
 function hasHeaderControlCharacter(value: string): boolean {
