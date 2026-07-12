@@ -117,14 +117,12 @@ These are not hidden failures; they are external/live-certification requirements
   MCP session are healthy, but TCC capabilities are denied.
 - Supabase, Redis, Typesense, Pipedream, Gmail/Outlook and accounting-provider sandbox matrices.
 - Authenticated Desk and physical-device Expo E2E.
-- npm registry visibility for the accepted but currently unqueryable public Expo
-  adapter version.
 
 ## 8. Decision
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **78.9%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **79.0%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted Redis, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.

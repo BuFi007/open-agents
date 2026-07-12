@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 78.9%.** The repository has strong contracts and a growing
+**Production parity: 79.0%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -20,9 +20,9 @@ provider, rendered client, production worker, or live evidence path.
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 82% | 8.2 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets and a Team Cockpit projection. Focused suites and a forced real Vercel preview build pass; authenticated browser E2E is still uncertified. |
-| Expo/Cleo command center | 7 | 78% | 5.5 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge and push notifications. Expo web export passes; authenticated device E2E remains open. |
+| Expo/Cleo command center | 7 | 80% | 5.6 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge and push notifications. Expo web export and a clean external install/import of the public adapter pass; authenticated device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **78.9%** |  |
+| **Total** | **100** |  | **79.0%** |  |
 
 ## Newly proven in this pass
 
@@ -155,10 +155,9 @@ provider, rendered client, production worker, or live evidence path.
   test: create, two idempotent upserts, tenant-filtered retrieval of exactly one
   document and cleanup. The larger recall/latency/freshness-repair load gate is
   still open.
-- `@bufinance/open-agents-expo-adapter@0.1.0` was accepted by npm and cannot be
-  republished, but the public registry metadata endpoint still returns 404. The
-  package is therefore not counted as externally installable until a clean
-  `npm view` plus install/import smoke passes.
+- `@bufinance/open-agents-expo-adapter@0.1.0` is publicly visible and a clean
+  temporary npm project installs and imports all five runtime exports. Its
+  dist-only ESM/types/react-native package contains no source-workspace imports.
 
 ## Must-have gaps before 100%
 
@@ -187,8 +186,6 @@ provider, rendered client, production worker, or live evidence path.
    run the signed broker path against a deployed preview. The producer/consumer
    contract now passes directly across repositories, but client consumption and
    hosted request evidence remain uncertified.
-10. Resolve npm visibility for the public Expo adapter and prove a clean external
-    install/import; an accepted-but-unqueryable package is not ecosystem parity.
 
 ## Bucket verdict
 
