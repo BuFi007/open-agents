@@ -468,7 +468,12 @@ async function runAgentStep(input: {
       modelId: workflow.modelId,
       requestUrl: workflow.requestOrigin,
       instructions: agent.instructions,
-      permissionMode: "allow-reads",
+      // Codex treats brokered custom tools as built-in approval requests when
+      // the sandbox is in read-only mode. The broker grant and workflow
+      // approval boundary remain authoritative for wallet/USDC actions; allow
+      // the isolated harness sandbox to execute the already-granted tool call.
+      permissionMode:
+        workflow.harnessId === "codex" ? "allow-all" : "allow-reads",
       brokerContext: {
         workspaceId: workflow.workspaceId,
         workspaceGrant,
