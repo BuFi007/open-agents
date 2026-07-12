@@ -130,6 +130,12 @@ binds supplied workflow/agent/trace identity into the immutable context-packet
 artifact hash, without exposing identity in the public packet payload, so
 duplicate persistence cannot retain stale trace linkage. The combined Desk
 context-packet, broker, and grant suite is green (16 tests, 43 assertions).
+
+The live certification rerun against the currently configured Redis endpoint
+reproduced `Connection is closed` in both the BullMQ runtime and the connected
+Postgres→BullMQ pipeline. Commit `16e36eb1` bounds connected-pipeline teardown
+so this provider failure exits in roughly 25 seconds instead of hanging the
+process. This improves failure hygiene but is not production queue evidence.
 The fix is isolated on a clean current-development branch and published as Desk
 PR #546; superseded PR #545 was closed because its older branch also carried
 unrelated accounting commits.
