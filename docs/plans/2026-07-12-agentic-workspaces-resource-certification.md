@@ -121,3 +121,12 @@ This closes the previous deadline failure and provides a deliberate
 high-concurrency bounded-envelope result. It is still not a claim that the
 worker was driven to its absolute CPU, memory, database-connection, or external
 provider ceiling; those ceiling tests remain a separate follow-up.
+
+## Multi-workspace attempt — not counted
+
+An exploratory 8-noisy/4-protected workspace run was intentionally not counted
+as capacity evidence: all 12 fixtures missed the initial convergence deadline
+because the deployed worker's explicit production workspace allowlist contains
+only the certification workspace. This validates that the allowlist is active,
+not that the provider or database saturated. The certifier's cleanup path ran,
+and no result from this attempt is used in the parity score.
