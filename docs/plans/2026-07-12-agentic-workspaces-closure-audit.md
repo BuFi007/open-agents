@@ -368,3 +368,9 @@ so the Circle result stayed executor-gated; a bash approval request was not
 auto-approved. Temporary operating-pack rows and bridge users were removed
 afterward. This closes hosted durable workflow plus read-only `tool.called`
 evidence, but not wallet executor provisioning or approved mutation/spend.
+
+The high-risk approval path was exercised separately with a disposable
+`agent-wallet.spend` grant. `agent_wallet_payment` returned `202`; after the
+durable hook became available, an explicit rejection was accepted and the run
+reached `rejected` with `approval.requested` and `approval.rejected` traces.
+No payment or wallet write occurred, and temporary rows/users were removed.

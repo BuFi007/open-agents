@@ -240,3 +240,11 @@ All temporary operating-pack rows and bridge users were removed after the run.
 This closes the hosted durable workflow and non-zero `tool.called` evidence
 gate for a read-only tool, but not wallet executor provisioning or approved
 mutation/spend.
+
+The hosted high-risk approval gate was also exercised with a disposable
+`agent-wallet.spend` grant. `agent_wallet_payment` returned `202`, initially
+returned a safe `409` while the durable hook was still being registered, then
+accepted the explicit rejection and reached `rejected`. The resulting trace
+contained `approval.requested` and `approval.rejected`; no payment, wallet
+write, or external mutation occurred. Temporary rows and the bridge user were
+removed after the run.
