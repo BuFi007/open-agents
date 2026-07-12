@@ -98,13 +98,15 @@ using a real member, workspace, or wallet. The route is not promoted to Desk
 production because the current production build still has unrelated pre-existing
 contract type debt, and the preview URL is not a durable production broker.
 
-The broker contract was corrected in Desk commit `253b72167`: strict request
+The broker contract was corrected in Desk commit `b320f197f`: strict request
 validation now accepts Open Agents' `agentRunId` and `traceId`, and knowledge
 packets preserve the agent-run identity instead of substituting the grant subject.
 The refreshed preview accepted the full signed Open Agents-shaped request before
 rejecting only its deliberately invalid grant; the focused Desk authorization
 suite is green (8 tests, 21 assertions).
-The follow-up is published as Desk PR #545.
+The fix was isolated onto a clean current-development branch as commit
+`b320f197f` and published as Desk PR #546; superseded PR #545 was closed because
+its older branch also carried unrelated accounting commits.
 
 Open Agents commit `70701f36` adds a durable per-agent execution envelope:
 bounded cancellation (`BUFI_AGENT_STEP_TIMEOUT_MS`), bounded attempts
