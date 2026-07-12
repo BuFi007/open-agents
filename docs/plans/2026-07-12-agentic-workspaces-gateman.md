@@ -81,6 +81,11 @@ four published stages, canonical/enrichment/1,536-dimension embedding/
 Typesense projection, five payload-free telemetry traces, and an idempotent
 repair replay; all database and external fixtures were cleaned up.
 
+The three-boundary Redis/Postgres kill gate also passed: queued-before-claim,
+active-before-effect, and effect-before-ack all recovered with zero committed
+job loss, stable entity identity/version, and zero duplicate effects. Its
+temporary QueueKillCertification rows were verified absent afterward.
+
 The two tangential Desk attempts were evaluated before closure: #495's guarded
 wallet tools were consolidated into the still-open #540 boundary, while #438's
 monorepo-wide AI SDK/artifact migration was superseded by the isolated Open

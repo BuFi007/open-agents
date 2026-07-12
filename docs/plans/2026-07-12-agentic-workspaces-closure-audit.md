@@ -168,6 +168,13 @@ entity v1, deterministic enrichment, 1,536-dimension embedding, Typesense
 projection, five payload-free telemetry traces, and an idempotent repair
 replay. Database rows and the external document were verified cleaned up.
 
+The Railway Redis three-boundary recovery gate also passed with the public BUFI
+Redis endpoint and Railway Postgres: queued-before-claim, active-before-effect,
+and effect-before-ack all completed; committed-job loss was zero, entity version
+remained 1, and the post-effect replay preserved entity identity without a
+duplicate effect. The QueueKillCertification table was verified clean after
+the run.
+
 The Desk Pipedream Connect configuration was exercised read-only through the
 current Streamable HTTP v3 client: app discovery returned QuickBooks and Xero
 Accounting OAuth apps, and scoped tool discovery returned 57 QuickBooks tools
