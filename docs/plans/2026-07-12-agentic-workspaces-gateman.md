@@ -221,6 +221,16 @@ assertions. The full Desk app typecheck remains an open hosted-build gate: the
 even with an 8 GB heap. No unrelated type-graph refactor was folded into this
 non-tax closure slice.
 
+## Expo/Cleo simulator revalidation — 2026-07-12
+
+The `apps/expo` native target reaches a successful direct Xcode simulator
+build after installing the declared `react-native-worklets` peer in an isolated
+worktree. A runtime Metro request still fails closed because the Circle wallet
+adapter graph pulls the Node-only `node:util` module from
+`@circle-fin/smart-contract-platform`. The native binary build is therefore
+green, but no protected Expo/Cleo workflow was rendered; the device gate
+remains open until the wallet dependency is split or platform-guarded.
+
 ## Hosted Open Agents production redeploy — 2026-07-12
 
 The production build initially exposed a real workflow-isolation defect: the

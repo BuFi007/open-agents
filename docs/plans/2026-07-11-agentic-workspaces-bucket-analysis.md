@@ -352,6 +352,19 @@ These results close the semantic-provider and larger lexical-recall subgates;
 they do not close authorized connector accounts, authenticated Desk/Expo
 journeys, wallet-spend execution, or production saturation.
 
+## Evidence addendum — 2026-07-12 Expo/Cleo simulator probe
+
+The correct `apps/expo` entrypoint was rebuilt against an iPhone 16 Pro iOS
+18.6 simulator. CocoaPods completed after the worktree installed its declared
+`react-native-worklets` peer, and a direct `xcodebuild` simulator build passed
+with zero errors. Runtime Metro bundling still fails closed: the Circle wallet
+adapter graph imports the Node-only `node:util` module from
+`@circle-fin/smart-contract-platform`, which cannot be bundled for React
+Native. The earlier shared `node_modules` symlink also masked this until the
+worktree was isolated. This is a real mobile packaging gap, not authenticated
+device evidence; the Expo/Cleo bucket remains open until the client graph is
+platform-safe and the protected workflow/citation journey is exercised.
+
 ## Evidence addendum — 2026-07-12 hosted workflow closure slice
 
 The strict July 11 score remains **82.7%** until every bucket criterion is
