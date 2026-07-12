@@ -452,3 +452,25 @@ pass; GitHub Validate/Claude review fail before workflow steps begin, with no
 step logs, so those checks remain an external CI/runner blocker. The honest
 hosted state is still executor-gated: the disposable authenticated workspace
 has no Circle wallet executor, and no wallet mutation/spend was attempted.
+
+## Hosted ingress and explicit spend-scope revalidation — 2026-07-12
+
+Desk commit `26337c928` adds `agent-wallet.spend` to the grant schema and issues
+that scope only when a member explicitly launches a high-risk `agent_wallet`
+workflow. Read-only discovery remains read-only. Focused verification passes:
+five Bun grant tests (nine assertions), seven Vitest operations/grant tests, and
+Biome checks.
+
+The READY Desk preview `dpl_GzR6n6k2wvpK36zetGJc8EsJfCrq` was deployed with the
+production Open Agents ingress secret and shared broker secret. Authenticated
+browser launch returned `202` and entered `awaiting_approval`. Hosted
+revalidation then recorded a rejection, a separate approval-held run cancelled
+with `run.cancelled`, and a read-only service-discovery run completed with six
+`tool.called` traces and `run.completed`. No wallet creation, funding,
+deployment, payment, or external mutation occurred.
+
+These results close the hosted ingress, explicit grant-scope, read-only
+execution, approval rejection, and cancellation boundaries. They do not close
+the external provider sandbox, production saturation, authenticated citation,
+physical Expo/Cleo, Claude/TCC, or operating-week gates; the strict score
+remains below 100%.
