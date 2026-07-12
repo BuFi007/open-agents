@@ -10,6 +10,22 @@ export const OPERATING_PACK_TOOL_NAMES = [
   "knowledge_read",
   "workflow_run",
   "circle_get_balance",
+  "circle_login",
+  "circle_logout",
+  "fetch_setup_skill",
+  "fetch_sub_skill",
+  "circle_list_wallets",
+  "circle_create_wallet",
+  "circle_deploy_wallet",
+  "circle_wallet_fund",
+  "circle_fund_fiat",
+  "circle_get_gateway_balance",
+  "circle_search_services",
+  "circle_inspect_service",
+  "fetch_service",
+  "call_free_service",
+  "circle_pay_service",
+  "circle_gateway_deposit",
 ] as const;
 
 export type OperatingPackToolName = (typeof OPERATING_PACK_TOOL_NAMES)[number];
@@ -37,7 +53,7 @@ function signBrokerRequest(
 
 async function callBroker(
   context: OperatingPackBrokerContext,
-  toolName: "knowledge_read" | "circle_get_balance",
+  toolName: Exclude<OperatingPackToolName, "workflow_run">,
   args: Record<string, unknown>,
   options: {
     brokerUrl?: string;
@@ -142,6 +158,48 @@ export function createOperatingPackBrokerTools(
       }),
       execute: (args) =>
         callBroker(context, "circle_get_balance", args, options),
+    });
+  }
+  const circleToolDescriptions: Readonly<
+    Record<
+      Exclude<
+        OperatingPackToolName,
+        "knowledge_read" | "workflow_run" | "circle_get_balance"
+      >,
+      string
+    >
+  > = {
+    circle_login: "Confirm the authenticated Circle agent-wallet session.",
+    circle_logout: "Clear the authenticated Circle agent-wallet session.",
+    fetch_setup_skill: "Read Circle Agent Stack setup guidance.",
+    fetch_sub_skill: "Read a Circle Agent Stack sub-skill.",
+    circle_list_wallets: "List the workspace's isolated Circle agent wallets.",
+    circle_create_wallet:
+      "Create an isolated Circle agent wallet; approval is required.",
+    circle_deploy_wallet:
+      "Deploy a Circle smart-contract wallet; approval is required.",
+    circle_wallet_fund: "Fund a Circle agent wallet; approval is required.",
+    circle_fund_fiat: "Create a fiat funding flow; approval is required.",
+    circle_get_gateway_balance: "Read the Circle Gateway balance.",
+    circle_search_services: "Discover x402 services available to the wallet.",
+    circle_inspect_service: "Inspect an x402 service before payment.",
+    fetch_service: "Probe an x402 service without payment.",
+    call_free_service: "Call a free x402 service.",
+    circle_pay_service: "Pay an x402 service with USDC; approval is required.",
+    circle_gateway_deposit:
+      "Deposit USDC into Circle Gateway; approval is required.",
+  };
+  for (const toolName of Object.keys(circleToolDescriptions) as Array<
+    Exclude<
+      OperatingPackToolName,
+      "knowledge_read" | "workflow_run" | "circle_get_balance"
+    >
+  >) {
+    if (!allowed.has(toolName)) continue;
+    tools[toolName] = tool({
+      description: circleToolDescriptions[toolName],
+      inputSchema: z.record(z.string(), z.unknown()),
+      execute: (args) => callBroker(context, toolName, args, options),
     });
   }
   if (allowed.has("workflow_run")) {

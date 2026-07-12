@@ -63,7 +63,16 @@ export type KnowledgeProcessorArtifact = Readonly<{
   artifactKey: string;
   workspaceId: string;
   connectorId: string;
-  provider: "manual" | "gmail" | "outlook" | "pipedream";
+  provider:
+    | "manual"
+    | "gmail"
+    | "outlook"
+    | "pipedream"
+    | "magic-inbox"
+    | "quickbooks"
+    | "xero"
+    | "contaazul"
+    | "contabilium";
   contentHash: string;
   mimeType: string;
   sizeBytes: number;

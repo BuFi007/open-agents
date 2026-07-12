@@ -1,7 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import { buildContextPacket } from "@open-agents/knowledge";
 import type { ToolSet } from "ai";
-import { createOperatingPackBrokerTools } from "./tool-broker";
+import {
+  createOperatingPackBrokerTools,
+  OPERATING_PACK_TOOL_NAMES,
+} from "./tool-broker";
 
 type ExecutableTool = {
   execute?: (input: unknown, options?: unknown) => Promise<unknown> | unknown;
@@ -127,5 +130,34 @@ describe("operating-pack host tool broker", () => {
         workflowId: "nested",
       }),
     ).rejects.toThrow("separately approved durable run");
+  });
+
+  test("exposes the complete Circle wallet tool registry as brokered calls", async () => {
+    const fetchImpl = mock(
+      async (_url: string | URL | Request, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as { tool?: string };
+        return Response.json({
+          result: { tool: body.tool, workspaceId: context.workspaceId },
+        });
+      },
+    );
+    const tools = createOperatingPackBrokerTools(
+      { ...context, allowedTools: OPERATING_PACK_TOOL_NAMES },
+      {
+        brokerUrl: "https://desk.test/api/internal/agent-tools",
+        brokerSecret: "test-secret-that-is-at-least-thirty-two-bytes",
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      },
+    );
+    for (const name of OPERATING_PACK_TOOL_NAMES.filter(
+      (candidate) =>
+        candidate !== "knowledge_read" && candidate !== "workflow_run",
+    )) {
+      expect(Object.keys(tools)).toContain(name);
+      await expect(execute(tools, name, {})).resolves.toMatchObject({
+        tool: name,
+      });
+    }
+    expect(fetchImpl).toHaveBeenCalledTimes(17);
   });
 });

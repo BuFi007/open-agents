@@ -361,29 +361,31 @@ async function main() {
   ) as Record<HarnessCertificationTarget, boolean>;
 
   const allEvidence: HarnessCertificationEvidence[] = [];
+  allEvidence.push(
+    evidence(
+      "contract_open_agents",
+      "open-agents",
+      "contract-test",
+      contract,
+      contract.exitCode === 0 ? contractChecks : [],
+    ),
+    evidence(
+      "hyper_open_agents",
+      "open-agents",
+      "endpoint-smoke",
+      { ...hyper, exitCode: hyperPassed ? 0 : 1 },
+      hyperPassed ? ["readOnlyHyperSmoke"] : [],
+    ),
+    evidence(
+      "circle_wallet_open_agents",
+      "open-agents",
+      "endpoint-smoke",
+      circleWallet,
+      circleWalletPassed ? ["circleWalletReadOnly"] : [],
+    ),
+  );
   for (const target of targets) {
     allEvidence.push(
-      evidence(
-        `contract_${target}`,
-        target,
-        "contract-test",
-        contract,
-        contract.exitCode === 0 ? contractChecks : [],
-      ),
-      evidence(
-        `hyper_${target}`,
-        target,
-        "endpoint-smoke",
-        { ...hyper, exitCode: hyperPassed ? 0 : 1 },
-        hyperPassed ? ["readOnlyHyperSmoke"] : [],
-      ),
-      evidence(
-        `circle_wallet_${target}`,
-        target,
-        "endpoint-smoke",
-        circleWallet,
-        circleWalletPassed ? ["circleWalletReadOnly"] : [],
-      ),
       evidence(
         `handshake_${target}`,
         target,
@@ -402,20 +404,24 @@ async function main() {
     targets.map((target) => [
       target,
       {
-        identityBound: contract.exitCode === 0,
-        workspaceBound: contract.exitCode === 0,
-        teamBound: contract.exitCode === 0,
-        sessionBound: contract.exitCode === 0,
-        mcpGrantEnforced: contract.exitCode === 0,
-        ungrantedToolDenied: contract.exitCode === 0,
-        approvalEventObserved: contract.exitCode === 0,
-        traceEventObserved: contract.exitCode === 0,
-        sandboxIsolated: handshakePassed[target],
-        callbackVisible: handshakePassed[target],
-        degradedStateHonest: contract.exitCode === 0,
-        readOnlyHyperSmoke: hyperPassed,
-        circleWalletReadOnly: circleWalletPassed,
-        deniedSpendWithoutApproval: contract.exitCode === 0,
+        identityBound: target === "open-agents" && contract.exitCode === 0,
+        workspaceBound: target === "open-agents" && contract.exitCode === 0,
+        teamBound: target === "open-agents" && contract.exitCode === 0,
+        sessionBound: target === "open-agents" && contract.exitCode === 0,
+        mcpGrantEnforced: target === "open-agents" && contract.exitCode === 0,
+        ungrantedToolDenied:
+          target === "open-agents" && contract.exitCode === 0,
+        approvalEventObserved:
+          target === "open-agents" && contract.exitCode === 0,
+        traceEventObserved: target === "open-agents" && contract.exitCode === 0,
+        sandboxIsolated: target === "open-agents" && handshakePassed[target],
+        callbackVisible: target === "open-agents" && handshakePassed[target],
+        degradedStateHonest:
+          target === "open-agents" && contract.exitCode === 0,
+        readOnlyHyperSmoke: target === "open-agents" && hyperPassed,
+        circleWalletReadOnly: target === "open-agents" && circleWalletPassed,
+        deniedSpendWithoutApproval:
+          target === "open-agents" && contract.exitCode === 0,
         ...(target === "computer-use"
           ? { computerUseDoctor: handshakePassed[target] }
           : {}),

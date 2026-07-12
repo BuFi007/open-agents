@@ -66,3 +66,7 @@ export {
   type KnowledgeProcessorArtifactReader,
   type KnowledgeEmbeddingProcessorResult,
 } from "./knowledge-processors";
+export {
+  scheduleKnowledgeRepairs,
+  type KnowledgeRepairScanResult,
+} from "./knowledge-repair-scheduler";

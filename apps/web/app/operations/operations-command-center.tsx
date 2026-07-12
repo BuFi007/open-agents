@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSessionChats } from "@/hooks/use-session-chats";
 import { useSessions } from "@/hooks/use-sessions";
 import { QueueTelemetryPanel } from "./queue-telemetry-panel";
+import type { OperatingPackHarnessId } from "@/lib/operating-packs/runtime";
 
 type Pack = {
   id: string;
@@ -114,9 +115,8 @@ export function OperationsCommandCenter() {
   const [workspaceGrant, setWorkspaceGrant] = useState("");
   const [packId, setPackId] = useState("");
   const [workflowId, setWorkflowId] = useState("");
-  const [harnessId, setHarnessId] = useState<"claude-code" | "pi">(
-    "claude-code",
-  );
+  const [harnessId, setHarnessId] =
+    useState<OperatingPackHarnessId>("claude-code");
   const [prompt, setPrompt] = useState(
     "Review this workspace and produce evidence-backed operating findings.",
   );
@@ -385,9 +385,10 @@ export function OperationsCommandCenter() {
                     className="h-9 w-full rounded-md border bg-background px-2 text-sm"
                     value={harnessId}
                     onChange={(event) =>
-                      setHarnessId(event.target.value as "claude-code" | "pi")
+                      setHarnessId(event.target.value as OperatingPackHarnessId)
                     }
                   >
+                    <option value="codex">Codex</option>
                     <option value="claude-code">Claude Code</option>
                     <option value="pi">Pi</option>
                   </select>

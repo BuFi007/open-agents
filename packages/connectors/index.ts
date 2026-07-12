@@ -18,6 +18,7 @@ export {
 export {
   type SourceArtifact,
   type SourceArtifactInput,
+  type SourceArtifactProvider,
   createSourceArtifact,
   sourceArtifactStageOperationId,
 } from "./source-artifact";

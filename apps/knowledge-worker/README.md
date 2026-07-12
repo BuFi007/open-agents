@@ -9,12 +9,16 @@ Deploy the same image as separate services:
   explicit workspace allowlist and publishes them to BullMQ.
 - `KNOWLEDGE_WORKER_MODE=source`: consumes canonical-write work.
 - `KNOWLEDGE_WORKER_MODE=knowledge`: consumes enrichment, embedding, Typesense
-  projection and repair work.
+  projection and repair work. When `KNOWLEDGE_WORKSPACE_IDS` is present, it
+  also runs a bounded freshness scheduler. The scheduler scans only canonical
+  `SourceArtifact` entities and enqueues stable, lineage-only repair jobs; it
+  never places raw documents, credentials, or provider responses in Redis.
 - `KNOWLEDGE_WORKER_MODE=all`: guarded dogfood topology only; it combines the
   three roles in one process.
 
 `/livez` is process liveness. `/readyz` fails closed when Redis/workers are not
-ready, the relay has not completed a recent cycle, or its latest cycle failed.
+ready, the relay or freshness scheduler has not completed a recent cycle, or
+the latest cycle failed.
 Railway uses `/readyz` as the rollout gate.
 
 Queue facts are grouped by workspace and originating run, bounded in memory,

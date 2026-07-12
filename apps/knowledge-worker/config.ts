@@ -14,6 +14,9 @@ export type KnowledgeWorkerConfig = Readonly<{
   workspaceIds: readonly string[];
   relayIntervalMs: number;
   relayBatchSize: number;
+  repairIntervalMs: number;
+  repairMaxAgeMs: number;
+  repairBatchSize: number;
   telemetryUrl: string;
   telemetrySecret: string;
   deploymentProtectionBypassSecret: string | null;
@@ -113,6 +116,24 @@ export function parseKnowledgeWorkerConfig(
       60_000,
     ),
     relayBatchSize: integer(environment.OUTBOX_RELAY_BATCH_SIZE, 100, 1, 1_000),
+    repairIntervalMs: integer(
+      environment.KNOWLEDGE_REPAIR_INTERVAL_MS,
+      60_000,
+      5_000,
+      86_400_000,
+    ),
+    repairMaxAgeMs: integer(
+      environment.KNOWLEDGE_REPAIR_MAX_AGE_MS,
+      86_400_000,
+      60_000,
+      31_536_000_000,
+    ),
+    repairBatchSize: integer(
+      environment.KNOWLEDGE_REPAIR_BATCH_SIZE,
+      500,
+      1,
+      10_000,
+    ),
     telemetryUrl,
     telemetrySecret,
     deploymentProtectionBypassSecret,

@@ -1,10 +1,21 @@
 import { createHash } from "node:crypto";
 import type { ConnectorStage } from "./manifest";
 
+export type SourceArtifactProvider =
+  | "manual"
+  | "gmail"
+  | "outlook"
+  | "pipedream"
+  | "magic-inbox"
+  | "quickbooks"
+  | "xero"
+  | "contaazul"
+  | "contabilium";
+
 export type SourceArtifactInput = {
   workspaceId: string;
   connectorId: string;
-  provider: "manual" | "gmail" | "outlook" | "pipedream";
+  provider: SourceArtifactProvider;
   accountId?: string;
   externalContainerId?: string;
   externalArtifactId?: string;

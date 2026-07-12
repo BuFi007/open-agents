@@ -15,6 +15,7 @@ import {
   createQueueTelemetryHttpSink,
   createQueueTelemetryReporter,
   relayKnowledgeOutbox,
+  scheduleKnowledgeRepairs,
   type BullMqRuntimeJob,
   type QueueTelemetryExport,
   type WorkerProfile,
@@ -74,6 +75,8 @@ const processors: Partial<
     (job: BullMqRuntimeJob, signal: AbortSignal) => Promise<void>
   >
 > = {};
+let repairProvider: string | null = null;
+let repairCollection: string | null = null;
 if (config.mode === "source" || config.mode === "all")
   processors["source-connectors"] = canonical;
 if (config.mode === "knowledge" || config.mode === "all") {
@@ -93,6 +96,8 @@ if (config.mode === "knowledge" || config.mode === "all") {
       collection: config.typesenseCollection,
     }),
   });
+  repairProvider = "typesense";
+  repairCollection = config.typesenseCollection;
   const repair = createKnowledgeRepairProcessor({
     canonical,
     enrichment,
@@ -113,17 +118,28 @@ let relayRunning = false;
 let lastRelayAt: string | null = null;
 let lastRelayErrorCode: string | null = null;
 let relayPublished = 0;
+let repairRunning = false;
+let lastRepairAt: string | null = null;
+let lastRepairErrorCode: string | null = null;
+let repairScheduled = 0;
+let repairReplayed = 0;
 await runtime.start(processors);
 
 const relayTimer =
   config.mode === "relay" || config.mode === "all"
     ? setInterval(() => void relayOnce(), config.relayIntervalMs)
     : null;
+const repairTimer =
+  (config.mode === "knowledge" || config.mode === "all") &&
+  config.workspaceIds.length > 0
+    ? setInterval(() => void repairOnce(), config.repairIntervalMs)
+    : null;
 const telemetryTimer = setInterval(
   () => void telemetry.flush(),
   config.telemetryIntervalMs,
 );
 if (relayTimer) void relayOnce();
+if (repairTimer) void repairOnce();
 
 const server = Bun.serve({
   port: config.port,
@@ -138,7 +154,15 @@ const server = Bun.serve({
         (lastRelayAt !== null &&
           Date.now() - Date.parse(lastRelayAt) <= config.relayIntervalMs * 5);
       const ready =
-        !stopping && health.ready && relayFresh && lastRelayErrorCode === null;
+        !stopping &&
+        health.ready &&
+        relayFresh &&
+        lastRelayErrorCode === null &&
+        (!repairTimer ||
+          (lastRepairAt !== null &&
+            Date.now() - Date.parse(lastRepairAt) <=
+              config.repairIntervalMs * 5 &&
+            lastRepairErrorCode === null));
       return Response.json(
         {
           ready,
@@ -151,6 +175,14 @@ const server = Bun.serve({
             lastRelayAt,
             errorCode: lastRelayErrorCode,
             published: relayPublished,
+          },
+          repair: {
+            configuredWorkspaces: repairTimer ? config.workspaceIds.length : 0,
+            running: repairRunning,
+            lastRepairAt,
+            errorCode: lastRepairErrorCode,
+            scheduled: repairScheduled,
+            replayed: repairReplayed,
           },
           telemetry: telemetry.pending(),
         },
@@ -260,6 +292,7 @@ async function shutdown(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
   if (relayTimer) clearInterval(relayTimer);
+  if (repairTimer) clearInterval(repairTimer);
   clearInterval(telemetryTimer);
   server.stop(false);
   await telemetry.close();
@@ -273,4 +306,56 @@ async function shutdown(signal: string): Promise<void> {
     }),
   );
   process.exit(0);
+}
+
+async function repairOnce(): Promise<void> {
+  if (
+    stopping ||
+    repairRunning ||
+    repairProvider === null ||
+    repairCollection === null
+  )
+    return;
+  repairRunning = true;
+  try {
+    for (const workspaceId of config.workspaceIds) {
+      const result = await scheduleKnowledgeRepairs({
+        workspace: knowledge.forWorkspace(workspaceId),
+        artifacts: connectors,
+        runtime,
+        provider: repairProvider,
+        collection: repairCollection,
+        maxAgeMs: config.repairMaxAgeMs,
+        maxJobs: config.repairBatchSize,
+      });
+      repairScheduled += result.enqueued;
+      repairReplayed += result.replayed;
+      if (result.stale > 0)
+        console.log(
+          JSON.stringify({
+            level: "info",
+            event: "knowledge.repair.scheduled",
+            workspaceId,
+            scanId: result.scanId,
+            inspected: result.inspected,
+            stale: result.stale,
+            enqueued: result.enqueued,
+            replayed: result.replayed,
+          }),
+        );
+    }
+    lastRepairAt = new Date().toISOString();
+    lastRepairErrorCode = null;
+  } catch {
+    lastRepairErrorCode = "KNOWLEDGE_REPAIR_CYCLE_FAILED";
+    console.error(
+      JSON.stringify({
+        level: "error",
+        event: "knowledge.repair.cycle_failed",
+        errorCode: lastRepairErrorCode,
+      }),
+    );
+  } finally {
+    repairRunning = false;
+  }
 }

@@ -1,4 +1,7 @@
-import type { HarnessUIMessageChunk } from "@open-agents/harness-runner";
+import type {
+  HarnessMcpCapability,
+  HarnessUIMessageChunk,
+} from "@open-agents/harness-runner";
 import {
   compileFilesystemRoster,
   compileOperatingPacks,
@@ -74,7 +77,26 @@ type PreparedRuntime = {
   workflowTitle: string;
 };
 
-const capabilityRegistry = [
+const circleWalletCapabilities = [
+  ["circle_login", "agent-wallet.session", false, "login"],
+  ["circle_logout", "agent-wallet.session", true, "logout"],
+  ["fetch_setup_skill", "agent-wallet.setup", false, "read"],
+  ["fetch_sub_skill", "agent-wallet.setup", false, "read"],
+  ["circle_list_wallets", "wallet.read", false, "read"],
+  ["circle_create_wallet", "wallet.write", true, "create"],
+  ["circle_deploy_wallet", "wallet.write", true, "deploy"],
+  ["circle_wallet_fund", "wallet.write", true, "fund"],
+  ["circle_fund_fiat", "wallet.fiat", true, "fund"],
+  ["circle_get_gateway_balance", "wallet.read", false, "read"],
+  ["circle_search_services", "service.read", false, "search"],
+  ["circle_inspect_service", "service.read", false, "inspect"],
+  ["fetch_service", "service.read", false, "fetch"],
+  ["call_free_service", "service.read", false, "call"],
+  ["circle_pay_service", "service.pay", true, "pay"],
+  ["circle_gateway_deposit", "wallet.spend", true, "deposit"],
+] as const satisfies readonly (readonly [string, string, boolean, string])[];
+
+const capabilityRegistry: readonly HarnessMcpCapability[] = [
   {
     name: "knowledge_read",
     server: "custom" as const,
@@ -96,7 +118,16 @@ const capabilityRegistry = [
     requiresApproval: false,
     allowedOperations: ["read"],
   },
-] as const;
+  ...circleWalletCapabilities.map(
+    ([name, scope, requiresApproval, operation]) => ({
+      name,
+      server: "bufi-hyper" as const,
+      scopes: [scope],
+      requiresApproval,
+      allowedOperations: [operation],
+    }),
+  ),
+];
 
 function traceId(executionId: string, sequence: number): string {
   return `${executionId}:${sequence}`;
@@ -393,89 +424,125 @@ async function runAgentStep(input: {
     packetHash?: string;
   }> = [];
   const toolNames = new Map<string, string>();
+  const sequenceBase = 1000 + index * 200;
+  await appendOperatingPackTrace({
+    id: traceId(workflow.executionId, sequenceBase),
+    runId: workflow.executionId,
+    workspaceId: workflow.workspaceId,
+    sequence: sequenceBase,
+    type: "agent.started",
+    agentId: agent.qualifiedId,
+    summary: `${agent.qualifiedId} started on ${workflow.harnessId}`,
+    data: {
+      harnessId: workflow.harnessId,
+      toolGrantIds: agent.tools,
+    },
+  });
   const messageId = `${workflow.executionId}:${agent.agentId}`;
   const workspaceGrant = await getOperatingPackWorkspaceGrant(
     workflow.executionId,
     workflow.workspaceId,
   );
-  const result = await runHarnessTurnViaApi({
-    harnessId: workflow.harnessId,
-    sandboxState: runtime.sandboxState,
-    workingDirectory: runtime.workingDirectory,
-    sessionId: messageId.slice(0, 128),
-    messageId,
-    messages: [
-      {
-        id: `${messageId}:request`,
-        role: "user",
-        parts: [
-          {
-            type: "text",
-            text: `${workflow.prompt}\n\nWork only as ${agent.qualifiedId}. Produce evidence-backed findings for the workflow join.`,
-          },
-        ],
+  let result;
+  try {
+    result = await runHarnessTurnViaApi({
+      harnessId: workflow.harnessId,
+      sandboxState: runtime.sandboxState,
+      workingDirectory: runtime.workingDirectory,
+      sessionId: messageId.slice(0, 128),
+      messageId,
+      messages: [
+        {
+          id: `${messageId}:request`,
+          role: "user",
+          parts: [
+            {
+              type: "text",
+              text: `${workflow.prompt}\n\nWork only as ${agent.qualifiedId}. Produce evidence-backed findings for the workflow join.`,
+            },
+          ],
+        },
+      ],
+      originalMessages: [],
+      selectedModelId: workflow.modelId,
+      modelId: workflow.modelId,
+      requestUrl: workflow.requestOrigin,
+      instructions: agent.instructions,
+      permissionMode: "allow-reads",
+      brokerContext: {
+        workspaceId: workflow.workspaceId,
+        workspaceGrant,
+        executionId: workflow.executionId,
+        agentRunId: agent.qualifiedId,
+        allowedTools: agent.tools as Array<
+          | "knowledge_read"
+          | "workflow_run"
+          | "circle_get_balance"
+          | (typeof circleWalletCapabilities)[number][0]
+        >,
       },
-    ],
-    originalMessages: [],
-    selectedModelId: workflow.modelId,
-    modelId: workflow.modelId,
-    requestUrl: workflow.requestOrigin,
-    instructions: agent.instructions,
-    permissionMode: "allow-reads",
-    brokerContext: {
-      workspaceId: workflow.workspaceId,
-      workspaceGrant,
-      executionId: workflow.executionId,
-      agentRunId: agent.qualifiedId,
-      allowedTools: agent.tools as Array<
-        "knowledge_read" | "workflow_run" | "circle_get_balance"
-      >,
-    },
-    onChunk: (chunk: HarnessUIMessageChunk) => {
-      if (String(chunk.type).startsWith("tool-")) {
-        toolEvents += 1;
-        const toolCallId =
-          typeof chunk.toolCallId === "string" ? chunk.toolCallId : null;
-        if (toolCallId && typeof chunk.toolName === "string")
-          toolNames.set(toolCallId, chunk.toolName);
-        const toolName =
-          typeof chunk.toolName === "string"
-            ? chunk.toolName
-            : toolCallId
-              ? toolNames.get(toolCallId)
-              : undefined;
-        if (toolTraceEvents.length < 100 && toolName) {
-          const output =
-            chunk.output &&
-            typeof chunk.output === "object" &&
-            !Array.isArray(chunk.output)
-              ? (chunk.output as Record<string, unknown>)
-              : undefined;
-          const packetHash =
-            toolName === "knowledge_read" &&
-            typeof output?.packetHash === "string" &&
-            /^sha256:[a-f0-9]{64}$/.test(output.packetHash)
-              ? output.packetHash
-              : undefined;
-          toolTraceEvents.push({
-            type: String(chunk.type),
-            toolName,
-            toolCallId,
-            ...(packetHash ? { packetHash } : {}),
-          });
+      onChunk: (chunk: HarnessUIMessageChunk) => {
+        if (String(chunk.type).startsWith("tool-")) {
+          toolEvents += 1;
+          const toolCallId =
+            typeof chunk.toolCallId === "string" ? chunk.toolCallId : null;
+          if (toolCallId && typeof chunk.toolName === "string")
+            toolNames.set(toolCallId, chunk.toolName);
+          const toolName =
+            typeof chunk.toolName === "string"
+              ? chunk.toolName
+              : toolCallId
+                ? toolNames.get(toolCallId)
+                : undefined;
+          if (toolTraceEvents.length < 100 && toolName) {
+            const output =
+              chunk.output &&
+              typeof chunk.output === "object" &&
+              !Array.isArray(chunk.output)
+                ? (chunk.output as Record<string, unknown>)
+                : undefined;
+            const packetHash =
+              toolName === "knowledge_read" &&
+              typeof output?.packetHash === "string" &&
+              /^sha256:[a-f0-9]{64}$/.test(output.packetHash)
+                ? output.packetHash
+                : undefined;
+            toolTraceEvents.push({
+              type: String(chunk.type),
+              toolName,
+              toolCallId,
+              ...(packetHash ? { packetHash } : {}),
+            });
+          }
         }
-      }
-    },
-  });
-  const sequenceBase = 1000 + index * 200;
+      },
+    });
+  } catch (error) {
+    await appendOperatingPackTrace({
+      id: traceId(workflow.executionId, sequenceBase + 198),
+      runId: workflow.executionId,
+      workspaceId: workflow.workspaceId,
+      sequence: sequenceBase + 198,
+      type: "agent.failed",
+      agentId: agent.qualifiedId,
+      summary: `${agent.qualifiedId} failed during harness execution`,
+      data: {
+        harnessId: workflow.harnessId,
+        error: sanitizeTraceText(
+          error instanceof Error ? error.message : String(error),
+        ),
+      },
+    });
+    throw error;
+  }
   const summary = responseText(result.responseMessage.parts);
   await Promise.all([
     ...toolTraceEvents.map((event, eventIndex) =>
       appendOperatingPackTrace({
-        id: traceId(workflow.executionId, sequenceBase + eventIndex),
+        id: traceId(workflow.executionId, sequenceBase + eventIndex + 1),
         runId: workflow.executionId,
         workspaceId: workflow.workspaceId,
-        sequence: sequenceBase + eventIndex,
+        sequence: sequenceBase + eventIndex + 1,
         type: "tool.called",
         agentId: agent.qualifiedId,
         summary: `${event.toolName}: ${event.type}`,
