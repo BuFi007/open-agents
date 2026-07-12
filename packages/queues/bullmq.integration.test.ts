@@ -39,15 +39,17 @@ liveDescribe("BullMQ production runtime", () => {
   const maxActive = new Map<string, number>();
   const completed: string[] = [];
   let permanentFailureEnabled = true;
+  let started = false;
 
   afterAll(async () => {
-    await Promise.all([
-      runtime.waitUntilIdle(30_000).catch(() => undefined),
-      peerRuntime.waitUntilIdle(30_000).catch(() => undefined),
-    ]);
-    await peerRuntime.close();
-    await runtime.purge().catch(() => undefined);
-    await runtime.close();
+    if (started)
+      await Promise.all([
+        runtime.waitUntilIdle(30_000).catch(() => undefined),
+        peerRuntime.waitUntilIdle(30_000).catch(() => undefined),
+      ]);
+    await cleanup(peerRuntime.close());
+    await cleanup(runtime.purge());
+    await cleanup(runtime.close());
   });
 
   test("runs real mixed work with profile budgets, deadlines, retries and compact DLQ", async () => {
@@ -170,6 +172,7 @@ liveDescribe("BullMQ production runtime", () => {
       "knowledge-ai": process,
     });
     await peerRuntime.start({ "source-connectors": process });
+    started = true;
     expect(await runtime.health()).toEqual(
       expect.objectContaining({ ready: true, redis: "ready" }),
     );
@@ -250,4 +253,8 @@ function job(
     traceId: `trace-${input.id}`,
     ...input,
   };
+}
+
+async function cleanup(operation: Promise<void>): Promise<void> {
+  await Promise.race([operation.catch(() => undefined), Bun.sleep(3_000)]);
 }

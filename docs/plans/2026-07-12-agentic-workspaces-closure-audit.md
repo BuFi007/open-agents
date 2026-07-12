@@ -58,7 +58,9 @@ The corrected live harness report was generated with report hash
 Open Agents passed its target-specific matrix; Hermes and Codex handshakes
 passed; Claude Code remained blocked by account credit; Computer Use remained
 blocked by macOS Screen Recording/TCC. Circle wallet read-only and bufi-hyper
-tools/list passed.
+tools/list passed. The configured live BullMQ Redis run still fails with
+`Connection is closed`; its certification teardown is now bounded so an
+unavailable provider does not leave the test process hanging for a minute.
 
 ## Honest parity status
 

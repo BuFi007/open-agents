@@ -355,8 +355,7 @@ export function createBullMqRuntime(options: {
         expectedPayloadHash,
       );
       const previous = await connection.get(markerKey);
-      if (previous)
-        return { bullJobId: previous, replayed: true };
+      if (previous) return { bullJobId: previous, replayed: true };
       const key = dlqKey(namespace, profile.name);
       const values = await connection.lrange(key, 0, -1);
       const serialized = values.find((value) => {
@@ -382,6 +381,7 @@ export function createBullMqRuntime(options: {
       return delivery;
     },
     async purge() {
+      if (isConnectionClosed(connection)) return;
       await Promise.all(
         [...queues.values()].map((queue) => queue.obliterate({ force: true })),
       );
@@ -403,11 +403,17 @@ export function createBullMqRuntime(options: {
       if (closing) return;
       closing = true;
       await Promise.all(pendingEffects);
+      if (isConnectionClosed(connection)) return;
       await Promise.all([...workers.values()].map((worker) => worker.close()));
       await Promise.all([...queues.values()].map((queue) => queue.close()));
       if (connection.status !== "end") await connection.quit();
     },
   };
+}
+
+function isConnectionClosed(connection: IORedis): boolean {
+  const status = connection.status as string;
+  return status === "end" || status === "close";
 }
 
 function validateJob(input: BullMqRuntimeJob): BullMqRuntimeJob {
