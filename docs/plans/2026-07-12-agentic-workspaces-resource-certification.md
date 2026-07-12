@@ -89,3 +89,14 @@ each removed its temporary database and Typesense state. Railway's
 This is the strongest current bounded-envelope sample, but the values remain
 far below the service ceiling. It does not substitute for a deliberate
 saturation/noisy-neighbor/connection-limit test.
+
+## Controlled 32-concurrent flood
+
+A follow-up flood launched 32 certifiers against one workspace. Twenty-four
+completed all stages and cleaned up; eight timed out at the certifier's
+120-second initial-stage deadline. Railway maxima remained low (1.3% CPU
+utilization and 132.98 MB memory). This is not a pass: it demonstrates that the
+workspace fair-share/backpressure boundary is active under a burst, while the
+remaining deadline failures require a deliberate capacity decision and must
+not be hidden behind a longer test timeout. No fixture state remained after the
+run.

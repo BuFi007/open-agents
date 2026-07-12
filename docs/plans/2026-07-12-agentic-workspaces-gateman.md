@@ -134,6 +134,12 @@ non-tax verdict is therefore **85.6%, not 100%**; external connector,
 provider, saturation, authenticated Desk/Expo, wallet-spend, and operating-week
 gates remain open.
 
+Gateman records the subsequent 32-concurrent flood as mixed, not green:
+24/32 certifiers completed, while 8 reached the 120-second initial-stage
+deadline. Low Railway resource utilization (1.3% CPU, 133.0 MB memory) points
+to fair-share/provider latency rather than host exhaustion. The deadline
+failures remain a required capacity/latency follow-up.
+
 ## Provider-gate update — 2026-07-12 10:55 UTC
 
 Gateman evidence is strengthened by fresh live runs: semantic retrieval passed

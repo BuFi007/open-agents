@@ -279,6 +279,12 @@ promoted to 100% until the authorized connector, semantic-provider,
 saturation/recall, authenticated Desk/Expo, wallet-spend, and operating-week
 gates are attached to the evidence ledger.
 
+The next controlled 32-concurrent hosted flood is recorded as mixed evidence:
+24 certifiers completed and 8 hit the 120-second initial-stage deadline, with
+low Railway resource maxima (1.3% CPU utilization, 133.0 MB memory). This
+confirms fair-share/backpressure behavior but is not a capacity pass; the
+deadline failures remain an open saturation/latency gate.
+
 ## Provider-gate update — 2026-07-12 10:55 UTC
 
 The previously credit-blocked semantic gate was rerun with the deployed
