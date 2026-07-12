@@ -78,22 +78,22 @@ type PreparedRuntime = {
 };
 
 const circleWalletCapabilities = [
-  ["circle_login", "agent-wallet.session", false, "login"],
-  ["circle_logout", "agent-wallet.session", true, "logout"],
+  ["circle_login", "agent-wallet.session", false, "read"],
+  ["circle_logout", "agent-wallet.session", true, "execute"],
   ["fetch_setup_skill", "agent-wallet.setup", false, "read"],
   ["fetch_sub_skill", "agent-wallet.setup", false, "read"],
   ["circle_list_wallets", "wallet.read", false, "read"],
-  ["circle_create_wallet", "wallet.write", true, "create"],
-  ["circle_deploy_wallet", "wallet.write", true, "deploy"],
-  ["circle_wallet_fund", "wallet.write", true, "fund"],
-  ["circle_fund_fiat", "wallet.fiat", true, "fund"],
+  ["circle_create_wallet", "wallet.write", true, "execute"],
+  ["circle_deploy_wallet", "wallet.write", true, "execute"],
+  ["circle_wallet_fund", "wallet.write", true, "execute"],
+  ["circle_fund_fiat", "wallet.fiat", true, "execute"],
   ["circle_get_gateway_balance", "wallet.read", false, "read"],
   ["circle_search_services", "service.read", false, "search"],
   ["circle_inspect_service", "service.read", false, "inspect"],
   ["fetch_service", "service.read", false, "fetch"],
   ["call_free_service", "service.read", false, "call"],
-  ["circle_pay_service", "service.pay", true, "pay"],
-  ["circle_gateway_deposit", "wallet.spend", true, "deposit"],
+  ["circle_pay_service", "service.pay", true, "execute"],
+  ["circle_gateway_deposit", "wallet.spend", true, "execute"],
 ] as const satisfies readonly (readonly [string, string, boolean, string])[];
 
 const capabilityRegistry: readonly HarnessMcpCapability[] = [
