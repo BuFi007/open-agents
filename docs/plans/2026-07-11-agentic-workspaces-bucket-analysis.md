@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 81.9%.** The repository has strong contracts and a growing
+**Production parity: 82.0%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -16,13 +16,13 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 97% | 11.6 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. Separate relay, canonical-source and knowledge-AI services pass `/readyz`; one disposable Neon artifact completed all four hosted stages through AI Gateway and Typesense. Literal hosted Redis/worker kill-restart, resource saturation, repair/redrive and alert-webhook certification remain open. |
+| BullMQ data plane and workload isolation | 12 | 98% | 11.8 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. Relay, canonical-source and knowledge-AI recovered readiness after a literal Railway Redis redeploy, then a disposable Neon artifact again completed all four hosted stages through AI Gateway and Typesense. Kill during an in-flight persisted job, resource saturation, repair/redrive and alert-webhook certification remain open. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 85% | 8.5 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Focused suites and a forced real Vercel preview build pass; authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 85% | 6.0 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Expo web export and a clean external install/import of the public adapter pass; authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **81.9%** |  |
+| **Total** | **100** |  | **82.0%** |  |
 
 ## Newly proven in this pass
 
@@ -233,13 +233,22 @@ provider, rendered client, production worker, or live evidence path.
   outbox test simulated crash-after-enqueue-before-acknowledge; the next relay
   claim replayed the stable BullMQ job, processed exactly one entity and published
   the outbox row after two attempts. Both unique queue namespaces were purged.
+- Railway Redis was then literally redeployed as deployment
+  `815efdcd-d50c-4537-9ffa-9cd08c8c5cc8`. After the restart, relay readiness
+  reported a fresh Redis connection, canonical-source reported its worker ready,
+  and knowledge-AI reported its worker ready. The complete disposable four-stage
+  certifier passed again after recovery (four published events, queued=4,
+  completed=4, canonical/enrichment/1,536-dimension embedding/Typesense receipt)
+  and cleaned all fixture state. This proves deployed reconnect and post-restart
+  processing, not kill-at-every-commit-boundary persistence.
 
 ## Must-have gaps before 100%
 
-1. Run literal Railway Redis/worker kill-restart and resource-saturation tests.
-   The mixed quiet/noisy workload and crash-after-enqueue relay replay now pass
-   against Railway Redis, but they do not prove CPU/memory/DB/provider saturation
-   or persistence across an actual service restart.
+1. Kill Redis/workers during an in-flight persisted job at each commit boundary
+   and run resource-saturation tests. A literal Railway Redis redeploy, recovery
+   of all three worker modes and a full post-restart four-stage fixture now pass,
+   but they do not prove queued-job persistence during the restart or
+   CPU/memory/DB/provider saturation.
 2. Configure the payload-free alert webhook, then repeat repair/redrive and
    crash-after-effect against the hosted alternate-index provider. Relay,
    canonical-source, enrichment, AI Gateway embedding and Typesense projection

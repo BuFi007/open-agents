@@ -86,12 +86,13 @@ The original Upstash endpoint still closes TLS before handshake, but it is no
 longer the active worker target. Separate Railway relay and canonical-source
 services now pass health checks and process a real Neon outbox artifact through
 Railway Redis. The mixed noisy/protected workload and crash-after-enqueue replay
-now pass against Railway Redis; literal service kill/restart and resource
-saturation have not yet run there.
+pass against Railway Redis. A literal Redis redeploy also completed; all three
+worker modes recovered readiness and a fresh four-stage fixture passed afterward.
+Kill during an in-flight persisted job and resource saturation remain open.
 
-Follow-up: execute literal Redis/worker kill-restart, repair/redrive and
-provider-resource saturation against Railway, then configure the payload-free
-alert webhook. The
+Follow-up: execute kill-at-each-commit-boundary with persisted in-flight work,
+repair/redrive and provider-resource saturation against Railway, then configure
+the payload-free alert webhook. The
 authenticated payload-free ingress, ordered trace persistence and queue cockpit
 now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
@@ -151,7 +152,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **81.9%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **82.0%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted load/chaos, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.
