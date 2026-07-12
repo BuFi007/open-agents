@@ -446,6 +446,26 @@ export const operatingPackTraces = pgTable(
   ],
 );
 
+export const queueTelemetryExports = pgTable(
+  "queue_telemetry_exports",
+  {
+    exportId: text("export_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    runId: text("run_id").notNull(),
+    generatedAtMs: bigint("generated_at_ms", { mode: "number" }).notNull(),
+    factCount: integer("fact_count").notNull(),
+    data: jsonb("data").$type<Readonly<Record<string, unknown>>>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("queue_telemetry_exports_workspace_idx").on(table.workspaceId),
+    index("queue_telemetry_exports_workspace_run_idx").on(
+      table.workspaceId,
+      table.runId,
+    ),
+  ],
+);
+
 export const operatingPackCompositions = pgTable(
   "operating_pack_compositions",
   {

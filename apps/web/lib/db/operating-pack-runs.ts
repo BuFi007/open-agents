@@ -5,6 +5,7 @@ import {
   type NewOperatingPackRun,
   operatingPackRuns,
   operatingPackTraces,
+  queueTelemetryExports,
 } from "./schema";
 
 export type OperatingPackRunStatus =
@@ -254,6 +255,47 @@ export async function appendOperatingPackTraceNext(input: {
       .from(operatingPackRuns)
       .where(eq(operatingPackRuns.id, input.runId))
       .limit(1);
+    if (!run[0] && input.type === "queue.telemetry") {
+      const existingExport = await transaction
+        .select({
+          exportId: queueTelemetryExports.exportId,
+          workspaceId: queueTelemetryExports.workspaceId,
+          runId: queueTelemetryExports.runId,
+        })
+        .from(queueTelemetryExports)
+        .where(eq(queueTelemetryExports.exportId, input.id))
+        .limit(1);
+      if (existingExport[0]) {
+        if (
+          existingExport[0].workspaceId !== input.workspaceId ||
+          existingExport[0].runId !== input.runId
+        )
+          throw new Error("Queue telemetry export is outside the workspace");
+        return { replayed: true, sequence: 1 };
+      }
+      const data = redactTraceData(input.data) ?? {};
+      const generatedAtMs =
+        typeof data.generatedAtMs === "number" &&
+        Number.isSafeInteger(data.generatedAtMs) &&
+        data.generatedAtMs > 0
+          ? data.generatedAtMs
+          : Date.now();
+      const factCount =
+        typeof data.factCount === "number" &&
+        Number.isSafeInteger(data.factCount) &&
+        data.factCount > 0
+          ? Math.min(data.factCount, 10_000)
+          : 1;
+      await transaction.insert(queueTelemetryExports).values({
+        exportId: input.id,
+        workspaceId: input.workspaceId,
+        runId: input.runId,
+        generatedAtMs,
+        factCount,
+        data,
+      });
+      return { replayed: false, sequence: 1 };
+    }
     if (!run[0] || run[0].workspaceId !== input.workspaceId)
       throw new Error("Operating-pack trace run is outside the workspace");
     const latest = await transaction
