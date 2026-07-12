@@ -198,3 +198,9 @@ The strict bucket-analysis baseline remains **82.7%**. The earlier **85.6%**
 figure is retained as a post-change implementation estimate, not a fresh strict
 score; this E2E result is evidence for the broker bucket only and must not be
 converted into 100% parity.
+
+The focused Desk/Shiva broker authorization suite passes 10 tests and 29
+assertions. The full Desk app typecheck remains an open hosted-build gate: the
+`private-transfer` shard exceeds the default heap and times out after 45 seconds
+even with an 8 GB heap. No unrelated type-graph refactor was folded into this
+non-tax closure slice.

@@ -329,3 +329,9 @@ approval-gated mutation, authenticated Desk/Expo journeys, connector
 sandboxing, saturation, or the operating-week gate. The strict bucket baseline
 remains **82.7%**; the **85.6%** value is a post-change estimate, not a fresh
 strict bucket rerun, and 100% parity is still unproven.
+
+Focused Desk/Shiva broker authorization tests pass (10 tests, 29 assertions).
+The full Desk app typecheck is still an open hosted-build gate: the existing
+`private-transfer` shard exhausts the default heap and times out after 45
+seconds with an 8 GB heap. This closure slice deliberately does not broaden
+into an unrelated monorepo type-graph refactor.
