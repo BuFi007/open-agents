@@ -242,9 +242,9 @@ describe("connected data plane (live Postgres + BullMQ)", () => {
 
 afterAll(async () => {
   if (runtime) {
-    await runtime.waitUntilIdle(5_000).catch(() => undefined);
-    await runtime.purge().catch(() => undefined);
-    await runtime.close();
+    await cleanup(runtime.waitUntilIdle(5_000));
+    await cleanup(runtime.purge());
+    await cleanup(runtime.close());
   }
   if (inspection) {
     if (outboxIds.size)
@@ -252,8 +252,12 @@ afterAll(async () => {
     await inspection`DELETE FROM knowledge_entities WHERE workspace_id = ${workspaceId}`;
     await inspection`DELETE FROM source_artifacts WHERE workspace_id = ${workspaceId}`;
     await inspection`DELETE FROM connector_deployments WHERE deployment_id = ${deploymentId}`;
-    await inspection.end({ timeout: 5 });
+    await cleanup(inspection.end({ timeout: 5 }));
   }
-  await connector?.close();
-  await knowledge?.close();
+  if (connector) await cleanup(connector.close());
+  if (knowledge) await cleanup(knowledge.close());
 });
+
+async function cleanup(operation: Promise<unknown>): Promise<void> {
+  await Promise.race([operation.catch(() => undefined), Bun.sleep(3_000)]);
+}
