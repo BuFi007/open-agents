@@ -86,6 +86,12 @@ active-before-effect, and effect-before-ack all recovered with zero committed
 job loss, stable entity identity/version, and zero duplicate effects. Its
 temporary QueueKillCertification rows were verified absent afterward.
 
+Open Agents commit `69c94a80` adds a startup Typesense credential check to the
+long-running knowledge worker. A present-but-invalid key now fails deployment
+startup instead of allowing a superficially healthy worker to accumulate
+projection failures; the worker config suite and package typecheck remain
+green.
+
 The two tangential Desk attempts were evaluated before closure: #495's guarded
 wallet tools were consolidated into the still-open #540 boundary, while #438's
 monorepo-wide AI SDK/artifact migration was superseded by the isolated Open
