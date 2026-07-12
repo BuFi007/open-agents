@@ -89,8 +89,8 @@ secret is provisioned as a sensitive Vercel environment variable; its value is
 not stored in this repository or audit output. Therefore the hosted catalog is
 certified, while hosted tool execution is not.
 
-The Desk-side signed broker route was deployed to a fresh preview from the
-merged Agentic Workspaces backend (`desk-v1-hd63pvrmf-bu-finance-007.vercel.app`).
+The Desk-side signed broker route was deployed to a clean current-development
+preview (`desk-v1-5y61v3sxw-bu-finance-007.vercel.app`).
 An unsigned request returned `401 Unauthorized`; a correctly signed HMAC request
 then reached grant verification and returned `403 Workspace grant is invalid or
 expired`. This proves runtime secret injection and signature verification without

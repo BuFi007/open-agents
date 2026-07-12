@@ -22,8 +22,8 @@ provider, device, hosted-route, and resource evidence listed at the end.
 | Testability | PASS LOCALLY | Focused non-tax package, scheduler/provider/broker, operations-route, and contract E2E suites pass; monorepo typecheck passes. 20 live provider/device/hosted-resource tests remain opt-in. The broader sweep counts are retained in the closure audit rather than conflated with this focused gate. |
 | AI behavior | CONDITIONAL | Open Agents target-specific matrix passes, and the production `agent_wallet` catalog exposes 17 grant-bound tools. A hosted read-only wallet workflow completed durably but emitted zero `tool.called` events because no compatible broker URL is configured. Hermes/Codex handshakes pass. Claude is credit-blocked; Computer Use is TCC-blocked. |
 
-The Desk broker boundary has an additional live preview probe: the fresh
-deployment `desk-v1-hd63pvrmf-bu-finance-007.vercel.app` returned `401` for an
+The Desk broker boundary has an additional live preview probe: the clean
+current-development deployment `desk-v1-5y61v3sxw-bu-finance-007.vercel.app` returned `401` for an
 unsigned request and `403 Workspace grant is invalid or expired` for a correctly
 HMAC-signed request with a deliberately invalid grant. This demonstrates runtime
 secret injection and signature verification while preserving the no-real-user
