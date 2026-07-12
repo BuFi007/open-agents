@@ -44,6 +44,12 @@ and denies spend calls without `agent-wallet.spend`. Eleven focused tests and
 31 assertions pass; this is still a local/contract gate until a real production
 member grant exercises the hosted path.
 
+The live bufi-hyper manifest reports 117 tools, including every Circle tool in
+the Open Agents registry. Forced Desk preview `dpl_4xKAH8euYUVusRho3hFQ6fhAugd7`
+reached READY and passed the unsigned 401 plus signed-invalid-grant 403 probes.
+That is deployment and schema evidence only; no real member grant or wallet
+call has been claimed.
+
 Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
 policy with retry traces; mutation-capable agents are explicitly non-retryable.
 The policy suite passes 3 tests and the web typecheck passes.
