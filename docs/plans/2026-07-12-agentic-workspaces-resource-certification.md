@@ -100,3 +100,24 @@ workspace fair-share/backpressure boundary is active under a burst, while the
 remaining deadline failures require a deliberate capacity decision and must
 not be hidden behind a longer test timeout. No fixture state remained after the
 run.
+
+## Deadline-bounded 32-concurrent rerun — 2026-07-12
+
+The certifier now accepts bounded `KNOWLEDGE_WORKER_CERT_INITIAL_TIMEOUT_MS`
+and `KNOWLEDGE_WORKER_CERT_REPAIR_TIMEOUT_MS` values (10 seconds to 15
+minutes). With both deadlines set to five minutes, 32 concurrent production
+certifiers completed all canonical-write, enrichment, embedding, Typesense
+projection, telemetry, repair-replay, and cleanup assertions. Result: **32
+completed, 0 failed, 0 missing, 0 non-certified logs**.
+
+Railway metrics sampled the worker during the flood:
+
+| Measure | Maximum observed | Service limit |
+| --- | ---: | ---: |
+| CPU units | 0.5583 | 24 |
+| Memory | 0.1285 GB | 24 GB |
+
+This closes the previous deadline failure and provides a deliberate
+high-concurrency bounded-envelope result. It is still not a claim that the
+worker was driven to its absolute CPU, memory, database-connection, or external
+provider ceiling; those ceiling tests remain a separate follow-up.

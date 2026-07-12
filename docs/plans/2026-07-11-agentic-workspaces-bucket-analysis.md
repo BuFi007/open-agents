@@ -389,3 +389,20 @@ receiving HTTP `200` from `/api/agent-workspaces/grant`. This is authenticated
 Desk evidence, but not a complete hosted browser launch/approve/cancel/trace
 journey; Expo physical-device evidence and Desk type-debt remediation remain
 open.
+
+## Evidence addendum — 2026-07-12 worker flood and knowledge broker
+
+The worker certifier gained bounded five-minute convergence controls and a
+fresh 32-concurrent production flood completed **32/32** with zero failures,
+zero missing results, and zero non-certified logs. Railway maxima during the
+run were 0.5583 CPU units (24 available) and 0.1285 GB memory (24 GB
+available). This materially strengthens the BullMQ/worker bucket, but remains
+bounded-envelope evidence rather than an absolute DB/provider ceiling.
+
+Open Agents production now calls the signed Desk broker for brokered tools. The
+linked Desk Supabase project has the context-packet tables, and a fresh
+finance-review workflow completed with persisted `knowledge_read` packet hashes.
+An authenticated packet resolver returned HTTP 200 with 10 references and 10
+citation handles. The selected finance citation-row browser assertion remains
+open because disposable probes exhausted the preview sensitive-operation rate
+limiter; no 100% claim is made.
