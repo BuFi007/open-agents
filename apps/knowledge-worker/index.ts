@@ -113,6 +113,14 @@ if (config.mode === "knowledge" || config.mode === "all") {
   });
 }
 
+if (config.mode === "knowledge" || config.mode === "all") {
+  await verifyTypesenseAccess({
+    baseUrl: config.typesenseUrl!,
+    apiKey: config.typesenseApiKey!,
+    collection: config.typesenseCollection,
+  });
+}
+
 let stopping = false;
 let relayRunning = false;
 let lastRelayAt: string | null = null;
@@ -206,6 +214,29 @@ console.log(
 
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
+
+async function verifyTypesenseAccess(input: {
+  baseUrl: string;
+  apiKey: string;
+  collection: string;
+}): Promise<void> {
+  const response = await fetch(
+    new URL(
+      `/collections/${encodeURIComponent(input.collection)}`,
+      input.baseUrl,
+    ),
+    {
+      headers: {
+        accept: "application/json",
+        "x-typesense-api-key": input.apiKey,
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok)
+    throw new Error(`Typesense credential check failed (${response.status})`);
+}
 
 async function relayOnce(): Promise<void> {
   if (stopping || relayRunning) return;
