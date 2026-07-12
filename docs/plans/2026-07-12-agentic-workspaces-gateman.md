@@ -46,6 +46,11 @@ certifiers: all eight completed and cleaned up, with observed maxima of 1.4%
 CPU and 0.4% memory. Gateman still treats this as bounded-envelope evidence,
 not saturation evidence.
 
+The two tangential Desk attempts were evaluated before closure: #495's guarded
+wallet tools were consolidated into the still-open #540 boundary, while #438's
+monorepo-wide AI SDK/artifact migration was superseded by the isolated Open
+Agents runtime. Neither should be cherry-picked into this non-tax slice.
+
 ## Required production follow-ups
 
 - Run authorized Pipedream, Magic Inbox, QuickBooks, Xero, Conta Azul, and

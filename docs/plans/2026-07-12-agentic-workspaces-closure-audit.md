@@ -122,11 +122,13 @@ canonical/enrichment/embedding/projection/repair path, each reporting
 and a post-run query confirmed zero certification fixtures remained. This
 improves bounded-envelope evidence but does not count as saturation proof.
 
-PR #495 is already merged and its subagent-usage accounting tests are in this
-branch. PR #438 is closed and dirty; its auto-commit polling behavior is
-already represented by the current `useAutoCommitStatus` hook, so cherry-picking
-it would add no missing Agentic Workspaces capability and would create a
-conflict surface.
+PR #495 is closed, with its guarded wallet-tool implementation explicitly
+consolidated into the still-open tax/agent boundary PR #540 (commit
+`9ada79c3a`); the clean broker path here keeps the non-tax runtime independent
+of that tax landing sequence. PR #438 is also closed and superseded by the
+narrower #540 plus Open Agents' isolated AI SDK runtime; cherry-picking its
+monorepo-wide SDK/artifact churn would add no missing Agentic Workspaces
+capability and would create a conflict surface.
 
 ## Honest parity status
 
