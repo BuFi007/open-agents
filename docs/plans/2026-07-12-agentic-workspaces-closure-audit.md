@@ -43,18 +43,19 @@ out of scope for this audit.
 The non-tax package sweep is green:
 
 ```text
-151 pass
+169 pass
 20 skip (opt-in live provider/device/hosted-resource cases)
 0 fail
-470 expect() calls
+561 expect() calls
 ```
 
 The monorepo typecheck is green across 19 targets. Focused checks also pass:
 
-- knowledge-worker config and repair scheduler: 4 tests
-- Circle broker full-registry forwarding: 4 tests
-- connector provider identity envelope: 4 tests
-- agentic workspaces and horizontal ERP contract E2E: 2 tests
+- knowledge-worker config and repair scheduler
+- Circle broker full-registry forwarding
+- connector provider identity envelope
+- agentic workspaces and horizontal ERP contract E2E
+- agent-wallet pack, grant-scope enforcement, and hosted catalog contract
 
 The corrected live harness report was generated with report hash
 `sha256:ca43e116b57ff7d261b2aa0968725114c0ef278d213d8b03c448f94aee34271b`.
