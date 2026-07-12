@@ -146,7 +146,7 @@ export function parseKnowledgeWorkerConfig(
     ),
     telemetryMaxConcurrentSends: integer(
       environment.QUEUE_TELEMETRY_MAX_CONCURRENT_SENDS,
-      8,
+      1,
       1,
       32,
     ),
