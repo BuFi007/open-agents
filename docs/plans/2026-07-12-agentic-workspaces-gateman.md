@@ -204,3 +204,21 @@ assertions. The full Desk app typecheck remains an open hosted-build gate: the
 `private-transfer` shard exceeds the default heap and times out after 45 seconds
 even with an 8 GB heap. No unrelated type-graph refactor was folded into this
 non-tax closure slice.
+
+## Hosted Open Agents production redeploy — 2026-07-12
+
+The production build initially exposed a real workflow-isolation defect: the
+operating-pack workflow statically imported the Node-only Postgres client. The
+database persistence calls are now isolated behind a dedicated step module in
+`apps/web/app/workflows/operating-pack-persistence.ts`. The clean production
+build completed successfully (including TypeScript and static generation) and
+the alias was promoted to `https://open-agents-bay.vercel.app` at deployment
+`dpl_HAxSnCsvYDvrSMBGSTdCdBCKKLY9`.
+
+The production broker secret was also populated for the Open Agents project.
+An authenticated, signed read-only request against
+`/api/bufi/operations` then returned HTTP `200` from the live alias and exposed
+the Agent Wallet catalog with its Circle tool grants. An unsigned request still
+returns HTTP `401`. This closes the hosted route/build/catalog gate; it does not
+prove a real wallet executor, external connector sandbox, browser/device
+journey, or approval-gated spend.
