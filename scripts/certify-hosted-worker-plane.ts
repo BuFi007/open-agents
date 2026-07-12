@@ -363,29 +363,43 @@ try {
     await runCleanup("delete Typesense certification document", () =>
       deleteTypesenseDocument(entityId!),
     );
-    await runCleanup("delete search projection", () =>
-      inspection`DELETE FROM knowledge_search_projections WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
+    await runCleanup(
+      "delete search projection",
+      () =>
+        inspection`DELETE FROM knowledge_search_projections WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
     );
-    await runCleanup("delete enrichment", () =>
-      inspection`DELETE FROM knowledge_enrichments WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
+    await runCleanup(
+      "delete enrichment",
+      () =>
+        inspection`DELETE FROM knowledge_enrichments WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
     );
-    await runCleanup("delete embedding", () =>
-      inspection`DELETE FROM knowledge_embeddings WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
+    await runCleanup(
+      "delete embedding",
+      () =>
+        inspection`DELETE FROM knowledge_embeddings WHERE workspace_id = ${workspaceId} AND entity_id = ${entityId}`,
     );
-    await runCleanup("delete knowledge entity", () =>
-      inspection`DELETE FROM knowledge_entities WHERE workspace_id = ${workspaceId} AND id = ${entityId}`,
+    await runCleanup(
+      "delete knowledge entity",
+      () =>
+        inspection`DELETE FROM knowledge_entities WHERE workspace_id = ${workspaceId} AND id = ${entityId}`,
     );
   }
   if (outboxIds.length > 0)
-    await runCleanup("delete outbox rows", () =>
-      inspection`DELETE FROM knowledge_outbox WHERE id IN ${inspection([...outboxIds])}`,
+    await runCleanup(
+      "delete outbox rows",
+      () =>
+        inspection`DELETE FROM knowledge_outbox WHERE id IN ${inspection([...outboxIds])}`,
     );
   if (artifactKey)
-    await runCleanup("delete source artifact", () =>
-      inspection`DELETE FROM source_artifacts WHERE workspace_id = ${workspaceId} AND artifact_key = ${artifactKey}`,
+    await runCleanup(
+      "delete source artifact",
+      () =>
+        inspection`DELETE FROM source_artifacts WHERE workspace_id = ${workspaceId} AND artifact_key = ${artifactKey}`,
     );
-  await runCleanup("delete connector deployment", () =>
-    inspection`DELETE FROM connector_deployments WHERE deployment_id = ${deploymentId}`,
+  await runCleanup(
+    "delete connector deployment",
+    () =>
+      inspection`DELETE FROM connector_deployments WHERE deployment_id = ${deploymentId}`,
   );
   await runCleanup("delete certification user", () =>
     db.delete(users).where(eq(users.id, userId)),
@@ -393,10 +407,14 @@ try {
   await Promise.all([
     runCleanup("close connector repository", () => connectors.close()),
     runCleanup("close knowledge repository", () => knowledge.close()),
-    runCleanup("close inspection database", () => inspection.end({ timeout: 5 })),
+    runCleanup("close inspection database", () =>
+      inspection.end({ timeout: 5 }),
+    ),
   ]);
   if (cleanupErrors.length > 0 && !failure) {
-    failure = new Error(`Hosted worker cleanup failed: ${cleanupErrors.join("; ")}`);
+    failure = new Error(
+      `Hosted worker cleanup failed: ${cleanupErrors.join("; ")}`,
+    );
   }
 }
 
@@ -410,7 +428,10 @@ if (failure) {
 }
 process.exit(0);
 
-async function runCleanup(label: string, operation: () => Promise<unknown>): Promise<void> {
+async function runCleanup(
+  label: string,
+  operation: () => Promise<unknown>,
+): Promise<void> {
   try {
     await operation();
   } catch (error) {
