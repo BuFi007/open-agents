@@ -344,7 +344,11 @@ The focused component suite passes 4 tests. A fresh Vercel preview deployment
 runtime environment is not configured for the agent-workspace broker
 (`503 Agent workspace runtime is not configured`), so the citation row cannot
 yet be certified on that preview. The citation implementation and unit proof
-are recorded; hosted citation rendering remains open until the preview is
+are recorded. The prior production-configured preview independently returned
+HTTP 200 for 15 authenticated context-packet fetches, including a populated
+packet with 10 references/citations; its old panel selected a later empty
+packet and displayed `0 citations`, which is the defect the new commit fixes.
+Hosted citation rendering therefore remains open until the fixed preview is
 redeployed with the broker/runtime environment. Expo/Cleo authenticated device,
 Circle wallet executor, provider sandbox, and capacity-ceiling gates remain
 open. Wallet execution remains deliberately unconfigured.
