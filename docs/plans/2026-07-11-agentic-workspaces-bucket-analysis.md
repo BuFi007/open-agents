@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 82.3%.** The repository has strong contracts and a growing
+**Production parity: 82.5%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -20,9 +20,9 @@ provider, rendered client, production worker, or live evidence path.
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 88% | 8.8 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Tool-specific grant scopes, mobile citation scope, and hash-prefixed packet persistence now fail closed; 19 focused tests and a forced real Vercel preview build pass. Authenticated browser E2E is still uncertified. |
-| Expo/Cleo command center | 7 | 85% | 6.0 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Expo web export and a clean external install/import of the public adapter pass; authenticated physical-device E2E remains open. |
+| Expo/Cleo command center | 7 | 88% | 6.2 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Push tokens are now bound to the JWT user and a membership-revalidated selected workspace; six focused route/authorization tests, Expo web export and a clean external install/import of the public adapter pass. Authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **82.3%** |  |
+| **Total** | **100** |  | **82.5%** |  |
 
 ## Newly proven in this pass
 
@@ -173,6 +173,11 @@ provider, rendered client, production worker, or live evidence path.
   to Desk and renders the same bounded citation/confidence/version/diff
   semantics in Expo. Invalid or cross-workspace packets stay hidden. Four
   focused tests and a fresh production Expo web export pass.
+- Desk PR #544 now also binds push-token persistence exclusively to the verified
+  JWT user and the explicitly selected workspace after a fresh membership check.
+  Body-supplied user identity is rejected; registration waits for session and
+  workspace context. Six focused route/authorization tests and repository
+  pre-push gates pass at commit `3357cad66`.
 - Queue workers can now turn BullMQ facts into a hash-bound snapshot containing
   only aggregate latency, retry, dead-letter, throttle and in-flight metrics.
   The HTTPS sink requires a 32-byte service secret, a ten-second timeout and a
