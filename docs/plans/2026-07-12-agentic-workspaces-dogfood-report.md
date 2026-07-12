@@ -129,3 +129,18 @@ ingress, explicit spend-scope, read-only execution, approval rejection, and
 cancellation boundaries. It does not close the external provider, device,
 saturation, or operating-week gates listed above, so the strict score remains
 below 100%.
+
+## Knowledge-backed finance workflow and citation resolver — 2026-07-12
+
+Open Agents production now has a configured signed Desk broker. After applying
+the context-packet schema to the linked Supabase project and canonicalizing
+PostgREST offset timestamps, a fresh `finance_ops/weekly_finance_review` run
+completed with persisted `knowledge_read` packet hashes. The authenticated Desk
+packet resolver returned HTTP `200` for a packet containing 10 references and 10
+citation handles. No wallet or payment mutation occurred.
+
+The command center rendered the authenticated operation timeline and evidence
+panel. A non-empty citation-row assertion for the selected finance run remains
+open because the preview sensitive-operation limiter was exhausted during this
+disposable probe; the signed broker, packet persistence, and membership-gated
+resolver are independently proven.

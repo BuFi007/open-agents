@@ -474,3 +474,27 @@ execution, approval rejection, and cancellation boundaries. They do not close
 the external provider sandbox, production saturation, authenticated citation,
 physical Expo/Cleo, Claude/TCC, or operating-week gates; the strict score
 remains below 100%.
+
+## Hosted knowledge-broker and citation revalidation — 2026-07-12
+
+Open Agents production previously had an empty `BUFI_AGENT_TOOL_BROKER_URL`,
+so knowledge-backed agents could only report a broker 404. The production
+environment now points at the signed Desk broker and was redeployed. Desk
+commit `fc6aabe6a` also canonicalizes PostgREST offset timestamps (for example
+`+00:00`) to UTC `Z` timestamps before packet validation and adds the required
+composite entity lineage index to the context-packet migration.
+
+The linked Supabase project was verified to contain both
+`knowledge_projection_state` and `knowledge_context_packets`; the migration
+history was repaired only after the SQL transaction completed successfully.
+A fresh hosted `finance_ops/weekly_finance_review` run then completed with
+multiple `knowledge_read` outputs carrying persisted `sha256:` packet hashes.
+The authenticated Desk packet resolver returned HTTP `200` for a packet with
+10 references and 10 citation handles, including a canonical `graphWatermark`.
+
+The authenticated Desk command center itself rendered with the operation
+timeline and evidence panel. A complete browser assertion that the selected
+finance run renders non-empty `[cN]` citation rows remains open because the
+preview's sensitive operation rate limiter was exhausted by the disposable
+dogfood probes; the packet API and broker path are proven independently. No
+wallet or external payment mutation occurred.
