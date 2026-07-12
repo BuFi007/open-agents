@@ -352,3 +352,19 @@ read-only grant against the live `/api/bufi/operations` endpoint returned HTTP
 the hosted build/route/catalog gate. It does not close wallet executor
 provisioning, non-zero wallet `tool.called` evidence, approval-gated spend,
 connector sandboxes, saturation, or authenticated browser/device journeys.
+
+## Hosted Agent Wallet workflow E2E — 2026-07-12
+
+A disposable signed `agent-wallet.read` grant started the live
+`agent_wallet_service_discovery` workflow with the `pi` harness. The operations
+API returned `202`; polling reached `completed` with durable traces:
+
+`workflow.started → artifact.emitted → agent.started → tool.called ×4 →
+agent.completed → run.completed → notification.skipped`.
+
+The trace contains Circle service-discovery input/output events and the normal
+agent/run lifecycle. The disposable workspace had no isolated wallet executor,
+so the Circle result stayed executor-gated; a bash approval request was not
+auto-approved. Temporary operating-pack rows and bridge users were removed
+afterward. This closes hosted durable workflow plus read-only `tool.called`
+evidence, but not wallet executor provisioning or approved mutation/spend.

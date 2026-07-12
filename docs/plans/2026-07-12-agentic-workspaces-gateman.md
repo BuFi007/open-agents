@@ -222,3 +222,21 @@ the Agent Wallet catalog with its Circle tool grants. An unsigned request still
 returns HTTP `401`. This closes the hosted route/build/catalog gate; it does not
 prove a real wallet executor, external connector sandbox, browser/device
 journey, or approval-gated spend.
+
+## Hosted Agent Wallet workflow E2E — 2026-07-12
+
+Using a disposable signed `agent-wallet.read` grant, the live alias accepted a
+read-only `agent_wallet_service_discovery` workflow with the `pi` harness and
+returned `202` with a durable execution and workflow run ID. Polling the live
+operations route reached `completed` and returned this trace sequence:
+
+`workflow.started → artifact.emitted → agent.started → tool.called ×4 →
+agent.completed → run.completed → notification.skipped`.
+
+The trace includes `circle_search_services` input/output events and native
+agent/run lifecycle records. The Circle result remains executor-gated for the
+disposable workspace; a bash approval request was correctly not auto-approved.
+All temporary operating-pack rows and bridge users were removed after the run.
+This closes the hosted durable workflow and non-zero `tool.called` evidence
+gate for a read-only tool, but not wallet executor provisioning or approved
+mutation/spend.
