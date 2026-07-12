@@ -37,6 +37,16 @@ out of scope for this audit.
   Hyper, or Circle observation to every external harness. Those observations
   are scoped to Open Agents; each external target receives only its own
   handshake/doctor evidence.
+- The deployed Railway worker plane now has an explicit repair workspace
+  allowlist and bounded freshness configuration. Four concurrent hosted
+  source→enrichment→embedding→Typesense fixtures completed and cleaned up;
+  five Railway resource samples stayed below 0.3% CPU and 0.6% memory. This is
+  a bounded-envelope observation, not a capacity saturation claim.
+- Production queue telemetry is now wired end to end. All three worker modes
+  target the production `/api/internal/queue-telemetry` route, the shared
+  secret is present on Vercel, and the live certification accepted one export
+  plus an exact replay while persisting one payload-free trace with three SLO
+  alerts. See the [resource certification](./2026-07-12-agentic-workspaces-resource-certification.md).
 
 ## Verification
 
@@ -98,9 +108,11 @@ The following gates remain required before claiming 100%:
 1. authorized Pipedream, Magic Inbox, QuickBooks, Xero, Conta Azul, and ERP
    sandbox events through the deployed connector path;
 2. production Redis/Postgres/Typesense CPU, memory, connection, provider
-   latency, noisy-neighbor, and kill/restart saturation evidence;
-3. larger hybrid-recall and freshness-load evidence plus a deployed repair
-   cycle;
+   latency, noisy-neighbor, and kill/restart saturation evidence. The current
+   four-fixture sample is explicitly below saturation and is recorded only as
+   bounded-envelope evidence;
+3. larger hybrid-recall and freshness-load evidence beyond the now-enabled
+   scheduled repair cycle;
 4. authenticated Desk browser launch/approve/reject/cancel/traces/citations;
 5. Expo/Cleo physical-device workflow and approval evidence;
 6. a funded Claude account and macOS Accessibility/Screen Recording approval;
