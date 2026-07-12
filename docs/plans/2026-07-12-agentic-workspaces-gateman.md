@@ -405,6 +405,15 @@ still open because two high-concurrency runs missed initial convergence and
 telemetry delivery pressure remains observable. No wallet, payment, customer,
 or tax-agent state was touched.
 
+## Telemetry concurrency experiment — 2026-07-12
+
+An opt-in bounded concurrent sender (1–32) was added with a focused regression
+test. The production experiment at budget 8 passed 32/32 but yielded mixed
+64-way results (59/64 and 60/64), so Gateman does not treat it as a closure of
+the capacity gate. Production was returned to the conservative single-sender
+default in commit `d2c929de`; the post-deploy one-certifier worker proof passed
+again. The option remains available for a separately admitted load test.
+
 ## Expo authenticated-environment simulator attempt — 2026-07-12
 
 The iOS release bundle was rebuilt with the existing Supabase public URL/key and

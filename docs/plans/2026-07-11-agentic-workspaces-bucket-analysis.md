@@ -443,3 +443,9 @@ close its production-ceiling criterion: two certifiers still missed initial
 convergence, and telemetry delivery pressure remains visible at the ceiling.
 The conservative strict score therefore stays **83.9%**, with no unsupported
 weighted-point increase.
+
+The telemetry sender optimization was measured but not promoted as a parity
+claim: budget 8 passed 32/32 and mixed 64-way floods (59/64, 60/64), after
+which production returned to a conservative single-sender default. The
+BullMQ/worker bucket therefore remains below 100% until a repeatable, classified
+production ceiling and multi-tenant fairness result is proven.

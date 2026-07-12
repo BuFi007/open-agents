@@ -191,3 +191,15 @@ classification after the ledger deployment, while the bounded probe still
 recorded telemetry delivery pressure at the ceiling. CPU/memory saturation was
 not demonstrated, so the capacity gate remains open pending connection,
 provider-latency, and admission-fairness evidence.
+
+## Bounded telemetry concurrency experiment — 2026-07-12
+
+The reporter now supports a bounded concurrent export budget (1–32) with a
+regression test; this is an opt-in optimization and retains the same replay,
+retry, and payload-free semantics. A worker deployment with budget 8 passed the
+32-way envelope (**32/32**) but produced mixed 64-way results (**59/64** and
+**60/64**), so concurrency is not counted as a capacity fix. Production now
+defaults back to a conservative single sender (`d2c929de`) while preserving the
+bounded option for a separately admitted, measured rollout. The post-rollback
+single-certifier run passed all canonical, AI, projection, telemetry, repair,
+and cleanup assertions.
