@@ -37,6 +37,7 @@ const telemetry = createQueueTelemetryReporter({
     secret: config.telemetrySecret,
     deploymentProtectionBypassSecret:
       config.deploymentProtectionBypassSecret ?? undefined,
+    maxAttempts: 3,
   }),
   policy: {
     queueWaitSloMs: 5_000,
@@ -45,6 +46,7 @@ const telemetry = createQueueTelemetryReporter({
     deadLetters: 0,
     inFlight: 100,
   },
+  maxConcurrentSends: config.telemetryMaxConcurrentSends,
   onDelivered: async (exported) => {
     if (exported.alerts.length > 0) await deliverAlerts(exported);
   },

@@ -26,6 +26,7 @@ export function createQueueTelemetryReporter(input: {
   policy: QueueTelemetryPolicy;
   maxGroups?: number;
   maxFactsPerGroup?: number;
+  maxConcurrentSends?: number;
   onDelivered?: (
     exported: QueueTelemetryExport,
     acknowledgement: { replayed: boolean; sequence: number },
@@ -39,6 +40,7 @@ export function createQueueTelemetryReporter(input: {
 }): QueueTelemetryReporter {
   const maxGroups = input.maxGroups ?? 100;
   const maxFactsPerGroup = input.maxFactsPerGroup ?? 1_000;
+  const maxConcurrentSends = input.maxConcurrentSends ?? 4;
   if (!Number.isInteger(maxGroups) || maxGroups < 1 || maxGroups > 1_000)
     throw new Error("Queue telemetry maxGroups must be between 1 and 1000");
   if (
@@ -48,6 +50,14 @@ export function createQueueTelemetryReporter(input: {
   )
     throw new Error(
       "Queue telemetry maxFactsPerGroup must be between 1 and 10000",
+    );
+  if (
+    !Number.isInteger(maxConcurrentSends) ||
+    maxConcurrentSends < 1 ||
+    maxConcurrentSends > 32
+  )
+    throw new Error(
+      "Queue telemetry maxConcurrentSends must be between 1 and 32",
     );
 
   const groups = new Map<string, QueueTraceFact[]>();
@@ -112,8 +122,10 @@ export function createQueueTelemetryReporter(input: {
     let delivered = 0;
     let replayed = 0;
     let failed = 0;
-    for (const [, facts] of snapshot) {
-      if (facts.length === 0) continue;
+    let nextIndex = 0;
+    const deliverOne = async (entry: readonly [string, QueueTraceFact[]]) => {
+      const [key, facts] = entry;
+      if (facts.length === 0) return;
       const exported = createQueueTelemetryExport({
         facts,
         policy: input.policy,
@@ -136,7 +148,7 @@ export function createQueueTelemetryReporter(input: {
         const rejected = facts.length - retry.length;
         droppedFacts += rejected;
         groups.set(key, [...retry, ...pending]);
-        continue;
+        return;
       }
       delivered += 1;
       if (acknowledgement.replayed) replayed += 1;
@@ -145,7 +157,21 @@ export function createQueueTelemetryReporter(input: {
       } catch {
         // An observer such as an alert webhook cannot change telemetry delivery.
       }
-    }
+    };
+    const sendBatch = async () => {
+      while (true) {
+        const index = nextIndex++;
+        const entry = snapshot[index];
+        if (!entry) return;
+        await deliverOne(entry);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(maxConcurrentSends, snapshot.length) },
+        () => sendBatch(),
+      ),
+    );
     return {
       attempted: snapshot.length,
       delivered,

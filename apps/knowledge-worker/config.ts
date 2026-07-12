@@ -21,6 +21,7 @@ export type KnowledgeWorkerConfig = Readonly<{
   telemetrySecret: string;
   deploymentProtectionBypassSecret: string | null;
   telemetryIntervalMs: number;
+  telemetryMaxConcurrentSends: number;
   typesenseUrl: string | null;
   typesenseApiKey: string | null;
   typesenseCollection: string;
@@ -142,6 +143,12 @@ export function parseKnowledgeWorkerConfig(
       15_000,
       1_000,
       300_000,
+    ),
+    telemetryMaxConcurrentSends: integer(
+      environment.QUEUE_TELEMETRY_MAX_CONCURRENT_SENDS,
+      8,
+      1,
+      32,
     ),
     typesenseUrl,
     typesenseApiKey,

@@ -139,4 +139,30 @@ describe("queue telemetry reporter", () => {
     expect(deliveries).toBe(1);
     expect(reporter.pending().facts).toBe(0);
   });
+
+  test("delivers groups with a bounded concurrent send budget", async () => {
+    let active = 0;
+    let peak = 0;
+    const reporter = createQueueTelemetryReporter({
+      policy,
+      maxConcurrentSends: 2,
+      sink: {
+        async send() {
+          active += 1;
+          peak = Math.max(peak, active);
+          await Bun.sleep(5);
+          active -= 1;
+          return { replayed: false, sequence: 1 };
+        },
+      },
+    });
+    for (let index = 0; index < 5; index += 1)
+      reporter.record(fact(`workspace-${index}`, `run-${index}`, 1_000 + index));
+    await expect(reporter.flush()).resolves.toMatchObject({
+      attempted: 5,
+      delivered: 5,
+      failed: 0,
+    });
+    expect(peak).toBe(2);
+  });
 });
