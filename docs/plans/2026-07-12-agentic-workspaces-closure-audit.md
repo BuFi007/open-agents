@@ -392,3 +392,22 @@ Playwright verified the disposable production-configured user reaches
 the authenticated `/api/agent-workspaces/grant` endpoint returns HTTP `200` for
 the member workspace. The user, team, wallet rows, and auth data were removed;
 no funding or spend occurred.
+
+## Contract revalidation — 2026-07-12 14:39 UTC
+
+The non-tax agentic path was re-run after the hosted closure work:
+
+- Open Agents agent-wallet, operating-pack, broker, and certification suites:
+  15 tests, 111 assertions, zero failures.
+- Desk internal agent-tool broker authorization suite: 9 tests, 27 assertions,
+  zero failures. It covers membership loss, request replay, read forwarding,
+  read-only spend denial, and authenticated bufi-hyper forwarding.
+- The broker contract still exposes all 17 Circle tools from the Vercel AI /
+  Mastra-compatible registry; no tool is granted without the compiled pack and
+  workspace/run signature.
+
+This is regression-proofing, not a new parity claim. The strict bucket baseline
+remains **82.7%** (the **85.6%** value is only a post-change estimate).
+Executor provisioning and approved wallet mutation, authorized connector
+sandbox runs, saturation/noisy-neighbor evidence, complete authenticated
+Desk/Expo journeys, and the operating-week dogfood report remain open.
