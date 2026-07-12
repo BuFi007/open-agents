@@ -31,6 +31,16 @@ const typesenseCollection = identifier(
 const workspaceId =
   process.env.KNOWLEDGE_WORKER_CERT_WORKSPACE ??
   "worker-certification-workspace";
+const initialTimeoutMs = boundedTimeout(
+  process.env.KNOWLEDGE_WORKER_CERT_INITIAL_TIMEOUT_MS,
+  120_000,
+  "KNOWLEDGE_WORKER_CERT_INITIAL_TIMEOUT_MS",
+);
+const repairTimeoutMs = boundedTimeout(
+  process.env.KNOWLEDGE_WORKER_CERT_REPAIR_TIMEOUT_MS,
+  120_000,
+  "KNOWLEDGE_WORKER_CERT_REPAIR_TIMEOUT_MS",
+);
 const suffix = crypto.randomUUID().replaceAll("-", "");
 const userId = `worker-cert-user-${suffix}`;
 const sessionId = `worker-cert-session-${suffix}`;
@@ -231,7 +241,7 @@ try {
         completed,
       };
     },
-    120_000,
+    initialTimeoutMs,
     "initial four-stage worker plane",
   );
   entityId = result.entity.id;
@@ -290,7 +300,7 @@ try {
         return null;
       return { event, document };
     },
-    120_000,
+    repairTimeoutMs,
     "idempotent hosted repair",
   );
   if (
@@ -514,6 +524,14 @@ function identifier(value: string, name: string): string {
   )
     throw new Error(`${name} is invalid`);
   return value;
+}
+
+function boundedTimeout(value: string | undefined, fallback: number, name: string): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 10_000 || parsed > 900_000)
+    throw new Error(`${name} must be an integer between 10000 and 900000`);
+  return parsed;
 }
 
 async function waitFor<T>(
