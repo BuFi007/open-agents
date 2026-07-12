@@ -104,6 +104,7 @@ packets preserve the agent-run identity instead of substituting the grant subjec
 The refreshed preview accepted the full signed Open Agents-shaped request before
 rejecting only its deliberately invalid grant; the focused Desk authorization
 suite is green (8 tests, 21 assertions).
+The follow-up is published as Desk PR #545.
 
 Open Agents commit `70701f36` adds a durable per-agent execution envelope:
 bounded cancellation (`BUFI_AGENT_STEP_TIMEOUT_MS`), bounded attempts
