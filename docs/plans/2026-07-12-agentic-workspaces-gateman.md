@@ -241,6 +241,12 @@ This closes the hosted durable workflow and non-zero `tool.called` evidence
 gate for a read-only tool, but not wallet executor provisioning or approved
 mutation/spend.
 
+The hosted cancellation gate was exercised with a disposable high-risk
+`agent-wallet_payment` run held at the approval boundary. The cancel action
+returned `200`, the durable run reached `cancelled`, and the trace contained
+`run.cancelled`. No wallet or payment mutation occurred; temporary rows and
+the bridge user were removed afterward.
+
 The hosted high-risk approval gate was also exercised with a disposable
 `agent-wallet.spend` grant. `agent_wallet_payment` returned `202`, initially
 returned a safe `409` while the durable hook was still being registered, then

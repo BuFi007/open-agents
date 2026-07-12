@@ -374,3 +374,8 @@ The high-risk approval path was exercised separately with a disposable
 durable hook became available, an explicit rejection was accepted and the run
 reached `rejected` with `approval.requested` and `approval.rejected` traces.
 No payment or wallet write occurred, and temporary rows/users were removed.
+
+The hosted cancellation path was also exercised with a disposable high-risk
+`agent_wallet_payment` run held at approval. Cancel returned `200`, the durable
+run reached `cancelled`, and `run.cancelled` was persisted. No payment or wallet
+write occurred; temporary rows/users were removed.
