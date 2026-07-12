@@ -65,8 +65,9 @@ blocked by macOS Screen Recording/TCC. Circle wallet read-only and bufi-hyper
 tools/list passed. The configured live BullMQ Redis run still fails with
 `Connection is closed`; its certification teardown is now bounded so an
 unavailable provider does not leave the test process hanging for a minute.
-The current production alias was redeployed after the UUID and grant-scope
-fixes; an authenticated workspace-grant GET to `/api/bufi/operations` returned
+The current production alias was redeployed after the UUID, grant-scope, and
+fail-closed broker fixes (`dpl_4hczh3YXgimg1knn3mRJ2f5ZNUy1`); an authenticated
+workspace-grant GET to `/api/bufi/operations` returned
 200 and exposed the `agent_wallet` pack with 17 tool grants and three
 workflows. A hosted read-only `agent_wallet_service_discovery` run also
 completed durably, but emitted **zero tool events**: the model returned a
