@@ -88,11 +88,13 @@ services now pass health checks and process a real Neon outbox artifact through
 Railway Redis. The mixed noisy/protected workload and crash-after-enqueue replay
 pass against Railway Redis. A literal Redis redeploy also completed; all three
 worker modes recovered readiness and a fresh four-stage fixture passed afterward.
-Kill during an in-flight persisted job and resource saturation remain open.
+The live three-boundary gate then killed workers before the Postgres effect and
+after the effect but before BullMQ acknowledgement; both recovered with one
+stable version-1 entity and no committed-job loss. Resource saturation remains
+open.
 
-Follow-up: execute kill-at-each-commit-boundary with persisted in-flight work,
-repair/redrive and provider-resource saturation against Railway, then configure
-the payload-free alert webhook. The
+Follow-up: execute repair/redrive and provider-resource saturation against
+Railway, then configure the payload-free alert webhook. The
 authenticated payload-free ingress, ordered trace persistence and queue cockpit
 now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
@@ -116,7 +118,7 @@ facts and zero fixture rows after cleanup. Railway deployment
 The upgraded fixture proved enrichment, a real 1,536-dimension AI Gateway
 embedding and a matching hosted Typesense 30.2 projection/receipt, then removed
 all Postgres and external-index fixture state. Hosted repair/redrive, alert
-delivery and chaos/load remain follow-ups.
+delivery and saturation/load remain follow-ups.
 
 ## 6. Product and UX contract review
 
@@ -158,7 +160,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **82.5%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **82.6%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted load/chaos, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.

@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 82.5%.** The repository has strong contracts and a growing
+**Production parity: 82.6%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -16,13 +16,13 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 98% | 11.8 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. Relay, canonical-source and knowledge-AI recovered readiness after a literal Railway Redis redeploy, then a disposable Neon artifact again completed all four hosted stages through AI Gateway and Typesense. Kill during an in-flight persisted job, resource saturation, repair/redrive and alert-webhook certification remain open. |
+| BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves queued recovery, kill-before-effect recovery and kill-after-Postgres-effect/before-ack replay with zero loss and zero duplicate effects. Resource saturation, hosted repair/redrive and alert-webhook certification remain open. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 88% | 8.8 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Tool-specific grant scopes, mobile citation scope, and hash-prefixed packet persistence now fail closed; 19 focused tests and a forced real Vercel preview build pass. Authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 88% | 6.2 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Push tokens are now bound to the JWT user and a membership-revalidated selected workspace; six focused route/authorization tests, Expo web export and a clean external install/import of the public adapter pass. Authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **82.5%** |  |
+| **Total** | **100** |  | **82.6%** |  |
 
 ## Newly proven in this pass
 
@@ -152,8 +152,14 @@ provider, rendered client, production worker, or live evidence path.
   RLS/search/pgvector/AI Gateway cases while the former Upstash endpoint closed
   the TLS handshake. That endpoint is now retired from the worker path: Railway
   Redis passes the deployed relay, canonical-source and knowledge-AI
-  certification. Provider saturation and kill/restart evidence remain open and
-  are not inferred from connectivity plus one successful fixture.
+  certification. Provider saturation remains open; worker kill/recovery is now
+  separately proven by the three-boundary live gate below.
+- A reusable hosted kill-boundary gate ran through Railway Redis and the
+  production Postgres knowledge constraint at three real boundaries: queued
+  before claim, SIGKILL before effect and SIGKILL after effect before queue ACK.
+  Every job completed after recovery; the replay kept the same entity identity
+  at version 1, proving zero committed-job loss and zero duplicate effects.
+  Unique queue/entity fixtures were removed after the run.
 - The configured hosted Typesense provider also passed a unique-collection live
   test: create, two idempotent upserts, tenant-filtered retrieval of exactly one
   document and cleanup. The larger recall/latency/freshness-repair load gate is
@@ -262,11 +268,10 @@ provider, rendered client, production worker, or live evidence path.
 
 ## Must-have gaps before 100%
 
-1. Kill Redis/workers during an in-flight persisted job at each commit boundary
-   and run resource-saturation tests. A literal Railway Redis redeploy, recovery
-   of all three worker modes and a full post-restart four-stage fixture now pass,
-   but they do not prove queued-job persistence during the restart or
-   CPU/memory/DB/provider saturation.
+1. Run production CPU/memory/DB/provider resource-saturation tests. A literal
+   Railway Redis redeploy, recovery of all three worker modes, a full
+   post-restart four-stage fixture and the three-boundary in-flight SIGKILL gate
+   now pass; deployment-level saturation telemetry remains open.
 2. Configure the payload-free alert webhook, then repeat repair/redrive and
    crash-after-effect against the hosted alternate-index provider. Relay,
    canonical-source, enrichment, AI Gateway embedding and Typesense projection
