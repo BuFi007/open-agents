@@ -7,15 +7,13 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 82.7%.** The repository has strong contracts and a growing
-durable runtime, but a contract or simulated gate is not counted as a shipped
-provider, rendered client, production worker, or live evidence path.
-
-This is the July 11 baseline. The July 12 closure audit raises the conservative
-post-change estimate to **85.6%** after the bounded execution policy, hosted
-worker evidence, clean Desk broker slice, and exact broker trace propagation;
-the remaining external-provider, authenticated-client, saturation, and harness
-gates below are still intentionally excluded from a 100% claim.
+**Current conservative strict parity: 83.9%.** The repository has strong
+contracts and a growing durable runtime, but a contract or simulated gate is
+not counted as a shipped provider, rendered client, production worker, or live
+evidence path. The July 11 baseline was 82.7%; the authenticated Desk browser
+closure added 1.2 weighted points. External-provider, authenticated-mobile,
+production-ceiling, wallet-executor, and harness gates below remain excluded
+from a 100% claim.
 
 | Must-have bucket | Weight | Proven completion | Weighted result | Authoritative evidence |
 | --- | ---: | ---: | ---: | --- |
@@ -25,10 +23,10 @@ gates below are still intentionally excluded from a 100% claim.
 | BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves zero-loss recovery, a deployed worker delivered a real DLQ SLO alert into Eve, and hash-verified redrive rejects tampering then replays idempotently. Production resource saturation remains open. |
 | Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 96% | 9.6 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval, external-document repair and immutable ContextPacket persistence pass. Native client rendering, scheduled repair and larger load/freshness testing remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
-| Desk command center and pack composer | 10 | 88% | 8.8 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Tool-specific grant scopes, mobile citation scope, and hash-prefixed packet persistence now fail closed; 19 focused tests and a forced real Vercel preview build pass. Authenticated browser E2E is still uncertified. |
+| Desk command center and pack composer | 10 | 100% | 10.0 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Authenticated browser E2E now proves launch, cancellation, approval rejection, timeline traces, and populated citation rendering; 19 focused tests and a forced real Vercel preview build pass. |
 | Expo/Cleo command center | 7 | 88% | 6.2 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Push tokens are now bound to the JWT user and a membership-revalidated selected workspace; six focused route/authorization tests, Expo web export and a clean external install/import of the public adapter pass. Authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **82.7%** |  |
+| **Total** | **100** |  | **83.9%** |  |
 
 ## Newly proven in this pass
 
