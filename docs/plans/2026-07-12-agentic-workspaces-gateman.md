@@ -30,11 +30,12 @@ secret injection and signature verification while preserving the no-real-user
 and no-real-wallet test boundary. It does not close hosted tool E2E because the
 preview is not production and no valid member grant was exercised.
 
-Desk commit `b320f197f` closes the request-shape mismatch with Open Agents by
-accepting and preserving `agentRunId`/`traceId` in the strict broker schema. Its
-focused authorization suite passes 8 tests and 21 assertions. The fix is
-isolated on clean commit `b320f197f` in Desk PR #546; the superseded PR #545
-was closed to remove unrelated accounting scope.
+Desk commit `dfbfc8d44` closes the request-shape mismatch with Open Agents by
+accepting and preserving `agentRunId`/`traceId` in the strict broker schema and
+persisting the exact incoming trace identity on knowledge packets. Its focused
+authorization suite passes 8 tests and 21 assertions. The fix is isolated on a
+clean current-development branch in Desk PR #546; the superseded PR #545 was
+closed to remove unrelated accounting scope.
 
 Open Agents commit `70701f36` adds bounded, cancellation-aware agent execution
 policy with retry traces; mutation-capable agents are explicitly non-retryable.
