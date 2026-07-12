@@ -155,6 +155,19 @@ resource path is not presently certifiable from this environment; prior
 successful Railway runs remain historical evidence, not a replacement for a
 fresh pass.
 
+The cleanup-hardening change in this closure branch makes the certifier
+continue database cleanup when an external Typesense delete is forbidden, and
+reports cleanup errors instead of masking them.
+
+Railway inspection identified the cause: `agentic-knowledge-ai` carried a
+different `TYPESENSE_API_KEY` from the `agentic-typesense` service. After
+synchronizing the worker variable and redeploying
+(`4a879e44-e692-4291-be6b-1c85dddf543e`), the hosted certifier passed the full
+four-stage path and repair replay: four published outbox events, canonical
+entity v1, deterministic enrichment, 1,536-dimension embedding, Typesense
+projection, five payload-free telemetry traces, and an idempotent repair
+replay. Database rows and the external document were verified cleaned up.
+
 The Desk Pipedream Connect configuration was exercised read-only through the
 current Streamable HTTP v3 client: app discovery returned QuickBooks and Xero
 Accounting OAuth apps, and scoped tool discovery returned 57 QuickBooks tools

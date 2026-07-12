@@ -75,6 +75,12 @@ connected Postgres→BullMQ pipeline passed 8 assertions. The semantic-worker
 variant reached AI Gateway but was rejected for insufficient credits, so its
 embedding-provider claim remains conditional.
 
+Railway hosted-worker certification subsequently passed after correcting the
+worker/Typesense key mismatch and redeploying the AI worker. The run observed
+four published stages, canonical/enrichment/1,536-dimension embedding/
+Typesense projection, five payload-free telemetry traces, and an idempotent
+repair replay; all database and external fixtures were cleaned up.
+
 The two tangential Desk attempts were evaluated before closure: #495's guarded
 wallet tools were consolidated into the still-open #540 boundary, while #438's
 monorepo-wide AI SDK/artifact migration was superseded by the isolated Open
