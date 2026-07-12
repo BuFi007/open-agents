@@ -24,6 +24,9 @@ out of scope for this audit.
   scopes, operations, and approval boundaries. Agent lifecycle traces now emit
   `agent.started` and `agent.failed` in addition to the existing completion and
   tool traces.
+- A dedicated `agent_wallet` operating pack now publishes all 17 Circle wallet
+  tools as grant-bound workflows: onboarding, service discovery, and payment.
+  Wallet mutation and USDC spend tools are approval-required in the manifest.
 - Desk's Operations command center can select Codex in addition to Claude Code
   and Pi. The external Hermes adapter remains a harness-runner concern rather
   than being silently presented as an in-process adapter.
@@ -61,13 +64,20 @@ blocked by macOS Screen Recording/TCC. Circle wallet read-only and bufi-hyper
 tools/list passed. The configured live BullMQ Redis run still fails with
 `Connection is closed`; its certification teardown is now bounded so an
 unavailable provider does not leave the test process hanging for a minute.
+The current production alias was redeployed as
+`dpl_J9i8U3EE8LTJVpQvMT21N1WFuYMK`; an authenticated workspace-grant GET to
+`/api/bufi/operations` returned 200 and exposed the `agent_wallet` pack with
+17 tool grants and three workflows. The production broker secret was
+provisioned as a sensitive Vercel environment variable; its value is not
+stored in this repository or audit output.
 
 ## Honest parity status
 
 The prior strict non-tax score was 82.7%. The code changes above improve the
-worker freshness, Circle registry, provider identity, lifecycle trace, and
-command-center slices, but they do not prove external state. A conservative
-post-change estimate is **84.1%**, not 100%.
+worker freshness, Circle registry, provider identity, lifecycle trace,
+command-center, hosted-auth, and operating-pack slices, but they do not prove
+all external state. A conservative post-change estimate is **85.6%**, not
+100%.
 
 The following gates remain required before claiming 100%:
 
@@ -82,8 +92,7 @@ The following gates remain required before claiming 100%:
 6. a funded Claude account and macOS Accessibility/Screen Recording approval;
 7. one connected internal operating-week report with three workflows, five
    KPIs, trace links, and zero unexpected spend;
-8. a current hosted deployment exposing the authenticated command-center route
-   and citation path (the observed alias is a cached Public Profile deployment
-   and `/api/bufi/operations` returns 404).
+8. authenticated Desk browser launch/approve/reject/cancel/traces/citations
+   and a current hosted citation path beyond the authenticated catalog GET.
 
 These are evidence/deployment gates, not reasons to weaken the code contract.
