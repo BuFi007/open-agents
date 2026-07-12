@@ -12,12 +12,6 @@ import { connectSandbox, type SandboxState } from "@open-agents/sandbox";
 import { sanitizeTraceText } from "@open-agents/traces";
 import { createHook, getWorkflowMetadata, sleep } from "workflow";
 import { resolveChatSandboxRuntime } from "./chat-sandbox-runtime";
-import {
-  appendOperatingPackTrace,
-  attachOperatingPackWorkflowRun,
-  getOperatingPackRun,
-  updateOperatingPackRun,
-} from "@/lib/db/operating-pack-runs";
 import { runHarnessTurnViaApi } from "@/lib/harness-runner/client";
 import type { OperatingPackHarnessId } from "@/lib/operating-packs/runtime";
 import { resolveOperatingPackWorkflow } from "@/lib/operating-packs/runtime";
@@ -26,10 +20,8 @@ import {
   type OperatingPackMobileNotificationStatus,
   sendOperatingPackMobileNotification,
 } from "@/lib/operating-packs/mobile-notification";
-import {
-  deleteOperatingPackWorkspaceGrant,
-  getOperatingPackWorkspaceGrant,
-} from "@/lib/operating-packs/credential-vault";
+import type { appendOperatingPackTrace as AppendOperatingPackTrace } from "@/lib/db/operating-pack-runs";
+import type { updateOperatingPackRun as UpdateOperatingPackRun } from "@/lib/db/operating-pack-runs";
 import {
   getOperatingPackControlToken,
   type OperatingPackControlCheckpoint,
@@ -40,6 +32,79 @@ import {
   shouldRetryAgent,
   type AgentExecutionPolicy,
 } from "@/lib/operating-packs/agent-execution-policy";
+
+// Keep the workflow bundle free of the Node-only postgres driver. These
+// persistence modules are loaded only from step functions; importing them at
+// workflow-module scope makes the Workflow compiler attempt to place postgres
+// in the isolate and fails the production build.
+async function appendOperatingPackTrace(
+  input: Parameters<typeof AppendOperatingPackTrace>[0],
+) {
+  const { appendOperatingPackTrace: append } = await import(
+    "@/lib/db/operating-pack-runs"
+  );
+  return append(input);
+}
+
+async function attachOperatingPackWorkflowRun(
+  executionId: Parameters<
+    typeof import("@/lib/db/operating-pack-runs").attachOperatingPackWorkflowRun
+  >[0],
+  workflowRunId: Parameters<
+    typeof import("@/lib/db/operating-pack-runs").attachOperatingPackWorkflowRun
+  >[1],
+) {
+  const { attachOperatingPackWorkflowRun: attach } = await import(
+    "@/lib/db/operating-pack-runs"
+  );
+  return attach(executionId, workflowRunId);
+}
+
+async function getOperatingPackRun(
+  executionId: Parameters<
+    typeof import("@/lib/db/operating-pack-runs").getOperatingPackRun
+  >[0],
+) {
+  const { getOperatingPackRun: get } = await import(
+    "@/lib/db/operating-pack-runs"
+  );
+  return get(executionId);
+}
+
+async function updateOperatingPackRun(
+  executionId: Parameters<typeof UpdateOperatingPackRun>[0],
+  patch: Parameters<typeof UpdateOperatingPackRun>[1],
+) {
+  const { updateOperatingPackRun: update } = await import(
+    "@/lib/db/operating-pack-runs"
+  );
+  return update(executionId, patch);
+}
+
+async function deleteOperatingPackWorkspaceGrant(
+  executionId: Parameters<
+    typeof import("@/lib/operating-packs/credential-vault").deleteOperatingPackWorkspaceGrant
+  >[0],
+) {
+  const { deleteOperatingPackWorkspaceGrant: remove } = await import(
+    "@/lib/operating-packs/credential-vault"
+  );
+  return remove(executionId);
+}
+
+async function getOperatingPackWorkspaceGrant(
+  executionId: Parameters<
+    typeof import("@/lib/operating-packs/credential-vault").getOperatingPackWorkspaceGrant
+  >[0],
+  workspaceId: Parameters<
+    typeof import("@/lib/operating-packs/credential-vault").getOperatingPackWorkspaceGrant
+  >[1],
+) {
+  const { getOperatingPackWorkspaceGrant: get } = await import(
+    "@/lib/operating-packs/credential-vault"
+  );
+  return get(executionId, workspaceId);
+}
 
 export type OperatingPackWorkflowInput = {
   executionId: string;
