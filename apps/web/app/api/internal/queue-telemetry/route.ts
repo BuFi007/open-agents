@@ -67,7 +67,18 @@ export async function POST(request: NextRequest) {
       },
       { status: persisted.replayed ? 200 : 202 },
     );
-  } catch {
+  } catch (error) {
+    const candidate = error as { code?: unknown; name?: unknown };
+    console.error(
+      JSON.stringify({
+        event: "queue.telemetry.persist_failed",
+        errorCode: "QUEUE_TELEMETRY_PERSIST_FAILED",
+        errorName:
+          typeof candidate.name === "string" ? candidate.name.slice(0, 80) : "unknown",
+        databaseCode:
+          typeof candidate.code === "string" ? candidate.code.slice(0, 40) : undefined,
+      }),
+    );
     return NextResponse.json(
       { error: "Queue telemetry run is unavailable" },
       { status: 409 },
