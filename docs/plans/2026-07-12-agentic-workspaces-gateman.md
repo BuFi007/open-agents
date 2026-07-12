@@ -324,9 +324,27 @@ or payment mutation occurred.
 The dogfood also exposed a real rate-limit interaction: the previous 2-second
 poll loop exhausted the sensitive endpoint while a run was open. Desk commit
 `73d775f9e` changes active polling to 10 seconds and terminal polling to 30
-seconds, leaving explicit controls available for the human. This closes the
-authenticated browser launch/cancel/timeline trace slice, but not the complete
-approve/reject/citation journey: the finance run was cancelled before a
-knowledge-backed evidence packet, and the separate high-risk launch was
-rate-limited before creating a new approval request. Wallet execution remains
-deliberately unconfigured.
+seconds, leaving explicit controls available for the human.
+
+The same authenticated session then launched the high-risk
+`agent_wallet_onboarding` pack with the Claude Code harness. Desk returned
+`202`, the resolver reached `awaiting_approval`, and the browser rendered the
+Approve/Reject/Cancel controls. Rejecting through the rendered **Reject**
+control returned HTTP `200`; the resolver reached terminal `rejected`, with
+`approval.requested` and `approval.rejected` traces and no wallet mutation.
+This closes the authenticated browser launch/cancel/approval-rejection/timeline
+trace slice for the non-tax command center.
+
+Desk commit `8219e4c1b` also fixes evidence selection when a run has multiple
+context packets: the panel now prefers the newest packet with populated
+citations and falls back to the newest packet only when none are populated.
+The focused component suite passes 4 tests. A fresh Vercel preview deployment
+(`dpl_9skv7pcNPVXarNpCHJkdbvmDDaxk9`,
+`desk-v1-o8m7nt457-bu-finance-007.vercel.app`) builds successfully, but its
+runtime environment is not configured for the agent-workspace broker
+(`503 Agent workspace runtime is not configured`), so the citation row cannot
+yet be certified on that preview. The citation implementation and unit proof
+are recorded; hosted citation rendering remains open until the preview is
+redeployed with the broker/runtime environment. Expo/Cleo authenticated device,
+Circle wallet executor, provider sandbox, and capacity-ceiling gates remain
+open. Wallet execution remains deliberately unconfigured.
