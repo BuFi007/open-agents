@@ -42,6 +42,20 @@ remains an open production gate.
   replayed=false`, exact replay `replayed=true` at the same sequence, with a
   persisted payload-free `queue.telemetry` trace containing three SLO alerts.
 
+## Higher-concurrency rerun
+
+- Eight concurrent copies of the same certifier ran through the production
+  knowledge-AI service with the Typesense administrative cleanup credential
+  supplied out-of-band. All eight completed the four-stage pipeline and repair
+  check (`queued=4`, `completed=4`) and removed their fixtures.
+- During the run, the maximum observed AI-worker CPU utilization was 1.4% and
+  maximum memory utilization was 0.4%. A post-run database check found zero
+  source artifacts, entities, enrichments, embeddings, projections, outbox rows,
+  or connector deployments remaining in the certification workspace.
+- This is stronger bounded-envelope evidence than the original four-fixture
+  sample, but it is still not a saturation, noisy-neighbor, or kill-at-every-
+  boundary proof.
+
 ## Decision
 
 The worker freshness and telemetry slices are now live-certified. Do not count

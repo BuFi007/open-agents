@@ -113,6 +113,13 @@ message/trace identities. Automatic retries are restricted to read-only agents;
 wallet writes and payments remain single-attempt to prevent duplicated external
 effects. The policy tests and the web package typecheck pass.
 
+The hosted worker plane was rerun at eight concurrent certifiers with the
+Typesense cleanup credential supplied out-of-band. All eight completed the
+canonical/enrichment/embedding/projection/repair path, each reporting
+`queued=4` and `completed=4`; observed maxima were 1.4% CPU and 0.4% memory,
+and a post-run query confirmed zero certification fixtures remained. This
+improves bounded-envelope evidence but does not count as saturation proof.
+
 PR #495 is already merged and its subagent-usage accounting tests are in this
 branch. PR #438 is closed and dirty; its auto-commit polling behavior is
 already represented by the current `useAutoCommitStatus` hook, so cherry-picking
