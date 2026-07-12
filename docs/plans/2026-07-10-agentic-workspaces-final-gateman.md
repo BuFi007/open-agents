@@ -93,8 +93,8 @@ after the effect but before BullMQ acknowledgement; both recovered with one
 stable version-1 entity and no committed-job loss. Resource saturation remains
 open.
 
-Follow-up: execute repair/redrive and provider-resource saturation against
-Railway, then configure the payload-free alert webhook. The
+Follow-up: execute schema-validated DLQ redrive and provider-resource saturation
+against Railway, then configure the payload-free alert webhook. The
 authenticated payload-free ingress, ordered trace persistence and queue cockpit
 now pass locally and against live Neon.
 Protected hosted delivery is also certified through Vercel deployment
@@ -117,8 +117,9 @@ facts and zero fixture rows after cleanup. Railway deployment
 `08e50274-f9ba-440f-97dc-e24a86537898` also passes `/readyz` in knowledge-AI mode.
 The upgraded fixture proved enrichment, a real 1,536-dimension AI Gateway
 embedding and a matching hosted Typesense 30.2 projection/receipt, then removed
-all Postgres and external-index fixture state. Hosted repair/redrive, alert
-delivery and saturation/load remain follow-ups.
+all Postgres and external-index fixture state. A later live repair event restored
+a deliberately deleted Typesense document with the same input hash. DLQ redrive,
+alert delivery and saturation/load remain follow-ups.
 
 ## 6. Product and UX contract review
 
@@ -160,7 +161,7 @@ These are not hidden failures; they are external/live-certification requirements
 
 Decision: **YES_WITH_FOLLOWUPS for review; NO for 100% production parity.**
 
-The strict bucket score is **82.6%**. Architecture, core runtime, Desk and Expo
+The strict bucket score is **82.7%**. Architecture, core runtime, Desk and Expo
 implementation are coherent, and the strongest live paths pass. Production/live
 provider parity is not certified while hosted load/chaos, provider sandboxes,
 authenticated client journeys, Claude Code and Computer Use remain red.

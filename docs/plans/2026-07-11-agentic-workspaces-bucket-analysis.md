@@ -7,7 +7,7 @@ Engine and Tax Agent are excluded from both numerator and denominator.
 
 ## Result
 
-**Production parity: 82.6%.** The repository has strong contracts and a growing
+**Production parity: 82.7%.** The repository has strong contracts and a growing
 durable runtime, but a contract or simulated gate is not counted as a shipped
 provider, rendered client, production worker, or live evidence path.
 
@@ -16,13 +16,13 @@ provider, rendered client, production worker, or live evidence path.
 | Filesystem agents, durable DAG, approvals, native traces | 12 | 90% | 10.8 | Real Open Agents dispatch completed; workflow/trace suites pass. |
 | Harness, MCP and Circle agent-wallet boundary | 13 | 80% | 10.4 | Fresh live certification passes Hermes, Codex, a terminal Open Agents dispatch, bufi-hyper and Circle read-only/spend-denial; Claude login and Computer Use TCC fail honestly. `@bufinance/intelligence@0.4.0` and the Eve binding expose the full Circle-compatible registry. |
 | Canonical Postgres KG and transactional outbox | 15 | 82% | 12.3 | Live Neon proves atomic resolver/outbox, rollback, leases, stable cursors, two-tenant RLS, version-bound embedding/enrichment/search projection and immutable source/artifact lineage through no-bypass runtime roles. |
-| BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves queued recovery, kill-before-effect recovery and kill-after-Postgres-effect/before-ack replay with zero loss and zero duplicate effects. Resource saturation, hosted repair/redrive and alert-webhook certification remain open. |
-| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 95% | 9.5 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval and immutable ContextPacket persistence pass. Native client rendering and larger load/freshness repair remain open. |
+| BullMQ data plane and workload isolation | 12 | 99% | 11.9 | Real BullMQ tests against Railway Redis prove cross-replica workspace caps, noisy/protected tenant progress, retries, permanent-error discard, deadlines, compact DLQ, throttling and payload-free facts. A live three-boundary SIGKILL gate proves queued recovery, kill-before-effect recovery and kill-after-Postgres-effect/before-ack replay with zero loss and zero duplicate effects. Resource saturation, schema-validated DLQ redrive and alert-webhook certification remain open. |
+| Indexed retrieval, embeddings, Typesense freshness and quality | 10 | 96% | 9.6 | Live lexical GIN, pgvector HNSW, local Typesense 30.2 and the configured hosted Typesense provider pass; real AI Gateway embeddings, tenant isolation, stale-write rejection, combined recall ≥0.8, version-bound receipts, idempotent hosted upsert/retrieval, external-document repair and immutable ContextPacket persistence pass. Native client rendering, scheduled repair and larger load/freshness testing remain open. |
 | Connected Data Spine: Pipedream, ERP, Magic Inbox and lineage | 13 | 55% | 7.2 | Persistent deployments, atomic signed-event receipts, immutable source artifacts, safe artifact reads, a live concrete Neon→BullMQ processor pipeline and the merged Desk knowledge broker producer pass. Authorized live provider sandboxes remain absent. |
 | Desk command center and pack composer | 10 | 88% | 8.8 | Desk PR #542 embeds the signed command center, pack composer, workflow timeline, approvals, traces, entity/evidence facets, verified ContextPacket citations/diffs and a Team Cockpit projection. Tool-specific grant scopes, mobile citation scope, and hash-prefixed packet persistence now fail closed; 19 focused tests and a forced real Vercel preview build pass. Authenticated browser E2E is still uncertified. |
 | Expo/Cleo command center | 7 | 88% | 6.2 | Desk PR #544 implements concrete Cleo inbox screens, server-revalidated approval intents, strict deep links, trace summaries, Shiva bridge, push notifications and fail-closed verified ContextPacket citations/diffs. Push tokens are now bound to the JWT user and a membership-revalidated selected workspace; six focused route/authorization tests, Expo web export and a clean external install/import of the public adapter pass. Authenticated physical-device E2E remains open. |
 | Horizontal operating packs and BUFI dogfood | 8 | 70% | 5.6 | Packs, policy, simulation, KPI definitions, durable runtime and Team Cockpit ownership/blocker/handoff projections exist. One week of connected cockpit evidence is not present. |
-| **Total** | **100** |  | **82.6%** |  |
+| **Total** | **100** |  | **82.7%** |  |
 
 ## Newly proven in this pass
 
@@ -164,6 +164,11 @@ provider, rendered client, production worker, or live evidence path.
   test: create, two idempotent upserts, tenant-filtered retrieval of exactly one
   document and cleanup. The larger recall/latency/freshness-repair load gate is
   still open.
+- The hosted worker-plane certifier now deletes the external Typesense document,
+  enqueues the same lineage-complete `knowledge.repair` event twice and requires
+  the deployed relay/knowledge-AI worker to restore the exact workspace/entity/
+  input-hash projection through one published outbox event. The live run passed
+  and removed all Postgres, index and probe-DLQ fixture state.
 - `@bufinance/open-agents-expo-adapter@0.1.0` is publicly visible and a clean
   temporary npm project installs and imports all five runtime exports. Its
   dist-only ESM/types/react-native package contains no source-workspace imports.
@@ -272,10 +277,10 @@ provider, rendered client, production worker, or live evidence path.
    Railway Redis redeploy, recovery of all three worker modes, a full
    post-restart four-stage fixture and the three-boundary in-flight SIGKILL gate
    now pass; deployment-level saturation telemetry remains open.
-2. Configure the payload-free alert webhook, then repeat repair/redrive and
-   crash-after-effect against the hosted alternate-index provider. Relay,
-   canonical-source, enrichment, AI Gateway embedding and Typesense projection
-   are certified; hosted repair plus alert delivery are not.
+2. Configure the payload-free alert webhook and certify the schema-validated DLQ
+   redrive lifecycle. Relay, canonical-source, enrichment, AI Gateway embedding,
+   Typesense projection and hosted external-document repair are certified;
+   external alert delivery and DLQ redrive are not.
 3. Run clean migration replay, multi-tenant load, larger combined-recall and
    latency benchmarks, scheduled freshness repair and Redis/worker kill-restart
    certification.
