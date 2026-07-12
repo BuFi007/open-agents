@@ -143,6 +143,10 @@ function fakeRuntime(): BullMqRuntime & { enqueued: BullMqRuntimeJob[] } {
     waitUntilIdle: async () => undefined,
     health: async () => ({ ready: true, redis: "ready", workers: {} }),
     listDlq: async () => [],
+    redrive: async ({ job }) => ({
+      bullJobId: job.idempotencyKey,
+      replayed: false,
+    }),
     purge: async () => undefined,
     close: async () => undefined,
   };

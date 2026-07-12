@@ -13,7 +13,7 @@ const redisUrl = configuredRedisUrl ?? "redis://127.0.0.1:1";
 const enabled = process.env.RUN_LIVE_QUEUE_TESTS === "1";
 const liveDescribe = enabled && configuredRedisUrl ? describe : describe.skip;
 
-setDefaultTimeout(30_000);
+setDefaultTimeout(60_000);
 
 liveDescribe("BullMQ production runtime", () => {
   const traces: QueueTraceFact[] = [];
@@ -38,6 +38,7 @@ liveDescribe("BullMQ production runtime", () => {
   const active = new Map<string, number>();
   const maxActive = new Map<string, number>();
   const completed: string[] = [];
+  let permanentFailureEnabled = true;
 
   afterAll(async () => {
     await Promise.all([
@@ -61,7 +62,7 @@ liveDescribe("BullMQ production runtime", () => {
         Math.max(maxActive.get(activeKey) ?? 0, nextActive),
       );
       try {
-        if (job.payload.mode === "permanent")
+        if (job.payload.mode === "permanent" && permanentFailureEnabled)
           throw new QueueTaskError({
             code: "INVALID_PROVIDER_RECORD",
             retryable: false,
@@ -205,6 +206,32 @@ liveDescribe("BullMQ production runtime", () => {
     expect(JSON.stringify([...sourceDlq, ...knowledgeDlq])).not.toContain(
       "must-not-enter-redis",
     );
+
+    const permanentJob = jobs.find((item) => item.id === "permanent-error")!;
+    await expect(
+      runtime.redrive({
+        profile: "source-connectors",
+        entryAtMs: sourceDlq[0]!.atMs,
+        job: { ...permanentJob, payload: { mode: "tampered" } },
+      }),
+    ).rejects.toThrow("payload hash");
+    permanentFailureEnabled = false;
+    const redrive = await runtime.redrive({
+      profile: "source-connectors",
+      entryAtMs: sourceDlq[0]!.atMs,
+      job: permanentJob,
+    });
+    expect(redrive.replayed).toBe(false);
+    await runtime.waitUntilIdle(10_000);
+    expect(completed.filter((id) => id === "permanent-error")).toHaveLength(1);
+    expect(await runtime.listDlq("source-connectors")).toEqual([]);
+    expect(
+      await runtime.redrive({
+        profile: "source-connectors",
+        entryAtMs: sourceDlq[0]!.atMs,
+        job: permanentJob,
+      }),
+    ).toEqual({ ...redrive, replayed: true });
     expect(traces.some((trace) => trace.type === "throttled")).toBe(true);
     expect(traces.some((trace) => trace.type === "retrying")).toBe(true);
     expect(traces.some((trace) => trace.type === "dead-lettered")).toBe(true);

@@ -91,6 +91,11 @@ export type BullMqRuntime = {
     profile: WorkerProfile["name"],
     limit?: number,
   ): Promise<readonly DlqEntry[]>;
+  redrive(input: {
+    profile: WorkerProfile["name"];
+    entryAtMs: number;
+    job: BullMqRuntimeJob;
+  }): Promise<{ bullJobId: string; replayed: boolean }>;
   purge(): Promise<void>;
   close(): Promise<void>;
 };
@@ -138,37 +143,39 @@ export function createBullMqRuntime(options: {
     }
   };
 
-  return {
-    async enqueue(input) {
-      const job = validateJob(input);
-      const profile = profileFor(job.profile);
-      if (!profile.allowedQueues.includes(job.queue))
-        throw new Error("Logical queue is not allowed for worker profile");
-      if (replicaCount > profile.maxReplicas)
-        throw new Error("Replica count exceeds worker profile budget");
-      await ensureConnected(connection);
-      const queue = queueFor(job.profile);
-      const bullJobId = bullId(job);
-      const existing = await queue.getJob(bullJobId);
-      if (existing) {
-        if (stableJson(existing.data) !== stableJson(job))
-          throw new Error("BullMQ job idempotency conflict");
-        return { bullJobId, replayed: true };
-      }
-      const policy = RETRY_POLICY[job.profile];
-      const added = await queue.add(job.queue, job, {
-        jobId: bullJobId,
-        attempts: policy.attempts,
-        backoff: { type: "exponential", delay: policy.backoffMs },
-        priority: priorityFor(profile.priority),
-        removeOnComplete: { count: 1_000 },
-        removeOnFail: true,
-      });
-      if (stableJson(added.data) !== stableJson(job))
+  const enqueueJob = async (input: BullMqRuntimeJob) => {
+    const job = validateJob(input);
+    const profile = profileFor(job.profile);
+    if (!profile.allowedQueues.includes(job.queue))
+      throw new Error("Logical queue is not allowed for worker profile");
+    if (replicaCount > profile.maxReplicas)
+      throw new Error("Replica count exceeds worker profile budget");
+    await ensureConnected(connection);
+    const queue = queueFor(job.profile);
+    const bullJobId = bullId(job);
+    const existing = await queue.getJob(bullJobId);
+    if (existing) {
+      if (stableJson(existing.data) !== stableJson(job))
         throw new Error("BullMQ job idempotency conflict");
-      await emit(traceFact("queued", job, 0));
-      return { bullJobId, replayed: false };
-    },
+      return { bullJobId, replayed: true };
+    }
+    const policy = RETRY_POLICY[job.profile];
+    const added = await queue.add(job.queue, job, {
+      jobId: bullJobId,
+      attempts: policy.attempts,
+      backoff: { type: "exponential", delay: policy.backoffMs },
+      priority: priorityFor(profile.priority),
+      removeOnComplete: { count: 1_000 },
+      removeOnFail: true,
+    });
+    if (stableJson(added.data) !== stableJson(job))
+      throw new Error("BullMQ job idempotency conflict");
+    await emit(traceFact("queued", job, 0));
+    return { bullJobId, replayed: false };
+  };
+
+  return {
+    enqueue: enqueueJob,
     async start(processors) {
       if (workers.size > 0)
         throw new Error("BullMQ runtime is already started");
@@ -331,6 +338,49 @@ export function createBullMqRuntime(options: {
         createDlqEntry(JSON.parse(value) as DlqEntry),
       );
     },
+    async redrive(input) {
+      const profile = profileFor(input.profile);
+      const job = validateJob(input.job);
+      if (job.profile !== profile.name)
+        throw new Error("DLQ redrive profile does not match the job");
+      if (!Number.isSafeInteger(input.entryAtMs) || input.entryAtMs < 1)
+        throw new Error("DLQ redrive timestamp is invalid");
+      await ensureConnected(connection);
+      const expectedPayloadHash = hash(stableJson(job.payload));
+      const markerKey = redriveMarkerKey(
+        namespace,
+        profile.name,
+        input.entryAtMs,
+        job.id,
+        expectedPayloadHash,
+      );
+      const previous = await connection.get(markerKey);
+      if (previous)
+        return { bullJobId: previous, replayed: true };
+      const key = dlqKey(namespace, profile.name);
+      const values = await connection.lrange(key, 0, -1);
+      const serialized = values.find((value) => {
+        const entry = createDlqEntry(JSON.parse(value) as DlqEntry);
+        return entry.jobId === job.id && entry.atMs === input.entryAtMs;
+      });
+      if (!serialized) throw new Error("DLQ redrive entry is unavailable");
+      const entry = createDlqEntry(JSON.parse(serialized) as DlqEntry);
+      if (
+        entry.workspaceId !== job.workspaceId ||
+        entry.profile !== job.profile ||
+        entry.queue !== job.queue
+      )
+        throw new Error("DLQ redrive identity does not match the job");
+      if (entry.payloadHash !== expectedPayloadHash)
+        throw new Error("DLQ redrive payload hash does not match");
+      const delivery = await enqueueJob(job);
+      await connection
+        .multi()
+        .set(markerKey, delivery.bullJobId, "PX", 7 * 24 * 60 * 60 * 1_000)
+        .lrem(key, 1, serialized)
+        .exec();
+      return delivery;
+    },
     async purge() {
       await Promise.all(
         [...queues.values()].map((queue) => queue.obliterate({ force: true })),
@@ -341,7 +391,12 @@ export function createBullMqRuntime(options: {
           ...workerProfiles.map((profile) => dlqKey(namespace, profile.name)),
         );
         const slotKeys = await scanKeys(connection, `${namespace}:slots:*`);
-        if (slotKeys.length > 0) await connection.del(...slotKeys);
+        const redriveKeys = await scanKeys(
+          connection,
+          `${namespace}:redrive:*`,
+        );
+        const transientKeys = [...slotKeys, ...redriveKeys];
+        if (transientKeys.length > 0) await connection.del(...transientKeys);
       }
     },
     async close() {
@@ -440,6 +495,19 @@ async function storeDlq(
 
 function dlqKey(namespace: string, profile: WorkerProfile["name"]): string {
   return `${namespace}:dlq:${profile}`;
+}
+
+function redriveMarkerKey(
+  namespace: string,
+  profile: WorkerProfile["name"],
+  entryAtMs: number,
+  jobId: string,
+  payloadHash: string,
+): string {
+  const identity = createHash("sha256")
+    .update(`${profile}:${entryAtMs}:${jobId}:${payloadHash}`)
+    .digest("hex");
+  return `${namespace}:redrive:${identity}`;
 }
 
 function workspaceSlotKey(namespace: string, job: BullMqRuntimeJob): string {
