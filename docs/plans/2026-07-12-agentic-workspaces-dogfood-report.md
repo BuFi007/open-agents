@@ -57,6 +57,21 @@ read-only workflow boundary. It still does not prove wallet executor
 provisioning, approved spend, authorized connector accounts, saturation, or a
 week-long operating report.
 
+## Desk broker admission-error revalidation — 2026-07-12 16:46 UTC
+
+Desk PR #546 advanced to commit `c0d0a1fb`. The internal broker now preserves
+structured bufi-hyper admission failures (`agent_wallet_workspace_required`)
+instead of collapsing them to a generic 422. The focused broker contract suite
+passes 8 tests / 24 assertions, including the degraded-state response. This is
+an important safety boundary: a missing isolated wallet executor is visible to
+the user and cannot be mistaken for a successful wallet operation.
+
+The PR's Vercel app checks pass. GitHub Validate and Claude review currently
+fail before any workflow steps start (empty job step lists); this is recorded as
+CI/runner infrastructure, not treated as a product pass. The hosted disposable
+user still has no active wallet workspace/executor, so no wallet mutation or
+spend was attempted.
+
 ## Evidence boundaries
 
 This report proves the hosted durable workflow, non-zero read-only tool-call,

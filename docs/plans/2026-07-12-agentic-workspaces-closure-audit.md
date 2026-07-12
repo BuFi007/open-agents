@@ -442,3 +442,13 @@ patch deterministically. A fresh clean install followed by
 `bunx expo export --platform web` completed successfully, bundling 9 web
 bundles and 9,622 modules. This closes the Expo web-build gate; physical-device
 authentication and native push delivery remain open.
+
+## Broker admission-error hardening — 2026-07-12
+
+Desk PR #546 now includes commit `c0d0a1fb`, preserving the upstream
+`agent_wallet_workspace_required` code and message from bufi-hyper. The focused
+authorization tests pass (8 tests / 24 assertions). Vercel's app preview checks
+pass; GitHub Validate/Claude review fail before workflow steps begin, with no
+step logs, so those checks remain an external CI/runner blocker. The honest
+hosted state is still executor-gated: the disposable authenticated workspace
+has no Circle wallet executor, and no wallet mutation/spend was attempted.
