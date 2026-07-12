@@ -241,6 +241,22 @@ This closes the hosted durable workflow and non-zero `tool.called` evidence
 gate for a read-only tool, but not wallet executor provisioning or approved
 mutation/spend.
 
+## Desk password-auth browser probe — 2026-07-12
+
+The Desk browser probe found and fixed a real UX defect in PR #546: password
+authentication established the Supabase browser session but never redirected
+through the shared post-auth setup route. Commit `727ffaf17` now sends a
+successful password login to `/api/auth/bu/complete?provider=email` while
+preserving the bounded `return_to` path.
+
+With a disposable confirmed production-configured Supabase user, Playwright
+observed the live local Desk flow redirecting to
+`/teams/setup/wallets?focus=personal`, proving authenticated post-login routing
+and the expected first-run wallet setup gate. The authenticated grant endpoint
+then returned HTTP `200` for the disposable team workspace. The disposable
+user, team, wallet rows, and auth data were removed after the run; no wallet
+funding or spend occurred.
+
 The hosted cancellation gate was exercised with a disposable high-risk
 `agent-wallet_payment` run held at the approval boundary. The cancel action
 returned `200`, the durable run reached `cancelled`, and the trace contained

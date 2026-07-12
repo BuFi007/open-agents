@@ -379,3 +379,16 @@ The hosted cancellation path was also exercised with a disposable high-risk
 `agent_wallet_payment` run held at approval. Cancel returned `200`, the durable
 run reached `cancelled`, and `run.cancelled` was persisted. No payment or wallet
 write occurred; temporary rows/users were removed.
+
+## Desk password-auth browser probe — 2026-07-12
+
+PR #546 commit `727ffaf17` fixes a real Desk auth UX defect: password login
+created the browser session but did not redirect through shared post-auth setup.
+The flow now redirects to `/api/auth/bu/complete?provider=email` with the
+bounded `return_to` path preserved.
+
+Playwright verified the disposable production-configured user reaches
+`/teams/setup/wallets?focus=personal`, the expected first-run wallet gate, and
+the authenticated `/api/agent-workspaces/grant` endpoint returns HTTP `200` for
+the member workspace. The user, team, wallet rows, and auth data were removed;
+no funding or spend occurred.
