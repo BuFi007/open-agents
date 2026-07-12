@@ -121,6 +121,22 @@ Agents runtime. Neither should be cherry-picked into this non-tax slice.
 Until those are attached to the evidence ledger, the correct status is
 **production-ready code slice with open certification gates**, not 100% parity.
 
+## Current revalidation — 2026-07-12 15:05 UTC
+
+The earlier hosted-wallet observation above is retained as historical evidence
+from the deployment where no compatible broker URL was configured. It is not
+the latest state. The current hosted deployment has since completed a signed
+read-only `agent_wallet_service_discovery` workflow with non-zero Circle
+`tool.called` traces, and separate hosted approval-rejection and cancellation
+runs. Those traces are recorded in the closure audit.
+
+The current remaining gates are unchanged in substance: an isolated wallet
+executor is still not provisioned for disposable workspaces, so no approved
+wallet mutation or spend has been attempted; provider sandboxes, saturation,
+authenticated browser/device journeys, and the operating-week report remain
+open. The Expo web-build prerequisite is now green after Desk commit
+`1907657db` and a clean 9,622-module export.
+
 ## Final reconciliation — 2026-07-12 10:45 UTC
 
 Chronological interim failures above are retained for auditability. Current
