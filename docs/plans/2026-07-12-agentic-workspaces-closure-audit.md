@@ -89,6 +89,15 @@ secret is provisioned as a sensitive Vercel environment variable; its value is
 not stored in this repository or audit output. Therefore the hosted catalog is
 certified, while hosted tool execution is not.
 
+The Desk-side signed broker route was deployed to a fresh preview from the
+merged Agentic Workspaces backend (`desk-v1-o5g0fgakk-bu-finance-007.vercel.app`).
+An unsigned request returned `401 Unauthorized`; a correctly signed HMAC request
+then reached grant verification and returned `403 Workspace grant is invalid or
+expired`. This proves runtime secret injection and signature verification without
+using a real member, workspace, or wallet. The route is not promoted to Desk
+production because the current production build still has unrelated pre-existing
+contract type debt, and the preview URL is not a durable production broker.
+
 PR #495 is already merged and its subagent-usage accounting tests are in this
 branch. PR #438 is closed and dirty; its auto-commit polling behavior is
 already represented by the current `useAutoCommitStatus` hook, so cherry-picking
@@ -122,5 +131,10 @@ The following gates remain required before claiming 100%:
    run with non-zero `tool.called` traces;
 9. authenticated Desk browser launch/approve/reject/cancel/traces/citations
    and a current hosted citation path beyond the authenticated catalog GET.
+
+The latest audit also confirmed that the public Open Agents alias can be stale
+for route probes (cached 404/HTML on unauthenticated paths); route certification
+must use an authenticated deployment URL and deployment ID, not infer health
+from the public profile page.
 
 These are evidence/deployment gates, not reasons to weaken the code contract.
