@@ -77,11 +77,7 @@ const internalHarnessRunRequestSchema = z
         workspaceGrant: z.string().min(80).max(2048),
         executionId: id,
         agentRunId: id,
-        allowedTools: z
-          .array(
-            z.enum(brokerToolNames),
-          )
-          .max(20),
+        allowedTools: z.array(z.enum(brokerToolNames)).max(20),
       })
       .strict()
       .optional(),
