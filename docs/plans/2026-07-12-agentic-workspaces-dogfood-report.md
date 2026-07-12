@@ -89,3 +89,19 @@ prove:
 The authoritative non-tax score therefore remains the conservative **82.7%
 strict baseline** (with **85.6%** retained only as a post-change estimate), not
 100%.
+
+## Fresh Desk command-center preview — 2026-07-12 17:30 UTC
+
+The Turbo build environment fix from Desk commit `cb2347408` produced a READY
+preview at `https://desk-v1-6jkto3ggb-bu-finance-007.vercel.app` and restored the
+`/agent-workspaces` route. An authenticated Playwright probe rendered the BUFI
+command center, pack composer, harness selector, launch controls, workflow
+timeline, trace/evidence panels, specialist roster, ownership map, and
+approval/cancellation controls. No wallet spend or external mutation was
+performed.
+
+The same probe found the hosted Operations API returning `401 Unauthorized`
+while unrelated authenticated Desk APIs returned `200`. Therefore the
+browser-render gate passes, but hosted launch/trace/approval/citation E2E is
+still open until preview auth/session handling is corrected. This is recorded as
+a blocker rather than a false pass; the strict score remains below 100%.
