@@ -617,3 +617,12 @@ fixtures. Railway's surrounding one-hour metrics were **0.2745 vCPU max / 203.4
 MB max memory**, confirming provider/queue latency rather than host CPU or
 memory exhaustion. This is a classified ceiling signal, not a 100% capacity
 pass.
+
+## Open Agents closure PR health — 2026-07-13
+
+PR #6 at head `4c796bbc` is now **mergeable/clean**. GitHub CI passes lint,
+typecheck, tests, and the database migration check; Vercel preview also passes.
+The DB repair adds the missing `0053_snapshot.json` for the already-committed
+queue telemetry migration without changing runtime schema or tax code. The PR
+still contains the historical broad feature set, so merge authority remains
+with the repository owner.
