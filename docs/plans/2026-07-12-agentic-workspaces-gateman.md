@@ -526,7 +526,7 @@ device/push evidence remains open.
 
 ## Desk PR consolidation and review remediation — 2026-07-13
 
-PR #553 was rebuilt from `origin/main`: the review diff is now **17 files**
+PR #553 was rebuilt from `origin/main`: the review diff is now **18 files**
 (wallet implementation, tests, and duplicate-config cleanup), rather than the
 stale branch's 2,595 files. The three Vercel project checks, Greptile,
 CodeRabbit, and Claude review pass. The Desk adapter uses an explicit token
@@ -535,3 +535,14 @@ rejects unknown precision instead of scaling as USDC. The remaining Validate
 failure is a broad pre-existing monorepo typecheck failure after setup, with
 unrelated billing/email/sales/schema errors outside this slice. No tax files
 were changed.
+
+## Score reconciliation — 2026-07-13
+
+The authoritative score is the bucket-analysis table in
+`2026-07-11-agentic-workspaces-bucket-analysis.md`: **83.9% conservative
+strict parity** after the Expo and wallet evidence updates. Earlier 82.7% and
+85.6% figures in this Gateman log are historical baselines/implementation
+estimates and must not be used as the current score. The 100% target remains
+open because authenticated physical-device evidence, provider sandbox runs,
+Circle mutation/spend proof, production saturation/fairness, and the operating
+week report are still unverified.
