@@ -460,12 +460,15 @@ deep-link evidence remain OPEN.
 
 ## Expo/Cleo bridge hardening — 2026-07-13
 
-Open PR #544 includes Desk commit `2ec8e1b52`, which keeps mobile workflow
-grants in the upstream header rather than the operation body, requires a
-workspace membership check for push-token unregistration, and types/routes
-`agent_workflow` notifications to the workflow inbox. The route regression
-suite passes 4/4 and Shiva typecheck passes. Gateman marks these review defects
-closed while authenticated device/push execution remains OPEN.
+Open PR #544 includes Desk commits `2ec8e1b52` and `181a8be89`, which keep mobile
+workflow grants in the upstream header rather than the operation body, require
+a workspace membership check for push-token unregistration, constrain the
+service-layer delete to the same `team_id`, and type/route `agent_workflow`
+notifications to the workflow inbox. The route regression suite passes 4/4.
+The repository-wide services typecheck is still blocked by pre-existing missing
+email-package modules and an unrelated notification payload type error. Gateman
+marks the reviewed isolation defects closed while authenticated device/push
+execution remains OPEN.
 
 ## Fresh hosted worker ceiling probe — 2026-07-13
 

@@ -495,13 +495,15 @@ evidence remain open.
 
 ## Expo/Cleo bridge hardening — 2026-07-13
 
-Open PR #544 now includes Desk commit `2ec8e1b52`: the Shiva POST bridge keeps
+Open PR #544 now includes Desk commits `2ec8e1b52` and `181a8be89`: the Shiva POST bridge keeps
 the short-lived workspace grant exclusively in `x-bufi-workspace-grant`, push
-unregistration requires the selected workspace and rechecks membership, and
+unregistration requires the selected workspace, rechecks membership, and
+constrains the service-layer delete predicate to that same `team_id`, and
 `agent_workflow` is part of the typed notification route contract. The route
-regression suite passes 4/4 and Shiva typecheck passes. This closes the
-review-discovered grant-leak and cross-team push-cleanup defects; authenticated
-device/push execution remains unverified.
+regression suite passes 4/4. The repository-wide services typecheck remains
+blocked by pre-existing missing email-package modules and an unrelated
+notification payload type error; authenticated device/push execution remains
+unverified.
 
 ## Fresh hosted worker ceiling probe — 2026-07-13
 
