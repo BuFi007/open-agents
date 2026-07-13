@@ -546,3 +546,13 @@ estimates and must not be used as the current score. The 100% target remains
 open because authenticated physical-device evidence, provider sandbox runs,
 Circle mutation/spend proof, production saturation/fairness, and the operating
 week report are still unverified.
+
+## Expo hosted-health follow-up — 2026-07-13
+
+CI run `29218745300` passed setup, lint, and required dependency builds, then
+failed in the existing `@bu/studio-admin` typecheck with unrelated billing,
+email, sales, schema, wallet, and environment errors. The desk Vercel preview
+for PR #544 also failed before the changed workflow path because the existing
+Next build cannot resolve multiple `@bu/email` exports. These are repository
+health blockers, not Expo/Shiva workflow regressions; the targeted suite is
+still 8/8. They do not change the authoritative 83.9% score.
