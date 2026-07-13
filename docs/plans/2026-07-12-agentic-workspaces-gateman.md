@@ -517,7 +517,7 @@ production/browser certification.
 ## Expo PR consolidation — 2026-07-13
 
 PR #544 was replayed onto its current `development` base (`847daf19c`). It is
-now mergeable with a focused **39-file** Expo/Shiva diff; the route/push
+now mergeable with a focused **41-file** Expo/Shiva diff; the route/push
 regression suite passes **8/8**, and duplicate Vercel JSON configs are removed
 while each canonical `vercel.ts` remains. The hosted Validate job reaches the
 real typecheck path after the shared `mise`-binary fix; broad monorepo type debt
