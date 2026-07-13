@@ -566,3 +566,8 @@ durable workflow kernel, and payload-free queue telemetry export. The harness
 contract suite separately passed **3 tests / 9 assertions**. These are fresh
 local contract/runtime proofs; they do not substitute for the remaining
 authenticated, provider, production-capacity, or device gates.
+
+The fresh live harness rerun after tightening the MCP assertion produced report
+hash `sha256:5bd12e7316cf96843757970ccc3ed481191888591968a3af8df312115fbd650d`:
+the bufi-hyper endpoint now proves **17/17** canonical Circle tools, while the
+same Claude credit and Computer Use TCC prerequisites remain visibly failed.
