@@ -596,3 +596,11 @@ The full isolated repository sweep was rerun with `bun run test:isolated`:
 **183 test files passed with zero failures**. Integration suites that require
 external credentials were correctly skipped by their guards; this is broad
 local regression evidence, not a claim that those provider gates are live.
+
+The same worker replay was rerun with the explicitly documented five-minute
+initial and repair deadlines through Railway's production environment:
+**32/32 certified, 0 failed**, with no stderr failures and zero residual
+fixtures after cleanup. This closes the bounded five-minute convergence
+regression, but does not close absolute CPU/memory/provider/database saturation
+or noisy-neighbor fairness; the two-minute result remains important latency
+evidence.
