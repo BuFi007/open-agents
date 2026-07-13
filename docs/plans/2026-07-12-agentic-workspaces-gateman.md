@@ -604,3 +604,9 @@ fixtures after cleanup. This closes the bounded five-minute convergence
 regression, but does not close absolute CPU/memory/provider/database saturation
 or noisy-neighbor fairness; the two-minute result remains important latency
 evidence.
+
+Railway's one-hour production metrics window covering the replay reported
+**0.2735 vCPU max / 185.5 MB max memory** against 24 vCPU / 24,576 MB limits.
+This confirms the five-minute result did not approach host CPU or memory
+ceilings; provider latency, database/connection limits, and noisy-neighbor
+fairness remain the unresolved capacity dimensions.
