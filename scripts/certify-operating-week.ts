@@ -54,7 +54,8 @@ function text(value: unknown): string {
 }
 
 function containsSpendTool(row: TraceRow): boolean {
-  const body = `${row.type} ${row.summary ?? ""} ${text(row.data)}`.toLowerCase();
+  const body =
+    `${row.type} ${row.summary ?? ""} ${text(row.data)}`.toLowerCase();
   return [
     "circle_pay_service",
     "circle_gateway_deposit",
@@ -91,10 +92,13 @@ try {
     ),
   );
   const spendTraces = traces.filter(containsSpendTool);
-  const executedSpend = traces.filter((trace) =>
-    ["tool.completed", "payment.completed", "wallet.mutation.completed"].includes(
-      trace.type,
-    ) && containsSpendTool(trace),
+  const executedSpend = traces.filter(
+    (trace) =>
+      [
+        "tool.completed",
+        "payment.completed",
+        "wallet.mutation.completed",
+      ].includes(trace.type) && containsSpendTool(trace),
   );
 
   const linkedTraceHashes = traces.map((trace) =>
