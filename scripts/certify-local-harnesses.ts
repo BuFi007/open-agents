@@ -11,6 +11,7 @@ import {
   findLiveWorkflowOutcome,
   parseDispatchIdentity,
 } from "../packages/certification/live-status.ts";
+import { CIRCLE_AGENT_WALLET_TOOLS } from "../packages/agent-wallet/index.ts";
 
 type Observation = {
   command: string;
@@ -39,6 +40,7 @@ const contractChecks: HarnessCertificationCheck[] = [
   "degradedStateHonest",
   "deniedSpendWithoutApproval",
 ];
+const requiredHyperTools = CIRCLE_AGENT_WALLET_TOOLS.map((tool) => tool.name);
 
 function hash(value: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
@@ -291,10 +293,12 @@ async function main() {
     "--data",
     '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}',
   ]);
+  const hyperToolPresent = (name: string) =>
+    new RegExp(`\\"name\\"\\s*:\\s*\\"${name}\\"`).test(hyper.output);
+  const hyperToolsPresent = requiredHyperTools.filter(hyperToolPresent);
   const hyperPassed =
     hyper.exitCode === 0 &&
-    hyper.output.includes("circle_get_balance") &&
-    hyper.output.includes("circle_pay_service");
+    hyperToolsPresent.length === requiredHyperTools.length;
   const circleWallet = await certifyCircleWalletReadOnly();
   const circleWalletPassed = circleWallet.exitCode === 0;
 
@@ -372,7 +376,11 @@ async function main() {
       "hyper_open_agents",
       "open-agents",
       "endpoint-smoke",
-      { ...hyper, exitCode: hyperPassed ? 0 : 1 },
+      {
+        ...hyper,
+        command: `${hyper.command} (Circle tools ${hyperToolsPresent.length}/${requiredHyperTools.length})`,
+        exitCode: hyperPassed ? 0 : 1,
+      },
       hyperPassed ? ["readOnlyHyperSmoke"] : [],
     ),
     evidence(
