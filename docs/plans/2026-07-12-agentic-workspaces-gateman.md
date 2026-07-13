@@ -610,3 +610,10 @@ Railway's one-hour production metrics window covering the replay reported
 This confirms the five-minute result did not approach host CPU or memory
 ceilings; provider latency, database/connection limits, and noisy-neighbor
 fairness remain the unresolved capacity dimensions.
+
+The five-minute **64-way** extension completed **59/64** fixtures; five hit the
+same bounded initial-stage deadline. Cleanup again verified zero residual
+fixtures. Railway's surrounding one-hour metrics were **0.2745 vCPU max / 203.4
+MB max memory**, confirming provider/queue latency rather than host CPU or
+memory exhaustion. This is a classified ceiling signal, not a 100% capacity
+pass.
