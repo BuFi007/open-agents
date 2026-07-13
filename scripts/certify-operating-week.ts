@@ -45,7 +45,12 @@ function canonical(value: unknown): string {
 }
 
 function text(value: unknown): string {
-  return typeof value === "string" ? value : "";
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function containsSpendTool(row: TraceRow): boolean {
