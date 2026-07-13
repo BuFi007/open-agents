@@ -476,7 +476,7 @@ discovery remains an explicit unavailable result until a configured x402
 directory adapter is authorized.
 
 The adapter test plus the existing agent-wallet, wallet-guard, and gateway
-suites pass **25/25 (79 assertions)**; intelligence typecheck and Desk
+suites pass **27/27 (81 assertions)**; intelligence typecheck and Desk
 pre-push gates pass. The implementation commit's app typecheck passed; the
 follow-up dependency-injection-only test refactor is covered by the Bun suite.
 This closes the authenticated Desk tool-injection criterion

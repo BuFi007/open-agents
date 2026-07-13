@@ -440,7 +440,7 @@ Writes are intentionally non-dispatching: transfer and x402 calls return an
 explicit `approval_required` result and point to the existing HITL/multisig
 boundary. Service discovery fails closed as unavailable until an authorized
 x402 directory adapter is configured. The adapter, agent-wallet, and wallet
-guard and gateway suites pass **25/25 (79 assertions)**; intelligence typecheck
+guard and gateway suites pass **27/27 (81 assertions)**; intelligence typecheck
 and Desk pre-push hooks pass. The implementation commit's app typecheck passed;
 the follow-up dependency-injection-only test refactor is covered by the Bun
 suite.
