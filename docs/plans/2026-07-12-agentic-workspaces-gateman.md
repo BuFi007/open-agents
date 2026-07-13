@@ -571,3 +571,8 @@ The fresh live harness rerun after tightening the MCP assertion produced report
 hash `sha256:5bd12e7316cf96843757970ccc3ed481191888591968a3af8df312115fbd650d`:
 the bufi-hyper endpoint now proves **17/17** canonical Circle tools, while the
 same Claude credit and Computer Use TCC prerequisites remain visibly failed.
+
+The full isolated repository sweep was rerun with `bun run test:isolated`:
+**183 test files passed with zero failures**. Integration suites that require
+external credentials were correctly skipped by their guards; this is broad
+local regression evidence, not a claim that those provider gates are live.
