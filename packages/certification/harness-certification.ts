@@ -19,6 +19,7 @@ export type HarnessCertificationChecks = {
   callbackVisible: boolean;
   degradedStateHonest: boolean;
   readOnlyHyperSmoke: boolean;
+  circleWalletReadOnly: boolean;
   deniedSpendWithoutApproval: boolean;
   computerUseDoctor?: boolean;
 };

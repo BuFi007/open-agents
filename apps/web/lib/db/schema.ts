@@ -1,8 +1,13 @@
 import type { SandboxState } from "@open-agents/sandbox";
+import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
+import type { OperatingPackCompositionItem } from "@/lib/operating-packs/runtime";
 import {
+  bigint,
   boolean,
+  customType,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -12,7 +17,12 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+  dataType: () => "tsvector",
+});
 
 // users
 export const users = pgTable("users", {
@@ -335,6 +345,456 @@ export const workflowRunSteps = pgTable(
   ],
 );
 
+export const operatingPackRuns = pgTable(
+  "operating_pack_runs",
+  {
+    id: text("id").primaryKey(),
+    workflowRunId: text("workflow_run_id").unique(),
+    workspaceId: text("workspace_id").notNull(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    packId: text("pack_id").notNull(),
+    workflowId: text("workflow_id").notNull(),
+    harnessId: text("harness_id", {
+      enum: ["codex", "claude-code", "pi"],
+    }).notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: text("status", {
+      enum: [
+        "pending",
+        "running",
+        "pause_requested",
+        "paused",
+        "awaiting_approval",
+        "approved",
+        "rejected",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("pending"),
+    approvalId: text("approval_id"),
+    result: jsonb("result").$type<Readonly<Record<string, unknown>>>(),
+    errorCode: text("error_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_runs_workspace_idempotency_idx").on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index("operating_pack_runs_session_id_idx").on(table.sessionId),
+    index("operating_pack_runs_user_id_idx").on(table.userId),
+    index("operating_pack_runs_status_idx").on(table.status),
+  ],
+);
+
+export const operatingPackCredentials = pgTable(
+  "operating_pack_credentials",
+  {
+    runId: text("run_id")
+      .primaryKey()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    ciphertext: text("ciphertext").notNull(),
+    iv: text("iv").notNull(),
+    authTag: text("auth_tag").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("operating_pack_credentials_expiry_idx").on(table.expiresAt),
+  ],
+);
+
+export const operatingPackTraces = pgTable(
+  "operating_pack_traces",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    sequence: integer("sequence").notNull(),
+    type: text("type").notNull(),
+    agentId: text("agent_id"),
+    summary: text("summary"),
+    data: jsonb("data").$type<Readonly<Record<string, unknown>>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_traces_run_sequence_idx").on(
+      table.runId,
+      table.sequence,
+    ),
+    index("operating_pack_traces_workspace_run_idx").on(
+      table.workspaceId,
+      table.runId,
+    ),
+  ],
+);
+
+export const queueTelemetryExports = pgTable(
+  "queue_telemetry_exports",
+  {
+    exportId: text("export_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    runId: text("run_id").notNull(),
+    generatedAtMs: bigint("generated_at_ms", { mode: "number" }).notNull(),
+    factCount: integer("fact_count").notNull(),
+    data: jsonb("data").$type<Readonly<Record<string, unknown>>>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("queue_telemetry_exports_workspace_idx").on(table.workspaceId),
+    index("queue_telemetry_exports_workspace_run_idx").on(
+      table.workspaceId,
+      table.runId,
+    ),
+  ],
+);
+
+export const operatingPackCompositions = pgTable(
+  "operating_pack_compositions",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(0),
+    items: jsonb("items")
+      .$type<readonly OperatingPackCompositionItem[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.userId] }),
+    index("operating_pack_compositions_user_idx").on(table.userId),
+  ],
+);
+
+export const operatingPackCompositionRevisions = pgTable(
+  "operating_pack_composition_revisions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull(),
+    eventType: text("event_type", {
+      enum: ["composition.saved", "composition.reverted"],
+    }).notNull(),
+    items: jsonb("items")
+      .$type<readonly OperatingPackCompositionItem[]>()
+      .notNull(),
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("operating_pack_composition_revisions_scope_revision_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.revision,
+    ),
+    index("operating_pack_composition_revisions_scope_idx").on(
+      table.workspaceId,
+      table.userId,
+    ),
+  ],
+);
+
+export const knowledgeEntities = pgTable(
+  "knowledge_entities",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    externalKey: text("external_key").notNull(),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    version: integer("version").notNull().default(1),
+    searchVector: tsvector("search_vector")
+      .generatedAlwaysAs(
+        sql`to_tsvector('simple', "name" || ' ' || "kind" || ' ' || "external_key")`,
+      )
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("knowledge_entities_workspace_kind_external_idx").on(
+      table.workspaceId,
+      table.kind,
+      table.externalKey,
+    ),
+    uniqueIndex("knowledge_entities_id_workspace_idx").on(
+      table.id,
+      table.workspaceId,
+    ),
+    index("knowledge_entities_workspace_id_idx").on(
+      table.workspaceId,
+      table.id,
+    ),
+    index("knowledge_entities_search_idx").using("gin", table.searchVector),
+  ],
+);
+
+export const knowledgeOutbox = pgTable(
+  "knowledge_outbox",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    topic: text("topic").notNull(),
+    schemaVersion: integer("schema_version").notNull(),
+    payload: jsonb("payload")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    status: text("status", {
+      enum: ["pending", "published", "dead"],
+    })
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: timestamp("available_at").defaultNow().notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at"),
+    lastErrorCode: text("last_error_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    publishedAt: timestamp("published_at"),
+  },
+  (table) => [
+    index("knowledge_outbox_workspace_claim_idx").on(
+      table.workspaceId,
+      table.status,
+      table.availableAt,
+      table.createdAt,
+    ),
+    index("knowledge_outbox_lease_expiry_idx").on(table.leaseExpiresAt),
+  ],
+);
+
+export const knowledgeEmbeddings = pgTable(
+  "knowledge_embeddings",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    model: text("model").notNull(),
+    inputVersion: text("input_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.entityId, table.model, table.inputVersion],
+    }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_embeddings_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_embeddings_workspace_model_idx").on(
+      table.workspaceId,
+      table.model,
+      table.inputVersion,
+    ),
+    index("knowledge_embeddings_cosine_idx")
+      .using("hnsw", table.embedding.op("vector_cosine_ops"))
+      .with({ m: 16, ef_construction: 64 }),
+  ],
+);
+
+export const knowledgeEnrichments = pgTable(
+  "knowledge_enrichments",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    classifierVersion: text("classifier_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    classification: text("classification").notNull(),
+    confidence: real("confidence").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.entityId, table.classifierVersion] }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_enrichments_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_enrichments_workspace_classification_idx").on(
+      table.workspaceId,
+      table.classification,
+    ),
+  ],
+);
+
+export const knowledgeSearchProjections = pgTable(
+  "knowledge_search_projections",
+  {
+    entityId: text("entity_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    provider: text("provider").notNull(),
+    collection: text("collection").notNull(),
+    schemaVersion: text("schema_version").notNull(),
+    inputHash: text("input_hash").notNull(),
+    sourceVersion: integer("source_version").notNull(),
+    providerRevision: text("provider_revision"),
+    projectedAt: timestamp("projected_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.entityId, table.provider, table.collection],
+    }),
+    foreignKey({
+      columns: [table.entityId, table.workspaceId],
+      foreignColumns: [knowledgeEntities.id, knowledgeEntities.workspaceId],
+      name: "knowledge_search_projections_entity_workspace_fk",
+    }).onDelete("cascade"),
+    index("knowledge_search_projections_workspace_version_idx").on(
+      table.workspaceId,
+      table.sourceVersion,
+    ),
+  ],
+);
+
+export const knowledgeContextPackets = pgTable(
+  "knowledge_context_packets",
+  {
+    packetHash: text("packet_hash").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    workflowRunId: text("workflow_run_id").notNull(),
+    agentRunId: text("agent_run_id").notNull(),
+    traceId: text("trace_id").notNull(),
+    authorizationScope: text("authorization_scope").notNull(),
+    graphWatermark: text("graph_watermark").notNull(),
+    projectionWatermark: text("projection_watermark").notNull(),
+    ontologyVersion: text("ontology_version").notNull(),
+    packet: jsonb("packet")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    generatedAt: timestamp("generated_at").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("knowledge_context_packets_workspace_run_idx").on(
+      table.workspaceId,
+      table.workflowRunId,
+      table.agentRunId,
+      table.generatedAt,
+    ),
+    index("knowledge_context_packets_workspace_expiry_idx").on(
+      table.workspaceId,
+      table.expiresAt,
+    ),
+  ],
+);
+
+export const connectorDeployments = pgTable(
+  "connector_deployments",
+  {
+    deploymentId: text("deployment_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectionId: text("connection_id").notNull(),
+    environment: text("environment", {
+      enum: ["development", "staging", "production"],
+    }).notNull(),
+    manifest: jsonb("manifest")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("connector_deployments_workspace_connection_env_idx").on(
+      table.workspaceId,
+      table.connectionId,
+      table.environment,
+    ),
+    index("connector_deployments_workspace_idx").on(table.workspaceId),
+  ],
+);
+
+export const connectorEventReceipts = pgTable(
+  "connector_event_receipts",
+  {
+    deploymentId: text("deployment_id")
+      .notNull()
+      .references(() => connectorDeployments.deploymentId, {
+        onDelete: "cascade",
+      }),
+    eventId: text("event_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    timestampMs: bigint("timestamp_ms", { mode: "number" }).notNull(),
+    bodyHash: text("body_hash").notNull(),
+    receivedAt: timestamp("received_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deploymentId, table.eventId] }),
+    index("connector_event_receipts_workspace_received_idx").on(
+      table.workspaceId,
+      table.receivedAt,
+    ),
+  ],
+);
+
+export const sourceArtifacts = pgTable(
+  "source_artifacts",
+  {
+    artifactKey: text("artifact_key").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectorId: text("connector_id").notNull(),
+    provider: text("provider", {
+      enum: ["manual", "gmail", "outlook", "pipedream"],
+    }).notNull(),
+    contentHash: text("content_hash").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    safeStorageRef: text("safe_storage_ref").notNull(),
+    sourceRevision: text("source_revision").notNull(),
+    metadata: jsonb("metadata")
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    receivedAt: timestamp("received_at").notNull(),
+    observedAt: timestamp("observed_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("source_artifacts_workspace_revision_idx").on(
+      table.workspaceId,
+      table.sourceRevision,
+    ),
+    index("source_artifacts_workspace_observed_idx").on(
+      table.workspaceId,
+      table.observedAt,
+    ),
+  ],
+);
+
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
 export type VercelProjectLink = typeof vercelProjectLinks.$inferSelect;
@@ -351,6 +811,35 @@ export type WorkflowRun = typeof workflowRuns.$inferSelect;
 export type NewWorkflowRun = typeof workflowRuns.$inferInsert;
 export type WorkflowRunStep = typeof workflowRunSteps.$inferSelect;
 export type NewWorkflowRunStep = typeof workflowRunSteps.$inferInsert;
+export type OperatingPackRun = typeof operatingPackRuns.$inferSelect;
+export type NewOperatingPackRun = typeof operatingPackRuns.$inferInsert;
+export type OperatingPackCredential =
+  typeof operatingPackCredentials.$inferSelect;
+export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
+export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
+export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
+export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
+export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
+export type NewKnowledgeOutboxEvent = typeof knowledgeOutbox.$inferInsert;
+export type KnowledgeEmbedding = typeof knowledgeEmbeddings.$inferSelect;
+export type NewKnowledgeEmbedding = typeof knowledgeEmbeddings.$inferInsert;
+export type KnowledgeEnrichment = typeof knowledgeEnrichments.$inferSelect;
+export type NewKnowledgeEnrichment = typeof knowledgeEnrichments.$inferInsert;
+export type KnowledgeSearchProjection =
+  typeof knowledgeSearchProjections.$inferSelect;
+export type NewKnowledgeSearchProjection =
+  typeof knowledgeSearchProjections.$inferInsert;
+export type KnowledgeContextPacket =
+  typeof knowledgeContextPackets.$inferSelect;
+export type NewKnowledgeContextPacket =
+  typeof knowledgeContextPackets.$inferInsert;
+export type ConnectorDeployment = typeof connectorDeployments.$inferSelect;
+export type NewConnectorDeployment = typeof connectorDeployments.$inferInsert;
+export type ConnectorEventReceipt = typeof connectorEventReceipts.$inferSelect;
+export type NewConnectorEventReceipt =
+  typeof connectorEventReceipts.$inferInsert;
+export type SourceArtifactRecord = typeof sourceArtifacts.$inferSelect;
+export type NewSourceArtifactRecord = typeof sourceArtifacts.$inferInsert;
 export type GitHubInstallation = typeof githubInstallations.$inferSelect;
 export type NewGitHubInstallation = typeof githubInstallations.$inferInsert;
 

@@ -11,6 +11,7 @@ import {
   findLiveWorkflowOutcome,
   parseDispatchIdentity,
 } from "../packages/certification/live-status.ts";
+import { CIRCLE_AGENT_WALLET_TOOLS } from "../packages/agent-wallet/index.ts";
 
 type Observation = {
   command: string;
@@ -39,16 +40,22 @@ const contractChecks: HarnessCertificationCheck[] = [
   "degradedStateHonest",
   "deniedSpendWithoutApproval",
 ];
+const requiredHyperTools = CIRCLE_AGENT_WALLET_TOOLS.map((tool) => tool.name);
 
 function hash(value: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
-async function run(command: string, args: string[], timeoutMs = 90_000) {
+async function run(
+  command: string,
+  args: string[],
+  timeoutMs = 90_000,
+  env: NodeJS.ProcessEnv = process.env,
+) {
   const startedAtMs = Date.now();
   const child = spawn(command, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
@@ -70,6 +77,79 @@ async function run(command: string, args: string[], timeoutMs = 90_000) {
     exitCode,
     output,
   } satisfies Observation;
+}
+
+async function certifyCircleWalletReadOnly(): Promise<Observation> {
+  const startedAtMs = Date.now();
+  const chain = process.env.CIRCLE_CERTIFICATION_CHAIN ?? "BASE";
+  const status = await run("circle", [
+    "wallet",
+    "status",
+    "--type",
+    "agent",
+    "--output",
+    "json",
+  ]);
+  const wallets = await run("circle", [
+    "wallet",
+    "list",
+    "--chain",
+    chain,
+    "--type",
+    "agent",
+    "--output",
+    "json",
+  ]);
+  try {
+    const statusJson = JSON.parse(status.output) as {
+      data?: { mainnet?: { tokenStatus?: string } };
+    };
+    const walletsJson = JSON.parse(wallets.output) as {
+      data?: { wallets?: Array<{ address?: string }> };
+    };
+    const address = walletsJson.data?.wallets?.[0]?.address;
+    if (
+      status.exitCode !== 0 ||
+      wallets.exitCode !== 0 ||
+      statusJson.data?.mainnet?.tokenStatus !== "VALID" ||
+      !address
+    ) {
+      throw new Error(
+        "agent wallet authentication or wallet inventory unavailable",
+      );
+    }
+    const balance = await run("circle", [
+      "wallet",
+      "balance",
+      "--address",
+      address,
+      "--chain",
+      chain,
+      "--output",
+      "json",
+    ]);
+    return {
+      command: `circle wallet status + list + balance --chain ${chain} (address redacted)`,
+      startedAtMs,
+      completedAtMs: Date.now(),
+      exitCode: balance.exitCode,
+      output: [
+        `status=${status.exitCode}`,
+        `wallets=${wallets.exitCode}`,
+        `balance=${balance.exitCode}`,
+        `walletCount=${walletsJson.data?.wallets?.length ?? 0}`,
+        `balanceHash=${hash(balance.output)}`,
+      ].join(";"),
+    };
+  } catch (error) {
+    return {
+      command: `circle wallet status + list + balance --chain ${chain} (address redacted)`,
+      startedAtMs,
+      completedAtMs: Date.now(),
+      exitCode: 1,
+      output: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 function evidence(
@@ -143,7 +223,7 @@ async function dispatchOpenAgents(): Promise<Observation> {
         output: `dispatch-status=${response.status};identity=${dispatchIdentity ? "valid" : "invalid"}`,
       };
     }
-    for (let attempt = 0; attempt < 15; attempt += 1) {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 2_000));
       const statusResponse = await fetch(
         new URL(
@@ -213,10 +293,24 @@ async function main() {
     "--data",
     '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}',
   ]);
+  const hyperToolPresent = (name: string) =>
+    new RegExp(`\\"name\\"\\s*:\\s*\\"${name}\\"`).test(hyper.output);
+  const hyperToolsPresent = requiredHyperTools.filter(hyperToolPresent);
   const hyperPassed =
     hyper.exitCode === 0 &&
-    hyper.output.includes("circle_get_balance") &&
-    hyper.output.includes("circle_pay_service");
+    hyperToolsPresent.length === requiredHyperTools.length;
+  const circleWallet = await certifyCircleWalletReadOnly();
+  const circleWalletPassed = circleWallet.exitCode === 0;
+
+  const claudeGatewayKey = process.env.AI_GATEWAY_API_KEY;
+  const claudeEnvironment = claudeGatewayKey
+    ? {
+        ...process.env,
+        ANTHROPIC_BASE_URL: "https://ai-gateway.vercel.sh",
+        ANTHROPIC_AUTH_TOKEN: claudeGatewayKey,
+        ANTHROPIC_API_KEY: "",
+      }
+    : process.env;
 
   const handshakes = {
     codex: await run("codex", [
@@ -229,18 +323,24 @@ async function main() {
       "never",
       "Reply with exactly BUFI_CODEX_HARNESS_OK. Do not call any tools.",
     ]),
-    "claude-code": await run("claude", [
-      "-p",
-      "--safe-mode",
-      "--permission-mode",
-      "dontAsk",
-      "--tools",
-      "",
-      "--no-session-persistence",
-      "--max-budget-usd",
-      "0.25",
-      "Reply with exactly BUFI_CLAUDE_HARNESS_OK. Do not call any tools.",
-    ]),
+    "claude-code": await run(
+      "claude",
+      [
+        "--bare",
+        "-p",
+        "--safe-mode",
+        "--permission-mode",
+        "dontAsk",
+        "--tools",
+        "",
+        "--no-session-persistence",
+        "--max-budget-usd",
+        "0.25",
+        "Reply with exactly BUFI_CLAUDE_HARNESS_OK. Do not call any tools.",
+      ],
+      90_000,
+      claudeEnvironment,
+    ),
     hermes: await run("hermes", [
       "--safe-mode",
       "-z",
@@ -264,23 +364,35 @@ async function main() {
     ]),
   ) as Record<HarnessCertificationTarget, boolean>;
 
-  const allEvidence: HarnessCertificationEvidence[] = [];
+  const allEvidence: HarnessCertificationEvidence[] = [
+    evidence(
+      "contract_open_agents",
+      "open-agents",
+      "contract-test",
+      contract,
+      contract.exitCode === 0 ? contractChecks : [],
+    ),
+    evidence(
+      "hyper_open_agents",
+      "open-agents",
+      "endpoint-smoke",
+      {
+        ...hyper,
+        command: `${hyper.command} (Circle tools ${hyperToolsPresent.length}/${requiredHyperTools.length})`,
+        exitCode: hyperPassed ? 0 : 1,
+      },
+      hyperPassed ? ["readOnlyHyperSmoke"] : [],
+    ),
+    evidence(
+      "circle_wallet_open_agents",
+      "open-agents",
+      "endpoint-smoke",
+      circleWallet,
+      circleWalletPassed ? ["circleWalletReadOnly"] : [],
+    ),
+  ];
   for (const target of targets) {
     allEvidence.push(
-      evidence(
-        `contract_${target}`,
-        target,
-        "contract-test",
-        contract,
-        contract.exitCode === 0 ? contractChecks : [],
-      ),
-      evidence(
-        `hyper_${target}`,
-        target,
-        "endpoint-smoke",
-        { ...hyper, exitCode: hyperPassed ? 0 : 1 },
-        hyperPassed ? ["readOnlyHyperSmoke"] : [],
-      ),
       evidence(
         `handshake_${target}`,
         target,
@@ -299,19 +411,24 @@ async function main() {
     targets.map((target) => [
       target,
       {
-        identityBound: contract.exitCode === 0,
-        workspaceBound: contract.exitCode === 0,
-        teamBound: contract.exitCode === 0,
-        sessionBound: contract.exitCode === 0,
-        mcpGrantEnforced: contract.exitCode === 0,
-        ungrantedToolDenied: contract.exitCode === 0,
-        approvalEventObserved: contract.exitCode === 0,
-        traceEventObserved: contract.exitCode === 0,
-        sandboxIsolated: handshakePassed[target],
-        callbackVisible: handshakePassed[target],
-        degradedStateHonest: contract.exitCode === 0,
-        readOnlyHyperSmoke: hyperPassed,
-        deniedSpendWithoutApproval: contract.exitCode === 0,
+        identityBound: target === "open-agents" && contract.exitCode === 0,
+        workspaceBound: target === "open-agents" && contract.exitCode === 0,
+        teamBound: target === "open-agents" && contract.exitCode === 0,
+        sessionBound: target === "open-agents" && contract.exitCode === 0,
+        mcpGrantEnforced: target === "open-agents" && contract.exitCode === 0,
+        ungrantedToolDenied:
+          target === "open-agents" && contract.exitCode === 0,
+        approvalEventObserved:
+          target === "open-agents" && contract.exitCode === 0,
+        traceEventObserved: target === "open-agents" && contract.exitCode === 0,
+        sandboxIsolated: target === "open-agents" && handshakePassed[target],
+        callbackVisible: target === "open-agents" && handshakePassed[target],
+        degradedStateHonest:
+          target === "open-agents" && contract.exitCode === 0,
+        readOnlyHyperSmoke: target === "open-agents" && hyperPassed,
+        circleWalletReadOnly: target === "open-agents" && circleWalletPassed,
+        deniedSpendWithoutApproval:
+          target === "open-agents" && contract.exitCode === 0,
         ...(target === "computer-use"
           ? { computerUseDoctor: handshakePassed[target] }
           : {}),

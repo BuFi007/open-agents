@@ -1,0 +1,7 @@
+{
+  "extends": "@open-agents/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["index.ts", "index.test.ts", "tsup.config.ts"]
+}

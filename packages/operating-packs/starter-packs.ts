@@ -407,6 +407,111 @@ export const BUFI_INTERNAL_OPS_PACK = pack({
   ],
 });
 
+export const TAX_AUTOMATION_PACK = parseOperatingPackManifest({
+  schemaVersion: 1,
+  graphVersion: 1,
+  id: "tax_automation",
+  name: "Tax Automation",
+  version: "1.0.0",
+  owner: "BUFI",
+  personas: ["freelancer", "founder", "accountant"],
+  jurisdictions: ["AR", "US"],
+  industries: ["remote-teams", "export-services"],
+  dependencies: ["finance_ops"],
+  permissions: ["data:read", "data:write", "external:communicate", "erp:write"],
+  ontology: {
+    sharedKinds: [
+      "Workspace",
+      "Customer",
+      "Document",
+      "Approval",
+      "Policy",
+      "Risk",
+      "Workflow",
+      "Agent",
+    ],
+    extensions: {
+      tax_case: ["jurisdiction", "readiness_state", "authority_state"],
+      tax_evidence: ["evidence_hash", "consent_version", "review_state"],
+    },
+  },
+  agents: [
+    {
+      id: "tax_evidence",
+      role: "tax_evidence",
+      tools: ["knowledge_read", "tax_invoice_case_read"],
+    },
+    {
+      id: "tax_orchestrator",
+      role: "tax_orchestrator",
+      tools: ["tax_invoice_prepare", "tax_invoice_case_read"],
+    },
+  ],
+  workflows: [
+    {
+      id: "ai_invoice_to_factura_e",
+      title: "AI invoice to reconciled Factura E",
+      agentIds: ["tax_evidence", "tax_orchestrator"],
+      requiredApproval: false,
+      risk: "high",
+      crossPack: false,
+    },
+  ],
+  connectors: [
+    ...baseConnectors,
+    {
+      id: "tax_automation_engine",
+      required: true,
+      capabilities: [
+        "evidence.append",
+        "invoice.ai-artifact.normalize",
+        "factura_e.prepare",
+        "factura_e.read",
+        "reclaim.handoff",
+        "settlement.reconcile",
+        "accounting.attestation.read",
+      ],
+    },
+    {
+      id: "accounting",
+      required: true,
+      capabilities: ["ledger.read", "invoice.write"],
+    },
+  ],
+  toolGrants: [
+    ...baseGrants,
+    {
+      tool: "tax_invoice_prepare",
+      operations: ["prepare"],
+      approvalRequired: false,
+    },
+    {
+      tool: "tax_invoice_case_read",
+      operations: ["read"],
+      approvalRequired: false,
+    },
+  ],
+  kpis: ["tax_evidence_coverage", "invoice_readiness", "authority_state"],
+  deskWidgets: [
+    { id: "tax_widget", kind: "kpi" },
+    { id: "factura_e_workflow", kind: "workflow" },
+    { id: "tax_approval", kind: "approval" },
+    { id: "tax_trace", kind: "trace" },
+  ],
+  expoCards: [
+    { id: "factura_e_status", kind: "workflow" },
+    { id: "tax_approval", kind: "approval" },
+  ],
+  traceViews: ["workflow", "tool", "approval", "evidence", "authority"],
+  setupChecklist: [
+    "Confirm the workspace tax profile and processing consent",
+    "Connect invoice and financial evidence sources",
+    "Review the Reclaim ARCA handoff",
+    "Keep user and accountant approval credentials outside the agent runtime",
+  ],
+  taxImplementation: "external-engine-v1",
+});
+
 export const STARTER_OPERATING_PACKS = [
   FINANCE_OPS_PACK,
   GRANT_OPS_PACK,
@@ -416,6 +521,6 @@ export const STARTER_OPERATING_PACKS = [
 
 export const FUTURE_TAX_PACK_REFERENCE = {
   id: "tax_automation",
-  state: "gated-separate-project",
-  taxImplementation: false,
+  state: "external-engine-available",
+  taxImplementation: "external-engine-v1",
 } as const;

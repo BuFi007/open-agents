@@ -14,6 +14,7 @@ const spies = {
   runHarnessTurn: mock(
     async (input: {
       onChunk: (chunk: Record<string, unknown>) => Promise<void> | void;
+      tools?: Record<string, unknown>;
     }) => {
       await input.onChunk({
         type: "text-delta",
@@ -109,7 +110,7 @@ describe("/api/internal/harness-runner", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Invalid harness",
+      error: "Invalid harness request",
     });
     expect(spies.connectSandbox).not.toHaveBeenCalled();
   });
@@ -175,5 +176,29 @@ describe("/api/internal/harness-runner", () => {
         },
       },
     ]);
+  });
+
+  test("materializes only the signed operating-pack tool grants", async () => {
+    const parsedBody = JSON.parse(body) as Record<string, unknown>;
+    const brokerBody = JSON.stringify({
+      ...parsedBody,
+      brokerContext: {
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
+        executionId: "op_test",
+        agentRunId: "agent_finance",
+        allowedTools: ["knowledge_read"],
+      },
+    });
+    const response = await POST(createRequest(true, brokerBody));
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(spies.runHarnessTurn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        tools: expect.objectContaining({ knowledge_read: expect.anything() }),
+      }),
+    );
+    const input = spies.runHarnessTurn.mock.calls.at(-1)?.[0];
+    expect(Object.keys(input?.tools ?? {})).toEqual(["knowledge_read"]);
   });
 });

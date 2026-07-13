@@ -1,4 +1,4 @@
-export type WorkspaceHarnessKind = "hermes" | "codex" | "claude-code";
+export type WorkspaceHarnessKind = "hermes" | "codex" | "claude-code" | "pi";
 export type HarnessConnectionState = "connected" | "degraded" | "disconnected";
 
 export type HarnessMcpCapability = {

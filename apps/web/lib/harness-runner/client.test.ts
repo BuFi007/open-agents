@@ -53,6 +53,14 @@ describe("runHarnessTurnViaApi", () => {
           "test-oidc-token",
         );
         expect(headers.get("x-vercel-oidc-token")).toBeNull();
+        expect(JSON.parse(body)).toMatchObject({
+          brokerContext: {
+            workspaceId: "11111111-1111-4111-8111-111111111111",
+            executionId: "op_test",
+            agentRunId: "agent_finance",
+            allowedTools: ["knowledge_read"],
+          },
+        });
 
         return new Response(
           [
@@ -99,6 +107,13 @@ describe("runHarnessTurnViaApi", () => {
       selectedModelId: "openai/gpt-5.4",
       modelId: "openai/gpt-5.4",
       requestUrl: "https://preview.example.com/api/chat",
+      brokerContext: {
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        workspaceGrant: "signed-workspace-grant".padEnd(100, "x"),
+        executionId: "op_test",
+        agentRunId: "agent_finance",
+        allowedTools: ["knowledge_read"],
+      },
       onChunk: (chunk) => {
         chunks.push(chunk);
       },

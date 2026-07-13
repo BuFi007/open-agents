@@ -6,10 +6,37 @@ export {
 } from "./store";
 export { createOutbox, type OutboxEvent, type OutboxStore } from "./outbox";
 export {
+  createPostgresKnowledgeRepository,
+  type PersistentEntity,
+  type PersistentKnowledgeEnrichment,
+  type PersistentOutboxEvent,
+  type PersistentSearchProjection,
+  type PostgresKnowledgeRepository,
+  type WorkspaceKnowledgeRepository,
+} from "./postgres";
+export {
   hybridRank,
   type RetrievalCandidate,
   type RetrievalResult,
 } from "./retrieval";
+export {
+  DEFAULT_KNOWLEDGE_EMBEDDING_MODEL,
+  KNOWLEDGE_EMBEDDING_DIMENSIONS,
+  KNOWLEDGE_EMBEDDING_INPUT_VERSION,
+  createAiGatewayKnowledgeEmbeddingProvider,
+  knowledgeEmbeddingInput,
+  knowledgeEmbeddingInputHash,
+  type KnowledgeEmbeddingBatch,
+  type KnowledgeEmbeddingProvider,
+} from "./embedding-provider";
+export {
+  KNOWLEDGE_SEARCH_SCHEMA_VERSION,
+  createTypesenseKnowledgeProjectionProvider,
+  knowledgeSearchDocument,
+  type KnowledgeSearchDocument,
+  type KnowledgeSearchProjectionProvider,
+  type KnowledgeSearchProjectionResult,
+} from "./search-projection";
 export { needsRefresh, type ProjectionVersion } from "./freshness";
 export {
   evaluateProductionGate,
@@ -22,6 +49,9 @@ export {
   type ContextPacketInput,
   type ContextPacketReference,
   buildContextPacket,
+  diffContextPackets,
+  type ContextPacketDiff,
+  validateContextPacket,
 } from "./context-packet";
 export {
   type KnowledgeChange,

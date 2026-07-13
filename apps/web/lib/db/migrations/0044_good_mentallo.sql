@@ -1,0 +1,1 @@
+CREATE INDEX "knowledge_entities_search_idx" ON "knowledge_entities" USING gin (to_tsvector('simple', "name" || ' ' || "kind" || ' ' || "external_key"));

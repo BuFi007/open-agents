@@ -288,6 +288,97 @@
       "when": 1781591975650,
       "tag": "0040_salty_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783756134192,
+      "tag": "0041_rainy_power_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1783795266917,
+      "tag": "0042_bumpy_the_fury",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1783796999863,
+      "tag": "0043_spicy_sleepwalker",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1783798120079,
+      "tag": "0044_good_mentallo",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1783798257620,
+      "tag": "0045_supreme_black_bird",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1783798520340,
+      "tag": "0046_easy_skaar",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1783798916958,
+      "tag": "0047_sleepy_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1783798935122,
+      "tag": "0048_motionless_doctor_strange",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1783800166546,
+      "tag": "0049_safe_logan",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1783801925959,
+      "tag": "0050_demonic_blazing_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1783804134929,
+      "tag": "0051_shocking_wolverine",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1783808658759,
+      "tag": "0052_certain_mordo",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1783898077463,
+      "tag": "0053_queue_telemetry_exports",
+      "breakpoints": true
     }
   ]
 }

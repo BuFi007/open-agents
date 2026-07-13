@@ -87,6 +87,9 @@ export type RunHarnessTurnInput = {
   originalMessages: HarnessUIMessage[];
   selectedModelId: string;
   modelId: string;
+  instructions?: string;
+  permissionMode?: "allow-reads" | "allow-edits" | "allow-all";
+  tools?: ToolSet;
   abortSignal?: AbortSignal;
   onChunk: (chunk: HarnessUIMessageChunk) => Promise<void> | void;
 };
@@ -530,9 +533,11 @@ export async function runHarnessTurn(
 
   const agent = new HarnessAgent({
     harness: createHarnessAdapter(input.harnessId, input.modelId),
-    instructions: HARNESS_INSTRUCTIONS[input.harnessId],
-    tools: OPEN_AGENT_HARNESS_TOOLS,
-    permissionMode: "allow-all",
+    instructions: input.instructions
+      ? `${HARNESS_INSTRUCTIONS[input.harnessId]}\n\n${input.instructions}`
+      : HARNESS_INSTRUCTIONS[input.harnessId],
+    tools: { ...OPEN_AGENT_HARNESS_TOOLS, ...input.tools },
+    permissionMode: input.permissionMode ?? "allow-all",
     toolApproval: {
       ask_user_question: "user-approval",
     },

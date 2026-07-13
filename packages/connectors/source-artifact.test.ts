@@ -91,4 +91,39 @@ describe("source artifacts", () => {
       }),
     ).toThrow("accountId");
   });
+
+  it("accepts the connected workspace provider identities without storing payloads", () => {
+    const providers = [
+      "pipedream",
+      "magic-inbox",
+      "quickbooks",
+      "xero",
+      "contaazul",
+      "contabilium",
+    ] as const;
+    const keys = providers.map((provider) =>
+      createSourceArtifact({
+        workspaceId: "ws_1",
+        connectorId: `${provider}_connector`,
+        provider,
+        accountId: "acct_1",
+        externalContainerId: "container_1",
+        externalArtifactId: `${provider}_artifact_1`,
+        contentHash: hashA,
+        mimeType: "application/json",
+        sizeBytes: 32,
+        receivedAtMs: 1_000,
+        observedAtMs: 1_000,
+        safeStorageRef: `storage/${provider}/artifact-1`,
+        schemaVersion: "source-artifact.v1",
+        normalizerVersion: `${provider}.v1`,
+        correlationId: `corr_${provider}`,
+        redaction: "metadata-only",
+      }),
+    );
+    expect(new Set(keys.map((artifact) => artifact.artifactKey)).size).toBe(
+      providers.length,
+    );
+    expect(keys.every((artifact) => !("payload" in artifact))).toBe(true);
+  });
 });

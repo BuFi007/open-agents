@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { ConnectorEnvironment, ConnectorManifest } from "./manifest";
 import { validateConnectorManifest } from "./manifest";
 
@@ -6,8 +6,15 @@ export type ConnectorEventRegistry = {
   getByDeploymentId(
     deploymentId: string,
   ): Promise<ConnectorManifest | undefined>;
-  hasSeenEvent(eventId: string): Promise<boolean>;
-  markSeenEvent(eventId: string): Promise<void>;
+  consumeEvent(input: ConnectorEventReceiptInput): Promise<boolean>;
+};
+
+export type ConnectorEventReceiptInput = {
+  deploymentId: string;
+  workspaceId: string;
+  eventId: string;
+  timestampMs: number;
+  bodyHash: string;
 };
 
 export type SignedConnectorEventInput = {
@@ -43,8 +50,12 @@ export async function verifySignedConnectorEvent(
   nowMs = Date.now(),
   replayWindowMs = 5 * 60 * 1000,
 ): Promise<ConnectorManifest> {
-  if (!input.deploymentId || !EVENT_ID.test(input.eventId))
+  if (!EVENT_ID.test(input.deploymentId) || !EVENT_ID.test(input.eventId))
     throw new Error("invalid connector event identity");
+  if (!Number.isSafeInteger(input.timestampMs) || input.timestampMs <= 0)
+    throw new Error("invalid connector event timestamp");
+  if (Buffer.byteLength(input.rawBody, "utf8") > 10 * 1024 * 1024)
+    throw new Error("connector event body is too large");
   if (Math.abs(nowMs - input.timestampMs) > replayWindowMs)
     throw new Error("connector event timestamp is outside replay window");
   const manifest = await registry.getByDeploymentId(input.deploymentId);
@@ -52,13 +63,19 @@ export async function verifySignedConnectorEvent(
   const valid = validateConnectorManifest(manifest);
   if (valid.environment !== input.environment)
     throw new Error("connector event environment mismatch");
-  if (await registry.hasSeenEvent(input.eventId))
-    throw new Error("duplicate connector event");
   const secret = await secretForDeployment(input.deploymentId);
   if (!secret || secret.length < 16)
     throw new Error("missing connector event signing secret");
   if (!equalHex(input.signature, sign(secret, input)))
     throw new Error("invalid connector event signature");
-  await registry.markSeenEvent(input.eventId);
+  const receipt = {
+    deploymentId: input.deploymentId,
+    workspaceId: valid.workspaceId,
+    eventId: input.eventId,
+    timestampMs: input.timestampMs,
+    bodyHash: `sha256:${createHash("sha256").update(input.rawBody).digest("hex")}`,
+  };
+  if (!(await registry.consumeEvent(receipt)))
+    throw new Error("duplicate connector event");
   return valid;
 }

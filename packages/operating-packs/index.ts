@@ -12,6 +12,16 @@ export {
 } from "./business-graph";
 export { type CompiledOperatingPacks, compileOperatingPacks } from "./compiler";
 export {
+  type CompiledFilesystemAgent,
+  type FilesystemAgentDefinition,
+  FilesystemAgentDefinitionSchema,
+  type FilesystemAgentFile,
+  type FilesystemRosterWriter,
+  compileFilesystemRoster,
+  defineFilesystemAgent,
+  materializeFilesystemRoster,
+} from "./filesystem-roster";
+export {
   type PackGovernanceDecision,
   type PackInstallation,
   type PackLifecycleState,
@@ -56,4 +66,9 @@ export {
   PRODUCT_OPS_PACK,
   SALES_OPS_PACK,
   STARTER_OPERATING_PACKS,
+  TAX_AUTOMATION_PACK,
 } from "./starter-packs";
+export {
+  AGENT_WALLET_PACK,
+  AGENT_WALLET_TOOL_NAMES,
+} from "./agent-wallet-pack";

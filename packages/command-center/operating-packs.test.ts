@@ -31,7 +31,7 @@ const harness = createWorkspaceHarness({
       server: "custom",
       scopes: ["workflow.run"],
       requiresApproval: false,
-      allowedOperations: ["start"],
+      allowedOperations: ["start", "inspect"],
     },
     {
       name: "circle_get_balance",

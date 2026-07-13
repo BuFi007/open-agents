@@ -45,11 +45,10 @@ describe("signed connector events", () => {
       async getByDeploymentId(deploymentId) {
         return deploymentId === manifest.deploymentId ? manifest : undefined;
       },
-      async hasSeenEvent(eventId) {
-        return seen.has(eventId);
-      },
-      async markSeenEvent(eventId) {
+      async consumeEvent({ eventId }) {
+        if (seen.has(eventId)) return false;
         seen.add(eventId);
+        return true;
       },
     };
     const unsigned = {
@@ -86,16 +85,15 @@ describe("signed connector events", () => {
       async getByDeploymentId() {
         return manifest;
       },
-      async hasSeenEvent() {
-        return false;
+      async consumeEvent() {
+        return true;
       },
-      async markSeenEvent() {},
     };
     const unsigned = {
       deploymentId: "dep_12345678",
       environment: "production" as const,
       eventId: "evt_abcdef12",
-      timestampMs: 0,
+      timestampMs: 1,
       rawBody: "{}",
     };
     const input = {
@@ -118,5 +116,50 @@ describe("signed connector events", () => {
         1000,
       ),
     ).rejects.toThrow("environment mismatch");
+  });
+
+  it("uses an atomic receipt claim when concurrent deliveries race", async () => {
+    const seen = new Set<string>();
+    const registry: ConnectorEventRegistry = {
+      async getByDeploymentId() {
+        return manifest;
+      },
+      async consumeEvent(input) {
+        if (seen.has(input.eventId)) return false;
+        seen.add(input.eventId);
+        return true;
+      },
+    };
+    const unsigned = {
+      deploymentId: "dep_12345678",
+      environment: "development" as const,
+      eventId: "evt_concurrent_123",
+      timestampMs: 1000,
+      rawBody: '{"artifact":"one"}',
+    };
+    const input = {
+      ...unsigned,
+      signature: signature("super-secret-signing-key", unsigned),
+    };
+    const settled = await Promise.allSettled([
+      verifySignedConnectorEvent(
+        input,
+        registry,
+        async () => "super-secret-signing-key",
+        1000,
+      ),
+      verifySignedConnectorEvent(
+        input,
+        registry,
+        async () => "super-secret-signing-key",
+        1000,
+      ),
+    ]);
+    expect(
+      settled.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      settled.filter((result) => result.status === "rejected"),
+    ).toHaveLength(1);
   });
 });

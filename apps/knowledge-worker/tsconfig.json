@@ -1,0 +1,4 @@
+{
+  "extends": "@open-agents/tsconfig/bun.json",
+  "include": ["**/*.ts"]
+}
