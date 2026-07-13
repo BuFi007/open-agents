@@ -502,3 +502,14 @@ non-zero because macOS Computer Use permissions are unavailable. The report
 records output hashes rather than command output and performed no wallet or
 external mutation. This is fresh evidence for the harness boundary, not a
 100% claim; the two failed external prerequisites remain open.
+
+## Fresh Desk preview deployment — 2026-07-13
+
+The current wallet-gateway branch was deployed to a clean READY Vercel preview:
+`https://desk-v1-aq9xnnw73-bu-finance-007.vercel.app` (`dpl_83ANHVVgB3NNS51vj5aMRkzGR43U`).
+Unauthenticated probes observed the live grant route returning `405` and the
+operations route returning `400 Invalid workspace scope`, confirming both
+routes are present and fail closed. The production alias still points at
+errored deployments; it was not promoted while PR #553 remains open. This
+strengthens preview evidence but does not substitute for authenticated
+production/browser certification.
