@@ -483,6 +483,16 @@ This closes the authenticated Desk tool-injection criterion
 and strengthens the wallet-read path, but does not close live service discovery,
 approved Circle mutation/spend, or the overall 100% gates.
 
+## Expo/Cleo Metro graph remediation — 2026-07-13
+
+Desk branch `codex/bu-544-gateman-remediation`, commit `403ee14db`, defers the
+Circle modular client import in `workspace-wallet-setup.service.ts` until the
+native allowlist reconciliation path is invoked. Fresh Expo production exports
+now pass for both iOS and Android (56.5 MB Hermes bundles each), removing the
+Node-only Circle graph from the initial Metro bundle. This closes the mobile
+packaging subgate; authenticated device, push, approval, and deep-link journey
+evidence remain open.
+
 ## Fresh hosted worker ceiling probe — 2026-07-13
 
 Using the Railway production worker's configured Typesense endpoint/key only in

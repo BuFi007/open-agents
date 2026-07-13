@@ -449,6 +449,15 @@ Gateman classification: **PASS for actor binding, response validation,
 exact-money conversion, and non-dispatching approval boundary; OPEN for real
 service discovery, approved Circle executor/spend, and the overall 100% goal.**
 
+## Expo/Cleo Metro graph remediation — 2026-07-13
+
+Desk branch `codex/bu-544-gateman-remediation`, commit `403ee14db`, defers the
+Circle modular client import in the native workspace-wallet setup path. Fresh
+production Expo exports pass for iOS and Android with 56.5 MB Hermes bundles;
+Metro no longer fails on the Node-only Circle dependency graph. Gateman marks
+the packaging subgate PASS while authenticated device, push, approval, and
+deep-link evidence remain OPEN.
+
 ## Fresh hosted worker ceiling probe — 2026-07-13
 
 The Railway production worker was exercised with 32 disposable concurrent
