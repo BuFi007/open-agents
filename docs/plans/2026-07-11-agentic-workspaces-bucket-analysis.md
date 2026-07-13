@@ -462,3 +462,21 @@ adapter default. Focused tests pass **19/19 (59 assertions)**, plus package
 TypeScript and Biome. This closes the code-parity gap but not the live Circle/
 Shiva adapter or approved wallet mutation gate, so no weighted score increase is
 claimed.
+
+## Agent-wallet live gateway slice — 2026-07-13
+
+Desk PR #553, commit `80158daac`, now injects a server-bound Circle adapter into
+the authenticated completion and audio gateways. The adapter resolves only the
+workspace row marked `wallet_purpose='agent'`, calls the existing Circle
+`WalletService` balance path, converts exact decimal balances to atomic units,
+and exposes no model-selected wallet ID or credential. Transfer and x402 payment
+calls return an explicit `approval_required` result without dispatch; the
+existing HITL/multisig executor remains the required next boundary. Service
+discovery remains an explicit unavailable result until a configured x402
+directory adapter is authorized.
+
+The adapter test plus the existing agent-wallet and wallet-guard suites pass
+**21/21 (63 assertions)**; intelligence and app typechecks pass, and Desk
+pre-push gates pass. This closes the authenticated Desk tool-injection criterion
+and strengthens the wallet-read path, but does not close live service discovery,
+approved Circle mutation/spend, or the overall 100% gates.
