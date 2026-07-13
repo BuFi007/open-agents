@@ -620,7 +620,7 @@ pass.
 
 ## Open Agents closure PR health — 2026-07-13
 
-PR #6 at head `4c796bbc` is now **mergeable/clean**. GitHub CI passes lint,
+PR #6 at head `cf93e328` is now **mergeable/clean**. GitHub CI passes lint,
 typecheck, tests, and the database migration check; Vercel preview also passes.
 The DB repair adds the missing `0053_snapshot.json` for the already-committed
 queue telemetry migration without changing runtime schema or tax code. The PR
