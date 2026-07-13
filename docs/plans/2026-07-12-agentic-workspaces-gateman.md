@@ -567,6 +567,16 @@ contract suite separately passed **3 tests / 9 assertions**. These are fresh
 local contract/runtime proofs; they do not substitute for the remaining
 authenticated, provider, production-capacity, or device gates.
 
+## Operating-week certifier — 2026-07-13
+
+The new read-only `bun run operating-week:certify` query against the connected
+cockpit store found **18 workflow runs, 209 traces, 5 distinct workflows, 108
+tool calls, 8 approval events, and zero executed spend traces**. It emitted
+redacted workspace/workflow/trace hashes and failed honestly because the
+observed run span is only **75,983,765 ms**, below the required seven-day
+coverage. This is repeatable evidence and a real gate, but the operating-week
+criterion remains open until a full seven-day window exists.
+
 The fresh live harness rerun after tightening the MCP assertion produced report
 hash `sha256:5bd12e7316cf96843757970ccc3ed481191888591968a3af8df312115fbd650d`:
 the bufi-hyper endpoint now proves **17/17** canonical Circle tools, while the
