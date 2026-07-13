@@ -425,3 +425,24 @@ Computer Use native pipe was unavailable, so the system confirmation could not
 be pressed. This is stronger native configuration evidence, but it does not
 close authenticated mobile workflow, approval/cancellation, push, or physical
 device gates.
+
+## Desk agent-wallet gateway integration — 2026-07-13
+
+PR #553 commit `80158daac` was audited as the next non-tax implementation
+slice. Desk's completion and audio gateways now inject a server-bound adapter
+that resolves the workspace's `wallet_purpose='agent'` row and reads Circle
+balances through `WalletService`; the model cannot select a wallet ID, chain
+record, credential, or database identity. Decimal Circle balances are parsed
+and converted to bounded six-decimal atomic units before the intelligence tool
+contract sees them.
+
+Writes are intentionally non-dispatching: transfer and x402 calls return an
+explicit `approval_required` result and point to the existing HITL/multisig
+boundary. Service discovery fails closed as unavailable until an authorized
+x402 directory adapter is configured. The adapter, agent-wallet, and wallet
+guard suites pass **21/21 (63 assertions)**; intelligence and app typechecks
+pass, and the Desk pre-push hooks pass.
+
+Gateman classification: **PASS for actor binding, response validation,
+exact-money conversion, and non-dispatching approval boundary; OPEN for real
+service discovery, approved Circle executor/spend, and the overall 100% goal.**
