@@ -124,7 +124,7 @@ export function createQueueTelemetryReporter(input: {
     let failed = 0;
     let nextIndex = 0;
     const deliverOne = async (entry: readonly [string, QueueTraceFact[]]) => {
-      const [key, facts] = entry;
+      const [, facts] = entry;
       if (facts.length === 0) return;
       const exported = createQueueTelemetryExport({
         facts,

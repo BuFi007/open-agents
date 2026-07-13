@@ -74,12 +74,18 @@ export async function POST(request: NextRequest) {
         event: "queue.telemetry.persist_failed",
         errorCode: "QUEUE_TELEMETRY_PERSIST_FAILED",
         errorName:
-          typeof candidate.name === "string" ? candidate.name.slice(0, 80) : "unknown",
+          typeof candidate.name === "string"
+            ? candidate.name.slice(0, 80)
+            : "unknown",
         databaseCode:
-          typeof candidate.code === "string" ? candidate.code.slice(0, 40) : undefined,
+          typeof candidate.code === "string"
+            ? candidate.code.slice(0, 40)
+            : undefined,
         errorMessage:
           error instanceof Error
-            ? error.message.replace(/postgres(?:ql)?:\/\/[^ ]+/gi, "[redacted]").slice(0, 160)
+            ? error.message
+                .replace(/postgres(?:ql)?:\/\/[^ ]+/gi, "[redacted]")
+                .slice(0, 160)
             : "unknown",
       }),
     );

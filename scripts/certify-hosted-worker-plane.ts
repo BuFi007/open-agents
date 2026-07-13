@@ -526,7 +526,11 @@ function identifier(value: string, name: string): string {
   return value;
 }
 
-function boundedTimeout(value: string | undefined, fallback: number, name: string): number {
+function boundedTimeout(
+  value: string | undefined,
+  fallback: number,
+  name: string,
+): number {
   if (!value) return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 10_000 || parsed > 900_000)

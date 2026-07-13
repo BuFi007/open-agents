@@ -157,7 +157,9 @@ describe("queue telemetry reporter", () => {
       },
     });
     for (let index = 0; index < 5; index += 1)
-      reporter.record(fact(`workspace-${index}`, `run-${index}`, 1_000 + index));
+      reporter.record(
+        fact(`workspace-${index}`, `run-${index}`, 1_000 + index),
+      );
     await expect(reporter.flush()).resolves.toMatchObject({
       attempted: 5,
       delivered: 5,

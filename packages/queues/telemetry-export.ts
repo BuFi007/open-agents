@@ -110,7 +110,11 @@ export function createQueueTelemetryHttpSink(options: {
   const retryDelayMs = options.retryDelayMs ?? 250;
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5)
     throw new Error("Queue telemetry maxAttempts must be between 1 and 5");
-  if (!Number.isInteger(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 5_000)
+  if (
+    !Number.isInteger(retryDelayMs) ||
+    retryDelayMs < 0 ||
+    retryDelayMs > 5_000
+  )
     throw new Error("Queue telemetry retryDelayMs must be between 0 and 5000");
   if (
     deploymentProtectionBypassSecret !== undefined &&
@@ -135,7 +139,8 @@ export function createQueueTelemetryHttpSink(options: {
               "content-type": "application/json",
               ...(deploymentProtectionBypassSecret
                 ? {
-                    "x-vercel-protection-bypass": deploymentProtectionBypassSecret,
+                    "x-vercel-protection-bypass":
+                      deploymentProtectionBypassSecret,
                   }
                 : {}),
             },
