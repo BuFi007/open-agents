@@ -491,3 +491,14 @@ unrelated notification payload typing error; changed-route tests and
 changed-file formatting checks pass. Gateman closes the local regression claim
 but keeps authenticated-device, provider-sandbox, Circle-executor, and
 production-capacity gates open.
+
+## Fresh live harness certification — 2026-07-13
+
+The redacted live certification report was rerun from the current checkout.
+Hermes, Codex, Open Agents dispatch, bufi-hyper's Circle tool listing, and the
+Circle agent-wallet status/list/balance read-only probe passed. Claude Code
+returned `Credit balance is too low`; `hermes computer-use doctor` remains
+non-zero because macOS Computer Use permissions are unavailable. The report
+records output hashes rather than command output and performed no wallet or
+external mutation. This is fresh evidence for the harness boundary, not a
+100% claim; the two failed external prerequisites remain open.
