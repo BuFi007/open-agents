@@ -478,3 +478,16 @@ configured Typesense provider. **24/32 completed and 8/32 timed out at initial
 convergence.** All eight failures had the certifier's bounded deadline error;
 they are classified as backpressure, not silently retried. Gateman keeps the
 production capacity/fairness gate open; no score increase is claimed.
+
+## Final local regression sweep — 2026-07-13
+
+The non-tax agent-wallet boundary was rerun with Bun across the Desk adapter,
+gateway authorization, wallet guard, schema, response-validation, approval, and
+ambiguous-write suites: **27 tests passed, 0 failed, 81 assertions**. The Expo
+Shiva operation bridge was rerun separately: **4 tests passed, 0 failed**. The
+services package-wide typecheck still cannot be treated as a feature failure
+because this checkout has pre-existing missing email-package modules and an
+unrelated notification payload typing error; changed-route tests and
+changed-file formatting checks pass. Gateman closes the local regression claim
+but keeps authenticated-device, provider-sandbox, Circle-executor, and
+production-capacity gates open.
