@@ -458,6 +458,15 @@ Metro no longer fails on the Node-only Circle dependency graph. Gateman marks
 the packaging subgate PASS while authenticated device, push, approval, and
 deep-link evidence remain OPEN.
 
+## Expo/Cleo bridge hardening — 2026-07-13
+
+Open PR #544 includes Desk commit `2ec8e1b52`, which keeps mobile workflow
+grants in the upstream header rather than the operation body, requires a
+workspace membership check for push-token unregistration, and types/routes
+`agent_workflow` notifications to the workflow inbox. The route regression
+suite passes 4/4 and Shiva typecheck passes. Gateman marks these review defects
+closed while authenticated device/push execution remains OPEN.
+
 ## Fresh hosted worker ceiling probe — 2026-07-13
 
 The Railway production worker was exercised with 32 disposable concurrent

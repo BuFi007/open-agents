@@ -493,6 +493,16 @@ Node-only Circle graph from the initial Metro bundle. This closes the mobile
 packaging subgate; authenticated device, push, approval, and deep-link journey
 evidence remain open.
 
+## Expo/Cleo bridge hardening — 2026-07-13
+
+Open PR #544 now includes Desk commit `2ec8e1b52`: the Shiva POST bridge keeps
+the short-lived workspace grant exclusively in `x-bufi-workspace-grant`, push
+unregistration requires the selected workspace and rechecks membership, and
+`agent_workflow` is part of the typed notification route contract. The route
+regression suite passes 4/4 and Shiva typecheck passes. This closes the
+review-discovered grant-leak and cross-team push-cleanup defects; authenticated
+device/push execution remains unverified.
+
 ## Fresh hosted worker ceiling probe — 2026-07-13
 
 Using the Railway production worker's configured Typesense endpoint/key only in
