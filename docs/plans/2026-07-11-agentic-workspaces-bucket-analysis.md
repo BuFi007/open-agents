@@ -449,3 +449,16 @@ claim: budget 8 passed 32/32 and mixed 64-way floods (59/64, 60/64), after
 which production returned to a conservative single-sender default. The
 BullMQ/worker bucket therefore remains below 100% until a repeatable, classified
 production ceiling and multi-tenant fairness result is proven.
+
+## Agent-wallet tool parity addendum — 2026-07-13
+
+The reopened BU-207 implementation was consolidated from Desk PR #548 into
+`codex/bu-542-gateman-remediation` (commits `0a0700bdd`, `72c68be1e`,
+`47bfaeb13`). The package now exposes the four Circle-compatible agent-wallet
+tools and registry metadata with actor binding, wallet hard walls, bounded
+atomic inputs, SSRF-safe x402 URLs, exact discovery-before-payment, deterministic
+command IDs, approval/ambiguous-write outcomes, and an explicit unavailable
+adapter default. Focused tests pass **19/19 (59 assertions)**, plus package
+TypeScript and Biome. This closes the code-parity gap but not the live Circle/
+Shiva adapter or approved wallet mutation gate, so no weighted score increase is
+claimed.
