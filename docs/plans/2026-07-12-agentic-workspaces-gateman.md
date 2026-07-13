@@ -556,3 +556,13 @@ for PR #544 also failed before the changed workflow path because the existing
 Next build cannot resolve multiple `@bu/email` exports. These are repository
 health blockers, not Expo/Shiva workflow regressions; the targeted suite is
 still 8/8. They do not change the authoritative 83.9% score.
+
+## Fresh local contract E2E — 2026-07-13
+
+Using the repository's Bun test runner (Vitest cannot resolve `bun:test`), the
+non-tax certification slice passed **14 tests / 74 expect calls** across the
+Agentic Workspaces E2E replay, horizontal ERP operating-pack certification,
+durable workflow kernel, and payload-free queue telemetry export. The harness
+contract suite separately passed **3 tests / 9 assertions**. These are fresh
+local contract/runtime proofs; they do not substitute for the remaining
+authenticated, provider, production-capacity, or device gates.
