@@ -577,6 +577,16 @@ observed run span is only **75,983,765 ms**, below the required seven-day
 coverage. This is repeatable evidence and a real gate, but the operating-week
 criterion remains open until a full seven-day window exists.
 
+## Railway 32-way saturation replay — 2026-07-13
+
+Using the production `agentic-knowledge-ai` environment through Railway (with
+Typesense variables mapped in-process and never printed), a disposable 32-way
+worker-plane replay produced **19/32 certified fixtures**. The remaining 13
+failed only with the bounded `initial four-stage worker plane did not converge
+before the deadline` error. A direct cleanup query found **zero** residual
+`worker-cert-*` runs or traces. This is strong current backpressure evidence,
+but not a passing saturation/fairness result; the capacity gate remains open.
+
 The fresh live harness rerun after tightening the MCP assertion produced report
 hash `sha256:5bd12e7316cf96843757970ccc3ed481191888591968a3af8df312115fbd650d`:
 the bufi-hyper endpoint now proves **17/17** canonical Circle tools, while the
