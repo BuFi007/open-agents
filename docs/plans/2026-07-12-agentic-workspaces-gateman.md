@@ -513,3 +513,15 @@ routes are present and fail closed. The production alias still points at
 errored deployments; it was not promoted while PR #553 remains open. This
 strengthens preview evidence but does not substitute for authenticated
 production/browser certification.
+
+## Desk PR consolidation and review remediation — 2026-07-13
+
+PR #553 was rebuilt from `origin/main`: the review diff is now **17 files**
+(wallet implementation, tests, and duplicate-config cleanup), rather than the
+stale branch's 2,595 files. The three Vercel project checks, Greptile,
+CodeRabbit, and Claude review pass. The Desk adapter uses an explicit token
+decimal allowlist (USDC/EURC six; native and wrapped EVM assets eighteen) and
+rejects unknown precision instead of scaling as USDC. The remaining Validate
+failure is a broad pre-existing monorepo typecheck failure after setup, with
+unrelated billing/email/sales/schema errors outside this slice. No tax files
+were changed.
