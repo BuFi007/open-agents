@@ -482,3 +482,14 @@ follow-up dependency-injection-only test refactor is covered by the Bun suite.
 This closes the authenticated Desk tool-injection criterion
 and strengthens the wallet-read path, but does not close live service discovery,
 approved Circle mutation/spend, or the overall 100% gates.
+
+## Fresh hosted worker ceiling probe — 2026-07-13
+
+Using the Railway production worker's configured Typesense endpoint/key only in
+child-process environment, 32 disposable `certify-hosted-worker-plane` runs
+were launched concurrently. **24/32 converged; 8/32 hit the initial
+four-stage convergence deadline.** The failed runs reported only the bounded
+deadline and the certifier's `finally` cleanup path remained active. This is
+real current backpressure evidence, not a pass and not CPU/memory saturation
+evidence. The production capacity/fairness gate remains open and the strict
+score remains **83.9%**.

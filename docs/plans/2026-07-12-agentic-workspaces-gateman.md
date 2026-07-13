@@ -448,3 +448,12 @@ suite.
 Gateman classification: **PASS for actor binding, response validation,
 exact-money conversion, and non-dispatching approval boundary; OPEN for real
 service discovery, approved Circle executor/spend, and the overall 100% goal.**
+
+## Fresh hosted worker ceiling probe — 2026-07-13
+
+The Railway production worker was exercised with 32 disposable concurrent
+four-stage certifiers using short-lived process environment injection for the
+configured Typesense provider. **24/32 completed and 8/32 timed out at initial
+convergence.** All eight failures had the certifier's bounded deadline error;
+they are classified as backpressure, not silently retried. Gateman keeps the
+production capacity/fairness gate open; no score increase is claimed.
