@@ -706,3 +706,20 @@ The focused safety suite is **20/20 pass, 0 fail** (56 expectations), and the
 `@bu/intelligence` typecheck passes. This closes the review defects locally;
 the hosted CI/Vercel checks for PR #573 still terminate before steps because
 the GitHub account payment/spending limit gate is unresolved.
+
+## Live local data-plane rerun — 2026-07-14
+
+The integration services were available locally and the guarded live suites
+were rerun with unique workspace IDs and cleanup:
+
+- Postgres connector artifact/outbox path: **1/1 pass**.
+- Postgres knowledge resolver, replay, and tenant path: **1/1 pass**.
+- BullMQ production runtime with mixed profiles, deadlines, retries, and DLQ:
+  **1/1 pass**.
+- Postgres outbox → BullMQ crash/replay path: **1/1 pass**.
+- Connected source-artifact → canonical write → enrichment → embedding →
+  projection → repair pipeline: **1/1 pass**.
+
+That is **5/5 live integration tests, 0 failures** on the current local
+services. It strengthens the local parity claim; it does not substitute for
+authorized hosted database/Redis/provider saturation or kill/restart evidence.
