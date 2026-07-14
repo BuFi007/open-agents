@@ -6,6 +6,7 @@ import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { sessions, workflowRuns } from "@/lib/db/schema";
+import { sanitizeTraceText } from "@open-agents/traces";
 
 const BUFI_BOT_USER_ID = "bufi-bridge-bot";
 
@@ -45,6 +46,8 @@ export async function GET(req: NextRequest) {
       repoOwner: sessions.repoOwner,
       repoName: sessions.repoName,
       createdAt: sessions.createdAt,
+      lifecycleState: sessions.lifecycleState,
+      lifecycleError: sessions.lifecycleError,
     })
     .from(sessions)
     .where(
@@ -89,6 +92,10 @@ export async function GET(req: NextRequest) {
         latestWorkflowRunId: run?.id ?? null,
         latestWorkflowStatus: run?.status ?? null,
         latestWorkflowFinishedAt: run?.finishedAt ?? null,
+        lifecycleState: row.lifecycleState,
+        lifecycleError: row.lifecycleError
+          ? sanitizeTraceText(row.lifecycleError)
+          : null,
       };
     }),
   );
