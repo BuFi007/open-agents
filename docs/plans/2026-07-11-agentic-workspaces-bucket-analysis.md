@@ -581,3 +581,31 @@ zero-step Desk and bufi-hyper hosted checks, 19 intentionally skipped
 credentialed integration tests, authenticated Expo physical-device coverage,
 Claude Code login/Computer Use TCC, authorized connector sandboxes, and live
 Circle mutation behind approval. These must be closed before claiming 100%.
+
+## Current-state addendum — 2026-07-14 rebase and hosted billing gate
+
+The Desk wallet slice was rebased again onto the current `development` tip
+(`0ea8ee918984f1a6d5cc4987a8237faa993a0fac`, including the audio pipeline line)
+and force-pushed as `f10ee9ed7`. The safe worktree preserved unrelated Expo
+edits. Focused Desk certification remains **27 pass, 0 fail** and
+`@bu/intelligence` typecheck passes.
+
+The hosted PR checks were retriggered against the new head. Both Desk Validate
+run `29327726435` and Claude review run `29327726480` terminated before any
+steps. GitHub's annotation is explicit: recent account payments failed or the
+spending limit must be increased. This is an account-capacity gate, not a
+wallet-code failure, and it prevents hosted merge evidence.
+
+Open Agents PR #7 continues to pass lint/typecheck on `ac175cd9`; its Vercel
+preview check remains pending, and `vercel inspect` cannot find the referenced
+deployment under the project context. The local Open Agents certification
+suite remains **112 pass, 19 explicit live-integration skips, 0 fail**.
+
+After restoring dependencies in the isolated bufi-hyper worktree, the
+Streamable HTTP, MCP initialize negotiation, and legacy SSE compatibility tests
+pass **3/3**. PR #340's hosted Perps/Vercel gates remain external failures.
+
+The strict score remains **83.9%**. No bucket points are added for these local
+passes because the missing evidence is still hosted deployment/account
+capacity, authorized provider/database/BullMQ saturation, authenticated
+Expo/Cleo device journeys, and approved live Circle mutation.
