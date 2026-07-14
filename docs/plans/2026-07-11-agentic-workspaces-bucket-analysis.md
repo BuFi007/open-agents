@@ -534,3 +534,21 @@ balance. Hosted Open Agents dispatch remains separately blocked by Vercel
 sandbox provisioning returning HTTP 402, and the overall 100% bucket claim is
 not made while authenticated Desk/Expo journeys, authorized connectors, live
 Circle mutation, Claude/TCC and the operating-week window remain open.
+
+## Hermes ↔ bufi-hyper transport certification — 2026-07-14
+
+Normal Hermes dogfood isolated a protocol mismatch in the production
+`bufi-hyper` gateway: the server returned `2024-11-05` and emitted the legacy
+SSE `endpoint` event during a Streamable HTTP session. Hermes logged
+`Unknown SSE event: endpoint` and could not complete a normal model/tool
+session, even though `hermes mcp test` could enumerate the tools.
+
+Defi-web-app PR #340 (`bb805b18`) now negotiates `2025-03-26` when advertised,
+sends a protocol-safe SSE comment for modern clients, preserves legacy
+`endpoint` discovery for `2024-11-05`, and covers all three paths with tests.
+Against the patched local gateway, normal Hermes with Gemini discovered 100
+tools and called `get__api_markets`, returning six live markets. Production
+currently still negotiates `2024-11-05`; its read-only tools/list exposes 117
+tools including all 17 Circle wallet tools, but normal Hermes remains blocked
+until PR #340 is merged and deployed. This is a transport deployment gate,
+not a missing Circle tool-surface claim.
