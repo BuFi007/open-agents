@@ -815,3 +815,13 @@ embedding projection and verified replay idempotency. This closes the local
 semantic-worker evidence gap. Hosted provider quotas, multi-tenant load,
 kill/restart across independent workers, and seven-day freshness are still
 separate production gates.
+
+## Fresh kill/recovery certification — 2026-07-14
+
+The explicit BullMQ SIGKILL harness passed all three recovery boundaries
+against the configured Redis/Postgres services: queued-before-claim,
+active-before-effect, and effect-before-ack. Every recovered job completed,
+committed-job loss stayed at zero, and the effect-before-ack replay preserved
+the same entity identity and version without a duplicate effect. This closes
+the local kill/restart boundary; multi-host saturation and noisy-neighbor
+capacity evidence remain separate requirements.
