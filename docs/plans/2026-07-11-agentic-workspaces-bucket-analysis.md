@@ -609,3 +609,27 @@ The strict score remains **83.9%**. No bucket points are added for these local
 passes because the missing evidence is still hosted deployment/account
 capacity, authorized provider/database/BullMQ saturation, authenticated
 Expo/Cleo device journeys, and approved live Circle mutation.
+
+## Disposable local data-plane certification — 2026-07-14
+
+To separate implementation defects from hosted-capacity gaps, an isolated
+Postgres/pgvector, Redis, and Typesense stack was started in disposable Docker
+containers. Against that stack:
+
+- Postgres knowledge integration: **8/8 pass**, including tenant RLS,
+  bounded lexical retrieval, enrichment receipts, context packets, leases,
+  and credential/size rejection.
+- BullMQ runtime integration: **1/1 pass**, including mixed-workload budgets,
+  deadlines, retries, and compact DLQ behavior.
+- Postgres outbox relay: **1/1 pass**, including crash-after-enqueue recovery
+  without duplicate delivery.
+- Connected data plane: **1/1 pass**, moving a source artifact through
+  canonical write, enrichment, embedding, alternate projection, telemetry,
+  and repair replay.
+- Typesense projection: **4/4 pass**, including a real tenant-filtered
+  upsert/retrieval against the disposable Typesense instance.
+
+This materially closes the local integration evidence gap (15 additional
+integration assertions, 0 failures), but it is intentionally not counted as
+production saturation or an authorized external-provider certification. The
+hosted account/Vercel gates and live AI Gateway/provider evidence remain open.
