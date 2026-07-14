@@ -530,10 +530,15 @@ ceiling or a seven-day operating-week report.
 
 The live harness certifier also now includes bounded read-only Circle service
 search and inspection (Open Agents PR #7), in addition to wallet status/list/
-balance. Hosted Open Agents dispatch remains separately blocked by Vercel
-sandbox provisioning returning HTTP 402, and the overall 100% bucket claim is
-not made while authenticated Desk/Expo journeys, authorized connectors, live
-Circle mutation, Claude/TCC and the operating-week window remain open.
+balance. A fresh production BUFI ingress dispatch was accepted with HTTP 200
+and created session `0r7UQZ78uoy8cZF89qKqb`, but terminal polling then reported
+failure. Vercel logs identify `resolveChatSandboxRuntime` and
+`runProvisioning` exhausting four attempts before returning `USER_ERROR`; this
+is a hosted sandbox-provisioning gate rather than an ingress or Circle-tool
+surface failure. Preview deployments remain queued. The overall 100% bucket
+claim is not made while authenticated Desk/Expo journeys, authorized
+connectors, live Circle mutation, Claude/TCC and the operating-week window
+remain open.
 
 ## Hermes ↔ bufi-hyper transport certification — 2026-07-14
 
