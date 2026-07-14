@@ -557,3 +557,27 @@ currently still negotiates `2024-11-05`; its read-only tools/list exposes 117
 tools including all 17 Circle wallet tools, but normal Hermes remains blocked
 until PR #340 is merged and deployed. This is a transport deployment gate,
 not a missing Circle tool-surface claim.
+
+## Gateman verification — agent-wallet and operating-pack workflow — 2026-07-14
+
+The post-implementation audit was run against the current Open Agents branch,
+Desk PR #573, and bufi-hyper PR #340. The audit did not treat local contracts,
+green package tests, or dispatch acceptance as proof of hosted completion.
+
+| Category | Score | Finding |
+| --- | ---: | --- |
+| Error handling | 8/10 | Wallet writes return an ambiguous reconciliation result and are not retried; hosted sandbox failures are persisted as failed workflow state. |
+| Logging | 8/10 | Trace data is redacted and bounded; raw operating-pack failure objects were removed from logs in commit `0d098cf5`. |
+| Type safety | 9/10 | Circle tool registry, actor-bound adapters, strict schemas, and response parsers are covered by typechecks and boundary tests. |
+| Testability | 9/10 | 27/27 Desk wallet assertions and the Open Agents certification/knowledge suite pass; live credentialed suites remain explicit skips. |
+| Performance | 8/10 | Railway worker-plane passes one-run and 32-way concurrency probes; provider saturation and larger recall/latency tests remain open. |
+| Security | 8/10 | Workspace grants, tenant binding, approval gates, SSRF/prototype-pollution checks, and secret redaction pass; no live spend is enabled by this audit. |
+| AI verification | 8/10 | Every cited commit, route, tool, and test was re-read or executed; hosted dispatch was followed to terminal failure instead of counted as success. |
+
+**Verdict: `YES_WITH_FOLLOWUPS` for local review, `NO` for production sign-off.**
+The remaining blockers are evidence gaps, not assumptions: hosted sandbox
+provisioning (`resolveChatSandboxRuntime`/`runProvisioning` exhaust retries),
+zero-step Desk and bufi-hyper hosted checks, 19 intentionally skipped
+credentialed integration tests, authenticated Expo physical-device coverage,
+Claude Code login/Computer Use TCC, authorized connector sandboxes, and live
+Circle mutation behind approval. These must be closed before claiming 100%.
