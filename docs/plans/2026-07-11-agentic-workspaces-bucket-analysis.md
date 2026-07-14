@@ -723,3 +723,16 @@ were rerun with unique workspace IDs and cleanup:
 That is **5/5 live integration tests, 0 failures** on the current local
 services. It strengthens the local parity claim; it does not substitute for
 authorized hosted database/Redis/provider saturation or kill/restart evidence.
+
+## Hermes/Circle perps boundary — 2026-07-14
+
+The public bufi-hyper MCP was queried without performing a write. Its trade
+prepare contract accepts the documented Hermes Circle agent address on Arc
+(chain `5042002`) and returns a `TelaranaFxOrderSettlement` EIP-712
+`SignedOrder` with digest, nonce, deadline, and typed-data domain. This proves
+the prepare/schema boundary is Circle-address compatible. The subsequent SCA
+signature and `post__api_trade_execute` remain unverified because the local
+Arc Circle CLI session is expired; no signature, spend, or position mutation
+was attempted. BU-201's ERC-1271 executor fix is already marked Done, so the
+remaining evidence is an authenticated Arc re-dogfood, not a new fallback to
+the hot-lane EOA.
