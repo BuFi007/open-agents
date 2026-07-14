@@ -665,3 +665,24 @@ scope denial, bufi-hyper forwarding, wallet read precision, approval-required
 writes, and ambiguous reconciliation. This closes the local Desk/Cleo evidence
 slice only; physical-device push/deep-link behavior and hosted authenticated
 execution remain unproven.
+
+## BU-216 consolidation — 2026-07-14
+
+The previously separate Desk PR #544 was evaluated against the wallet branch
+and consolidated into Desk PR #573 at `c5a728104`. The workflow inbox and its
+Shiva bridge now sit on the same branch as the guarded Circle agent-wallet
+integration. The consolidation preserved deployment configuration and the
+newer mobile-safe Circle/worklets fixes; duplicate draft PR #544 was closed as
+superseded.
+
+Merged-branch evidence:
+
+- Expo workspace service: **1/1**.
+- Shiva workspace-grant route: **4/4**.
+- Push controller: **3/3** under Vitest.
+- Wallet/intelligence suite: **32/32**.
+- Expo iOS export: **7,956 modules**, pass.
+- Expo Android export: **7,950 modules**, pass.
+
+This closes the BU-216 local implementation slice, but not physical-device
+approval/push/deep-link execution or hosted authenticated CI.
