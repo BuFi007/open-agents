@@ -762,3 +762,20 @@ The new hosted Validate run fails before executing a step with the same GitHub
 account payment/spending-limit annotation; Vercel contexts fail immediately
 with the build-rate-limit gate. The rebase removes branch drift but does not
 manufacture hosted evidence.
+
+## Current hosted status correction — 2026-07-14
+
+The fork's Open Agents PR #7 (`BuFi007/open-agents`, head
+`codex/circle-service-certification`) is **OPEN** with its hosted
+`lint-and-typecheck` run **passing** and Vercel Preview Comments passing. The
+remaining Vercel preview deployment is pending and is subject to the account's
+build-rate limit; PR #7 is not an application-code failure.
+
+The broad Desk `@bu/app` actions typecheck is a separate baseline/resource
+gate: the default local shard timed out, a 4 GB heap run OOM'd, and an 8 GB
+heap run surfaced pre-existing errors across email, billing, invoice/bill,
+bank-account, and audio utility types. Wallet-specific suites, the
+`@bu/intelligence` typecheck, and Expo iOS/Android exports remain green. This
+must not be reported as a wallet regression, but it does prevent claiming a
+clean whole-app typecheck until the existing baseline debt or CI resource
+limit is addressed.
