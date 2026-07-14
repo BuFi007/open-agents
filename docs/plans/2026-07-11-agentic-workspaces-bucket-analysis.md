@@ -803,3 +803,15 @@ kill/restart across independent machines, and seven-day freshness remain open.
 
 Open Agents PR #7 now has hosted `lint-and-typecheck` **passing** at
 `5bf55aa4`; its only failing context is the Vercel deployment rate limit.
+
+## Fresh live semantic certification — 2026-07-14
+
+The opt-in semantic tests were also run against the configured Postgres,
+Redis, and AI Gateway services. Both passed (**2/2, 0 failures**): real
+embedding and hybrid retrieval preserved tenant isolation, rejected stale
+vectors, used the cosine index, and met the combined-recall threshold; the
+durable semantic worker relayed a real entity event through BullMQ into an
+embedding projection and verified replay idempotency. This closes the local
+semantic-worker evidence gap. Hosted provider quotas, multi-tenant load,
+kill/restart across independent workers, and seven-day freshness are still
+separate production gates.
