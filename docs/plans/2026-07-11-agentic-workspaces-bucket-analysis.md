@@ -792,8 +792,9 @@ RUN_LIVE_DATA_PLANE_TESTS=1
 RUN_LIVE_KNOWLEDGE_TESTS=1
 ```
 
-The result was **11 pass, 0 fail, 1 intentional skip** across five files:
-tenant-safe connector persistence, knowledge RLS and bounded lexical recall,
+The result was **12 pass, 0 fail** across six files (the connector test was
+then rerun with its explicit opt-in flag): tenant-safe connector persistence,
+knowledge RLS and bounded lexical recall,
 version-bound enrichment and context packets, crash-safe outbox replay, the
 real mixed BullMQ runtime, and the connected source-artifact → canonical
 write → enrichment → embedding → projection → repair pipeline. This is fresh
