@@ -766,10 +766,10 @@ manufacture hosted evidence.
 ## Current hosted status correction — 2026-07-14
 
 The fork's Open Agents PR #7 (`BuFi007/open-agents`, head
-`codex/circle-service-certification`) is **OPEN** with its hosted
-`lint-and-typecheck` run **passing** and Vercel Preview Comments passing. The
-remaining Vercel preview deployment is pending and is subject to the account's
-build-rate limit; PR #7 is not an application-code failure.
+`codex/circle-service-certification`) is **OPEN**. Its latest completed
+`lint-and-typecheck` run passed; the docs-only head at `d0bf54f7` has a new CI
+run still in progress, while Vercel is rate-limited. PR #7 has no reported
+application-code failure.
 
 The broad Desk `@bu/app` actions typecheck is a separate baseline/resource
 gate: the default local shard timed out, a 4 GB heap run OOM'd, and an 8 GB
@@ -801,8 +801,9 @@ write → enrichment → embedding → projection → repair pipeline. This is f
 local production-shape evidence; hosted saturation, provider sandboxes,
 kill/restart across independent machines, and seven-day freshness remain open.
 
-Open Agents PR #7 now has hosted `lint-and-typecheck` **passing** at
-`5bf55aa4`; its only failing context is the Vercel deployment rate limit.
+Open Agents PR #7's latest completed `lint-and-typecheck` run passed at the
+previous docs head; the current `d0bf54f7` rerun is still in progress and the
+Vercel deployment remains rate-limited.
 
 ## Fresh live semantic certification — 2026-07-14
 
