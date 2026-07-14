@@ -747,3 +747,18 @@ families, and zero unexpected spend**, but spans only about 21 hours. This is
 useful production evidence and an honest zero-spend result; it is not a
 seven-day operating-week certification and must remain open until the window
 actually covers seven days.
+
+## Development-line rebase — 2026-07-14
+
+Desk PR #573 was rebased onto the current `development` tip `6ddf8ef72`,
+including the latest audio/intelligence and invoice commits, then force-pushed
+as `50d993cc6`. The consolidated branch still passes **25/25** focused Bun
+tests (wallet, Expo workspace service, Shiva grant route, and intelligence),
+**14/14** Vitest command-center/operations/push tests, and the
+`@bu/intelligence` typecheck. Expo exports also pass from the app workspace:
+iOS **7,956 modules** and Android **7,950 modules**.
+
+The new hosted Validate run fails before executing a step with the same GitHub
+account payment/spending-limit annotation; Vercel contexts fail immediately
+with the build-rate-limit gate. The rebase removes branch drift but does not
+manufacture hosted evidence.
