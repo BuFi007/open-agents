@@ -645,3 +645,23 @@ handshake exited non-zero, the hosted Open Agents dispatch still exhausted
 sandbox provisioning retries, and `hermes computer-use doctor` exited non-zero.
 No wallet spend, signing, funding, or mutation was attempted. These are
 explicit remaining harness/hosted gates rather than unobserved success.
+
+## Desk/Cleo local E2E recheck — 2026-07-14
+
+Against Desk commit `c2693e348` (the wallet branch rebased onto the current
+development/audio line), the local command-center contract was re-executed:
+
+- Desk command-center, evidence-context, and team-cockpit UI suites: **8/8**.
+- Authenticated operations route suite: **7/7**.
+- Internal broker authorization suite: **7/7**.
+- Agent-wallet and intelligence suites: **34/34**.
+- Expo Metro exports: iOS **9,619 modules** and Android **9,613 modules**, both
+  successful with 61.4 MB bundles.
+
+The UI tests cover launch, approval, rejection, cancellation, pause/resume,
+manifest composition, citations, and proof that browser state never receives a
+workspace grant. The route and broker tests cover membership, replay rejection,
+scope denial, bufi-hyper forwarding, wallet read precision, approval-required
+writes, and ambiguous reconciliation. This closes the local Desk/Cleo evidence
+slice only; physical-device push/deep-link behavior and hosted authenticated
+execution remain unproven.
