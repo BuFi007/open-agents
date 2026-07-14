@@ -779,3 +779,26 @@ bank-account, and audio utility types. Wallet-specific suites, the
 must not be reported as a wallet regression, but it does prevent claiming a
 clean whole-app typecheck until the existing baseline debt or CI resource
 limit is addressed.
+
+## Fresh live data-plane certification — 2026-07-14
+
+With the disposable local Postgres and Redis services available, the guarded
+integration set was rerun with:
+
+```text
+RUN_CONNECTED_PIPELINE_INTEGRATION=1
+RUN_LIVE_QUEUE_TESTS=1
+RUN_LIVE_DATA_PLANE_TESTS=1
+RUN_LIVE_KNOWLEDGE_TESTS=1
+```
+
+The result was **11 pass, 0 fail, 1 intentional skip** across five files:
+tenant-safe connector persistence, knowledge RLS and bounded lexical recall,
+version-bound enrichment and context packets, crash-safe outbox replay, the
+real mixed BullMQ runtime, and the connected source-artifact → canonical
+write → enrichment → embedding → projection → repair pipeline. This is fresh
+local production-shape evidence; hosted saturation, provider sandboxes,
+kill/restart across independent machines, and seven-day freshness remain open.
+
+Open Agents PR #7 now has hosted `lint-and-typecheck` **passing** at
+`5bf55aa4`; its only failing context is the Vercel deployment rate limit.
