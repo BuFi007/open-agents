@@ -736,3 +736,14 @@ Arc Circle CLI session is expired; no signature, spend, or position mutation
 was attempted. BU-201's ERC-1271 executor fix is already marked Done, so the
 remaining evidence is an authenticated Arc re-dogfood, not a new fallback to
 the hot-lane EOA.
+
+## Operating-week report attempt — 2026-07-14
+
+`bun --env-file=.env.local scripts/certify-operating-week.ts` found real
+workspace activity and produced a hashed report, but correctly failed the
+seven-day coverage gate. The observed window contains **18 workflow runs, 7
+completed runs, 108 tool calls, 8 approval events, 209 traces, 5 workflow
+families, and zero unexpected spend**, but spans only about 21 hours. This is
+useful production evidence and an honest zero-spend result; it is not a
+seven-day operating-week certification and must remain open until the window
+actually covers seven days.
