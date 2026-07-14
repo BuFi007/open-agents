@@ -633,3 +633,15 @@ This materially closes the local integration evidence gap (15 additional
 integration assertions, 0 failures), but it is intentionally not counted as
 production saturation or an authorized external-provider certification. The
 hosted account/Vercel gates and live AI Gateway/provider evidence remain open.
+
+## Fresh local harness matrix — 2026-07-14
+
+`bun --env-file=.env.local scripts/certify-local-harnesses.ts` was rerun. The
+individual evidence slices passed for the Open Agents contract suite,
+production bufi-hyper Circle-tool smoke (**17/17**), Circle wallet read-only
+status/list/balance, Circle service discovery/inspection, Codex handshake, and
+Hermes handshake. The aggregate report correctly remained failed: Claude Code
+handshake exited non-zero, the hosted Open Agents dispatch still exhausted
+sandbox provisioning retries, and `hermes computer-use doctor` exited non-zero.
+No wallet spend, signing, funding, or mutation was attempted. These are
+explicit remaining harness/hosted gates rather than unobserved success.
