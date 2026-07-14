@@ -686,3 +686,23 @@ Merged-branch evidence:
 
 This closes the BU-216 local implementation slice, but not physical-device
 approval/push/deep-link execution or hosted authenticated CI.
+
+## Agent-wallet safety review remediation — 2026-07-14
+
+Greptile review findings on Desk PR #573 were reproduced and fixed in commit
+`eb0215b67`:
+
+- Chainless balance reads now fail closed when multiple agent wallets match;
+  the adapter no longer selects an arbitrary chain.
+- x402 payment discovery caches the complete offer and the dispatch gate
+  requires exact URL, amount, currency, chain, and (when advertised) method
+  and payload equality. Tampered terms are rejected before the adapter is
+  called.
+- Ambiguous transfer/payment outcomes now return the outer failure shape
+  (`ok: false`) with a reconciliation payload, so callers cannot mistake an
+  unknown write state for success.
+
+The focused safety suite is **20/20 pass, 0 fail** (56 expectations), and the
+`@bu/intelligence` typecheck passes. This closes the review defects locally;
+the hosted CI/Vercel checks for PR #573 still terminate before steps because
+the GitHub account payment/spending limit gate is unresolved.
