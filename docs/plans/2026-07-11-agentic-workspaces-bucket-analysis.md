@@ -817,6 +817,12 @@ semantic-worker evidence gap. Hosted provider quotas, multi-tenant load,
 kill/restart across independent workers, and seven-day freshness are still
 separate production gates.
 
+## Open Agents CI completion — 2026-07-14
+
+The latest Open Agents PR #7 head `65679bc5` completed hosted CI successfully
+(lint/format, typecheck, tests, and DB check all passed). Its remaining Vercel
+context is an account build-rate-limit failure, not a repository check failure.
+
 ## Fresh kill/recovery certification — 2026-07-14
 
 The explicit BullMQ SIGKILL harness passed all three recovery boundaries
