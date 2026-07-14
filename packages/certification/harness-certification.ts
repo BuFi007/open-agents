@@ -20,6 +20,8 @@ export type HarnessCertificationChecks = {
   degradedStateHonest: boolean;
   readOnlyHyperSmoke: boolean;
   circleWalletReadOnly: boolean;
+  /** Optional until older persisted reports are replayed with the new check. */
+  circleServiceDiscovery?: boolean;
   deniedSpendWithoutApproval: boolean;
   computerUseDoctor?: boolean;
 };

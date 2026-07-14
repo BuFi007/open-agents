@@ -515,3 +515,22 @@ deadline and the certifier's `finally` cleanup path remained active. This is
 real current backpressure evidence, not a pass and not CPU/memory saturation
 evidence. The production capacity/fairness gate remains open and the strict
 score remains **83.9%**.
+
+## Fresh hosted worker-plane probe — 2026-07-14
+
+The disposable certifier was rerun through the linked Railway production
+environment with its deployed Redis, Typesense and AI Gateway configuration.
+One controlled run passed, then a **32-way concurrent probe completed 32/32**:
+each run published canonical-write, deterministic enrichment, a 1,536-dimension
+embedding, a version-bound Typesense projection, four payload-free telemetry
+completions, and a stable-hash repair replay. Every fixture was removed by the
+certifier cleanup path. This closes the previously observed bounded convergence
+failure for this probe size; it is still not an absolute provider/DB saturation
+ceiling or a seven-day operating-week report.
+
+The live harness certifier also now includes bounded read-only Circle service
+search and inspection (Open Agents PR #7), in addition to wallet status/list/
+balance. Hosted Open Agents dispatch remains separately blocked by Vercel
+sandbox provisioning returning HTTP 402, and the overall 100% bucket claim is
+not made while authenticated Desk/Expo journeys, authorized connectors, live
+Circle mutation, Claude/TCC and the operating-week window remain open.
