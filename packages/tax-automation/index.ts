@@ -30,9 +30,34 @@ export {
   settlementReferenceHashForEvent,
   taxSettlementCommandFor,
 } from "./invoice-settlement";
-export * from "./authority-corridor";
+export {
+  TaxAuthorityApprovalClient,
+  createServerHeldFacturaEApprovalRef,
+  deriveServerHeldFacturaEApprovalRef,
+} from "./authority-corridor";
+export type {
+  RegisterFacturaEAuthorityApprovalInput,
+  SafeFacturaEAuthorityApprovalReceipt,
+  TaxAuthorityApprovalClientOptions,
+} from "./authority-corridor";
 export { TaxAutomationRequestError } from "./request-error";
-export * from "./setup-contract";
+export {
+  TaxSetupCatalogueSchema,
+  TaxSetupConfigurationReceiptSchema,
+  TaxSetupDataScopeSchema,
+  TaxSetupJurisdictionSchema,
+  TaxSetupOperationRequestSchema,
+  TaxSetupOperationResultSchema,
+  TaxSetupProfileSchema,
+  TaxSetupProjectionKeySchema,
+  TaxSetupWorkspaceIdSchema,
+} from "./setup-contract";
+export type {
+  TaxSetupConfigurationReceipt,
+  TaxSetupOperationRequest,
+  TaxSetupOperationResult,
+  TaxSetupProfile,
+} from "./setup-contract";
 
 const decimal = z.string().regex(/^\d+(?:\.\d+)?$/);
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
@@ -472,21 +497,26 @@ const taxProfileEnvelopeSchema = z
   .object({ data: TaxSetupProfileSchema })
   .strict();
 
-function taxAgentPrincipalHeaders(input: Readonly<{
-  secret: string;
-  workspaceId: string;
-  actorId: string;
-  toolId: string;
-  path: string;
-  rawBody: string;
-  idempotencyKey: string;
-  expiresAt: string;
-}>): Record<string, string> {
+function taxAgentPrincipalHeaders(
+  input: Readonly<{
+    secret: string;
+    workspaceId: string;
+    actorId: string;
+    toolId: string;
+    path: string;
+    rawBody: string;
+    idempotencyKey: string;
+    expiresAt: string;
+  }>,
+): Record<string, string> {
   const principal = {
     version: "tax-agent-principal-v1" as const,
     workspaceId: z.string().uuid().parse(input.workspaceId),
     actorId: z.string().min(1).max(300).parse(input.actorId),
-    toolId: z.string().regex(/^tax_[a-z0-9_]{1,120}$/).parse(input.toolId),
+    toolId: z
+      .string()
+      .regex(/^tax_[a-z0-9_]{1,120}$/)
+      .parse(input.toolId),
     method: "POST" as const,
     path: z
       .string()
@@ -639,7 +669,9 @@ export class TaxAutomationClient {
       options.agentPrincipalSecret.length < 32 ||
       options.agentPrincipalSecret === options.agentApiKey
     )
-      throw new Error("Tax agent principal secret is not configured or isolated");
+      throw new Error(
+        "Tax agent principal secret is not configured or isolated",
+      );
     this.#agentApiKey = options.agentApiKey;
     this.#agentPrincipalSecret = options.agentPrincipalSecret;
     this.#fetch = options.fetchImpl ?? fetch;
@@ -1376,9 +1408,7 @@ async function strictBoundedJson<T>(
   maximumBytes = 512 * 1024,
 ): Promise<T> {
   try {
-    return schema.parse(
-      await readBoundedJsonResponse(response, maximumBytes),
-    );
+    return schema.parse(await readBoundedJsonResponse(response, maximumBytes));
   } catch (error) {
     if (error instanceof TaxAutomationRequestError) throw error;
     throw new TaxAutomationRequestError("TAX_SETUP_UPSTREAM_INVALID", 502);

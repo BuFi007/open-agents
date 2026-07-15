@@ -469,9 +469,9 @@ describe("Tax Automation Engine agent bridge", () => {
         .update(JSON.stringify(requests[0]?.body), "utf8")
         .digest("hex"),
     );
-    expect(
-      requests[0]?.headers.get("x-tax-agent-principal-signature"),
-    ).toMatch(/^[a-f0-9]{64}$/);
+    expect(requests[0]?.headers.get("x-tax-agent-principal-signature")).toMatch(
+      /^[a-f0-9]{64}$/,
+    );
     expect(result).toEqual({ run: settledRun, replayed: true });
     expect(result.run.revision).toBe(12);
   });
@@ -583,7 +583,7 @@ describe("Tax Automation Engine agent bridge", () => {
       const client = new TaxAutomationClient({
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
-      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         fetchImpl: async () => response(result, problem.status),
       });
 
@@ -745,7 +745,7 @@ describe("Tax Automation Engine agent bridge", () => {
       const client = new TaxAutomationClient({
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
-      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         fetchImpl: async () => response(invalid.body, invalid.status),
       });
       await expect(
@@ -768,7 +768,7 @@ describe("Tax Automation Engine agent bridge", () => {
       const client = new TaxAutomationClient({
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
-      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         fetchImpl: async () =>
           response({ data: { run: mismatchedRun, replayed: false } }),
       });
@@ -961,7 +961,7 @@ describe("Tax Automation Engine agent bridge", () => {
         new TaxAutomationClient({
           baseUrl: "http://tax.example.com",
           agentApiKey: "agent-key-at-least-sixteen",
-      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+          agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         }),
     ).toThrow("HTTPS");
     expect(JSON.stringify(input).toLowerCase()).not.toContain("privatekey");
