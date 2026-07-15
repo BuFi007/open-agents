@@ -16,6 +16,7 @@ const grantPayloadSchema = z
           "agent-wallet.read",
           "agent-wallet.spend",
           "tax.invoice.prepare",
+          "tax.invoice.settlement",
         ]),
       )
       .min(1)

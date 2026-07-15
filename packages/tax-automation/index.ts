@@ -2,6 +2,20 @@ import { createHash } from "node:crypto";
 import { Decimal } from "decimal.js";
 import { z } from "zod";
 
+import {
+  type InvoiceSettlementEventV1,
+  InvoiceSettlementEventV1Schema,
+  taxSettlementCommandFor,
+} from "./invoice-settlement";
+
+export {
+  type InvoiceSettlementEventV1,
+  InvoiceSettlementEventV1Schema,
+  type TaxSettlementCommand,
+  settlementReferenceHashForEvent,
+  taxSettlementCommandFor,
+} from "./invoice-settlement";
+
 const decimal = z.string().regex(/^\d+(?:\.\d+)?$/);
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 const isoDate = z.iso.date();
@@ -15,7 +29,8 @@ export const TaxInvoiceDispatchSchema = z
     issuancePath: z.enum(["reclaim_copilot", "wsfex_delegated"]),
     invoice: z
       .object({
-        invoiceId: z.string().min(1).max(191),
+        ledgerInvoiceId: z.uuid(),
+        artifactId: z.string().min(1).max(191),
         economicEventId: z.string().min(1).max(191),
         artifactHash: sha256,
         sourceEventHash: sha256,
@@ -64,6 +79,7 @@ export const AiInvoiceArtifactDispatchSchema = z
     actorId: z.string().min(2).max(191),
     idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,191}$/),
     issuancePath: z.enum(["reclaim_copilot", "wsfex_delegated"]),
+    ledgerInvoiceId: z.uuid(),
     artifact: z
       .object({
         documentId: z.string().min(1).max(191),
@@ -147,6 +163,7 @@ export const AiInvoiceDocumentDispatchSchema = z
     actorId: z.string().min(2).max(191),
     idempotencyKey: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,191}$/),
     issuancePath: z.enum(["reclaim_copilot", "wsfex_delegated"]),
+    ledgerInvoiceId: z.uuid(),
     document: z
       .object({
         id: z.string().min(1).max(191),
@@ -183,6 +200,7 @@ export function dispatchFromAiInvoiceDocument(
     actorId: parsed.actorId,
     idempotencyKey: parsed.idempotencyKey,
     issuancePath: parsed.issuancePath,
+    ledgerInvoiceId: parsed.ledgerInvoiceId,
     artifact: {
       documentId: parsed.document.id,
       invoiceNumber: invoice.invoiceNumber,
@@ -214,6 +232,7 @@ export function dispatchFromAiInvoiceArtifact(
   const sourceEventHash = hash(
     stableJson({
       workspaceId: parsed.workspaceId,
+      ledgerInvoiceId: parsed.ledgerInvoiceId,
       documentId: parsed.artifact.documentId,
       artifactHash,
       consentVersion: parsed.exportContext.consentVersion,
@@ -229,8 +248,9 @@ export function dispatchFromAiInvoiceArtifact(
     idempotencyKey: parsed.idempotencyKey,
     issuancePath: parsed.issuancePath,
     invoice: {
-      invoiceId: parsed.artifact.documentId,
-      economicEventId: `invoice:${parsed.artifact.documentId}`,
+      ledgerInvoiceId: parsed.ledgerInvoiceId,
+      artifactId: parsed.artifact.documentId,
+      economicEventId: `invoice:${parsed.ledgerInvoiceId}`,
       artifactHash,
       sourceEventHash,
       consentVersion: parsed.exportContext.consentVersion,
@@ -319,6 +339,11 @@ const TaxRunSchema = z
 
 export type TaxAutomationRun = z.infer<typeof TaxRunSchema>;
 
+export type TaxSettlementRecordResult = Readonly<{
+  run: TaxAutomationRun;
+  replayed: boolean;
+}>;
+
 const RunEnvelopeSchema = z
   .object({
     data: TaxRunSchema,
@@ -391,13 +416,13 @@ export class TaxAutomationClient {
       body: {
         records: [
           {
-            evidenceId: `bufi-invoice:${invoice.invoiceId}`,
+            evidenceId: `bufi-invoice:${invoice.ledgerInvoiceId}`,
             workspaceId: parsed.workspaceId,
             revision: "1",
             sourceId: "bufi:invoice-ai",
             sourceKind: "bufi_invoice",
             canonicalProviderId: "bufi",
-            externalReferenceHash: hash(`invoice:${invoice.invoiceId}`),
+            externalReferenceHash: hash(`artifact:${invoice.artifactId}`),
             sourceEventHash: invoice.sourceEventHash,
             artifactHash: invoice.artifactHash,
             jurisdiction: "AR",
@@ -419,7 +444,8 @@ export class TaxAutomationClient {
             idempotencyKey: hash(
               [
                 parsed.workspaceId,
-                invoice.invoiceId,
+                invoice.ledgerInvoiceId,
+                invoice.artifactId,
                 invoice.artifactHash,
                 invoice.consentVersion,
               ].join(":"),
@@ -477,7 +503,7 @@ export class TaxAutomationClient {
       {
         runId,
         economicEventId: invoice.economicEventId,
-        intentId: `bufi-ai:${invoice.invoiceId}`,
+        intentId: `bufi-ai:${invoice.ledgerInvoiceId}`,
         foreignCustomerSafeLabel: invoice.foreignCustomerSafeLabel,
         destinationCountry: invoice.destinationCountry,
         destinationCountryArcaCode: invoice.destinationCountryArcaCode,
@@ -505,6 +531,35 @@ export class TaxAutomationClient {
       { runId },
     );
     return mutationRun(result);
+  }
+
+  async recordInvoiceSettlement(
+    runId: string,
+    event: InvoiceSettlementEventV1,
+    actorId = "agent:tax-settlement",
+  ): Promise<TaxSettlementRecordResult> {
+    const parsedEvent = InvoiceSettlementEventV1Schema.parse(event);
+    const result = await this.#invoke(
+      "tax_ar_factura_e_record_settlement",
+      actorId,
+      `invoice-settlement:${parsedEvent.eventId}`,
+      {
+        runId,
+        settlement: taxSettlementCommandFor(parsedEvent),
+      },
+    );
+    const parsed = z
+      .object({ run: TaxRunSchema, replayed: z.boolean() })
+      .passthrough()
+      .parse(mutationData(result));
+    if (
+      parsed.run.runId !== runId ||
+      parsed.run.workspaceId !== parsedEvent.teamId
+    )
+      throw new Error(
+        "Tax Automation Engine request failed: TAX_AUTOMATION_RESPONSE_IDENTITY_MISMATCH",
+      );
+    return { run: parsed.run, replayed: parsed.replayed };
   }
 
   async getRun(

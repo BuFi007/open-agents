@@ -1,5 +1,5 @@
 import { redactTraceData, sanitizeTraceText } from "@open-agents/traces";
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   type NewOperatingPackRun,
@@ -59,6 +59,27 @@ export async function getOperatingPackRunByIdempotency(
       eq(operatingPackRuns.idempotencyKey, idempotencyKey),
     ),
   });
+}
+
+export async function claimOperatingPackWorkflowRestart(runId: string) {
+  const [run] = await db
+    .update(operatingPackRuns)
+    .set({
+      status: "pending",
+      errorCode: null,
+      finishedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(operatingPackRuns.id, runId),
+        eq(operatingPackRuns.status, "failed"),
+        eq(operatingPackRuns.errorCode, "WORKFLOW_START_FAILED"),
+        isNull(operatingPackRuns.workflowRunId),
+      ),
+    )
+    .returning();
+  return run;
 }
 
 export async function getOwnedOperatingPackRun(runId: string, userId: string) {
@@ -187,6 +208,7 @@ export async function updateOperatingPackRun(
     result?: Readonly<Record<string, unknown>> | null;
     errorCode?: string | null;
     finished?: boolean;
+    reopen?: boolean;
   },
 ): Promise<void> {
   await db
@@ -197,7 +219,11 @@ export async function updateOperatingPackRun(
       result: input.result,
       errorCode: input.errorCode,
       updatedAt: new Date(),
-      ...(input.finished ? { finishedAt: new Date() } : {}),
+      ...(input.reopen
+        ? { finishedAt: null }
+        : input.finished
+          ? { finishedAt: new Date() }
+          : {}),
     })
     .where(eq(operatingPackRuns.id, runId));
 }

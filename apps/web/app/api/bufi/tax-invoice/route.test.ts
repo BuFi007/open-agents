@@ -4,10 +4,12 @@ import type { NextRequest } from "next/server";
 let grantValid = true;
 let grantSubject = "22222222-2222-4222-8222-222222222222";
 let grantScopes = ["tax.invoice.prepare"];
-let existingRun = false;
 let started = 0;
+let startFailuresRemaining = 0;
 let createdUserId: string | undefined;
 let runUserId: string | undefined;
+let bindingInput: Record<string, unknown> | undefined;
+let storedRun: Record<string, unknown> | undefined;
 
 mock.module("@/lib/operating-packs/desk-grant", () => ({
   verifyDeskWorkspaceGrant: () =>
@@ -19,21 +21,50 @@ mock.module("@/lib/operating-packs/desk-bridge-user", () => ({
 }));
 
 mock.module("@/lib/db/operating-pack-runs", () => ({
-  getOperatingPackRunByIdempotency: async () =>
-    existingRun
-      ? {
-          id: "tax_existing",
-          workflowRunId: "wfr_existing",
-          status: "running",
-          requestHash: requestHash,
-          result: null,
-        }
-      : null,
+  getOperatingPackRunByIdempotency: async () => storedRun ?? null,
   createOperatingPackRun: async (input: Record<string, unknown>) => {
     runUserId = String(input.userId);
-    return { created: true, run: input };
+    storedRun = {
+      ...input,
+      workflowRunId: null,
+      errorCode: null,
+      result: null,
+    };
+    return { created: true, run: storedRun };
   },
-  updateOperatingPackRun: async () => undefined,
+  claimOperatingPackWorkflowRestart: async () => {
+    if (
+      storedRun?.status !== "failed" ||
+      storedRun.errorCode !== "WORKFLOW_START_FAILED" ||
+      storedRun.workflowRunId !== null
+    )
+      return undefined;
+    storedRun = {
+      ...storedRun,
+      status: "pending",
+      errorCode: null,
+    };
+    return storedRun;
+  },
+  updateOperatingPackRun: async (
+    _runId: string,
+    input: Record<string, unknown>,
+  ) => {
+    storedRun = storedRun && { ...storedRun, ...input };
+  },
+}));
+
+mock.module("@/lib/db/tax-settlements", () => ({
+  TaxSettlementDeliveryConflictError: class extends Error {},
+  bindTaxInvoiceRun: async (input: Record<string, unknown>) => {
+    bindingInput = input;
+    return input;
+  },
+  receiveTaxSettlementDelivery: async () => ({
+    delivery: { status: "waiting_for_case" },
+    binding: undefined,
+    created: true,
+  }),
 }));
 
 mock.module("@/lib/db/sessions", () => ({
@@ -51,6 +82,10 @@ mock.module("@/app/workflows/tax-invoice", () => ({
 mock.module("workflow/api", () => ({
   start: async () => {
     started += 1;
+    if (startFailuresRemaining > 0) {
+      startFailuresRemaining -= 1;
+      throw new Error("workflow unavailable");
+    }
     return { runId: "wfr_tax_1" };
   },
   getRun: () => ({ status: Promise.resolve("running") }),
@@ -62,13 +97,13 @@ const { POST } = await import("./route");
 const secret = "shared-ingress-secret-at-least-sixteen";
 const workspaceGrant = "signed-workspace-grant".padEnd(100, "x");
 const workspaceId = "11111111-1111-4111-8111-111111111111";
-const requestHash = "request-hash";
 
 const dispatch = {
   workspaceId,
   actorId: grantSubject,
   idempotencyKey: "tax-invoice:33333333-3333-4333-8333-333333333333",
   issuancePath: "reclaim_copilot" as const,
+  ledgerInvoiceId: "55555555-5555-4555-8555-555555555555",
   artifact: {
     documentId: "33333333-3333-4333-8333-333333333333",
     invoiceNumber: "INV-2026-001",
@@ -118,10 +153,12 @@ beforeEach(() => {
   grantValid = true;
   grantSubject = dispatch.actorId;
   grantScopes = ["tax.invoice.prepare"];
-  existingRun = false;
   started = 0;
+  startFailuresRemaining = 0;
   createdUserId = undefined;
   runUserId = undefined;
+  bindingInput = undefined;
+  storedRun = undefined;
 });
 
 describe("BUFI AI invoice Tax Automation ingress", () => {
@@ -131,6 +168,11 @@ describe("BUFI AI invoice Tax Automation ingress", () => {
     expect(started).toBe(1);
     expect(createdUserId).toBe(`desk_${dispatch.actorId}`);
     expect(runUserId).toBe(createdUserId);
+    expect(bindingInput).toMatchObject({
+      workspaceId,
+      ledgerInvoiceId: dispatch.ledgerInvoiceId,
+      idempotencyKey: dispatch.idempotencyKey,
+    });
     expect(JSON.stringify(await response.json())).not.toContain(workspaceGrant);
   });
 
@@ -157,6 +199,34 @@ describe("BUFI AI invoice Tax Automation ingress", () => {
       }),
     );
     expect(response.status).toBe(422);
+    expect(started).toBe(0);
+  });
+
+  test("restarts the same bound run after workflow start fails", async () => {
+    startFailuresRemaining = 1;
+    expect((await POST(request(dispatch))).status).toBe(503);
+    expect(storedRun).toMatchObject({
+      status: "failed",
+      errorCode: "WORKFLOW_START_FAILED",
+      workflowRunId: null,
+    });
+
+    const retry = await POST(request(dispatch));
+    expect(retry.status).toBe(202);
+    expect(await retry.json()).toMatchObject({
+      status: "pending",
+      replayed: true,
+    });
+    expect(started).toBe(2);
+    expect(bindingInput).toMatchObject({
+      ledgerInvoiceId: dispatch.ledgerInvoiceId,
+    });
+  });
+
+  test("requires a canonical ledger invoice UUID distinct from the document", async () => {
+    const { ledgerInvoiceId: _ledgerInvoiceId, ...withoutLedgerInvoice } =
+      dispatch;
+    expect((await POST(request(withoutLedgerInvoice))).status).toBe(400);
     expect(started).toBe(0);
   });
 

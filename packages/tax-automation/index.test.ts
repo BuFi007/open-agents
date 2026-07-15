@@ -7,9 +7,11 @@ import {
   dispatchFromAiInvoiceArtifact,
   dispatchFromAiInvoiceDocument,
   prepareTaxInvoiceCase,
+  settlementReferenceHashForEvent,
   taxRunIdFor,
   type TaxAutomationRun,
   type TaxInvoiceDispatch,
+  type InvoiceSettlementEventV1,
 } from "./index";
 
 const aiArtifactInput = {
@@ -17,6 +19,7 @@ const aiArtifactInput = {
   actorId: "agent:tax",
   idempotencyKey: "tax-invoice:ai-document-1",
   issuancePath: "reclaim_copilot" as const,
+  ledgerInvoiceId: "33333333-3333-4333-8333-333333333333",
   artifact: {
     documentId: "ai-document-1",
     invoiceNumber: "INV-2026-001",
@@ -57,8 +60,9 @@ const input: TaxInvoiceDispatch = {
   idempotencyKey: "tax-invoice:invoice-1",
   issuancePath: "reclaim_copilot",
   invoice: {
-    invoiceId: "invoice-1",
-    economicEventId: "invoice:invoice-1",
+    ledgerInvoiceId: "33333333-3333-4333-8333-333333333333",
+    artifactId: "invoice-document-1",
+    economicEventId: "invoice:33333333-3333-4333-8333-333333333333",
     artifactHash: "a".repeat(64),
     sourceEventHash: "b".repeat(64),
     consentVersion: "tax-consent-v1",
@@ -75,6 +79,55 @@ const input: TaxInvoiceDispatch = {
     paymentTerms: "Due on receipt",
     unitCode: 7,
     observedAt: "2026-07-11T12:00:00.000Z",
+  },
+};
+
+const settlementEvent: InvoiceSettlementEventV1 = {
+  schemaVersion: 1,
+  eventType: "InvoiceSettlementFinalizedV1",
+  eventId: "20000000-0000-4000-8000-000000000001",
+  teamId: input.workspaceId,
+  invoiceId: input.invoice.ledgerInvoiceId,
+  billId: null,
+  settlementId: "20000000-0000-4000-8000-000000000003",
+  allocationId: "20000000-0000-4000-8000-000000000004",
+  allocationRevision: 1,
+  replayKey: "e".repeat(64),
+  traceId: null,
+  currency: "USDC",
+  sourceMoney: {
+    currency: "USDC",
+    grossAmount: "100.50",
+    feeAmount: "0.50",
+    netAmount: "100.00",
+  },
+  sourceEquivalentAmount: "100.00",
+  allocationBasis: "net",
+  network: "base",
+  fx: null,
+  source: {
+    kind: "circle_transfer",
+    provider: "circle",
+    identityHash: "f".repeat(64),
+    revision: 1,
+  },
+  evidence: {
+    status: "verified",
+    method: "provider_webhook",
+    hashAlgorithm: "sha256",
+    evidenceRef: "20000000-0000-4000-8000-000000000005",
+    evidenceHash: "a".repeat(64),
+    verifiedAt: "2026-07-15T14:00:00.000Z",
+  },
+  recordedAt: "2026-07-15T14:00:01.000Z",
+  finalizedAt: "2026-07-15T13:59:59.000Z",
+  allocationAmount: "100.00",
+  projection: {
+    version: 1,
+    state: "paid",
+    invoiceTotal: "100.00",
+    settledTotal: "100.00",
+    outstandingAmount: "0",
   },
 };
 
@@ -108,6 +161,7 @@ describe("Tax Automation Engine agent bridge", () => {
       actorId: aiArtifactInput.actorId,
       idempotencyKey: "tax-invoice:desk-document-1",
       issuancePath: "reclaim_copilot",
+      ledgerInvoiceId: aiArtifactInput.ledgerInvoiceId,
       document: {
         id: "desk-document-1",
         kind: "invoice",
@@ -138,7 +192,8 @@ describe("Tax Automation Engine agent bridge", () => {
 
     expect(dispatch).toMatchObject({
       invoice: {
-        invoiceId: "desk-document-1",
+        ledgerInvoiceId: aiArtifactInput.ledgerInvoiceId,
+        artifactId: "desk-document-1",
         total: { decimal: "1500.00", currency: "USD" },
         foreignCustomerSafeLabel: "Foreign customer",
       },
@@ -152,6 +207,7 @@ describe("Tax Automation Engine agent bridge", () => {
       actorId: aiArtifactInput.actorId,
       idempotencyKey: "tax-invoice:desk-document-bad",
       issuancePath: "reclaim_copilot" as const,
+      ledgerInvoiceId: aiArtifactInput.ledgerInvoiceId,
       document: {
         id: "desk-document-bad",
         kind: "invoice" as const,
@@ -187,7 +243,8 @@ describe("Tax Automation Engine agent bridge", () => {
     });
     expect(first).toMatchObject({
       invoice: {
-        invoiceId: "ai-document-1",
+        ledgerInvoiceId: aiArtifactInput.ledgerInvoiceId,
+        artifactId: "ai-document-1",
         total: { decimal: "1500.00", currency: "USD" },
         serviceDescription: "Software services used abroad",
       },
@@ -195,6 +252,17 @@ describe("Tax Automation Engine agent bridge", () => {
     expect(first.invoice.artifactHash).toBe(replay.invoice.artifactHash);
     expect(first.invoice.sourceEventHash).toBe(replay.invoice.sourceEventHash);
     expect(first.invoice.artifactHash).toHaveLength(64);
+    expect(first.invoice.ledgerInvoiceId).not.toBe(first.invoice.artifactId);
+    const anotherLedgerInvoice = dispatchFromAiInvoiceArtifact({
+      ...aiArtifactInput,
+      ledgerInvoiceId: "44444444-4444-4444-8444-444444444444",
+    });
+    expect(anotherLedgerInvoice.invoice.artifactHash).toBe(
+      first.invoice.artifactHash,
+    );
+    expect(anotherLedgerInvoice.invoice.sourceEventHash).not.toBe(
+      first.invoice.sourceEventHash,
+    );
   });
 
   test("blocks AI arithmetic drift and authority-shaped fields", () => {
@@ -283,6 +351,88 @@ describe("Tax Automation Engine agent bridge", () => {
       consentVersion: "tax-consent-v1",
     });
     expect(JSON.stringify(requests)).not.toContain("clave fiscal");
+  });
+
+  test("sends a finalized invoice settlement through the exact Tax Engine action", async () => {
+    const requests: Array<{ path: string; body: unknown; headers: Headers }> =
+      [];
+    const settledRun = run({ settlementState: "final", revision: 12 });
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      evidenceIngestToken: "evidence-token-at-least-sixteen",
+      fetchImpl: async (url, init) => {
+        const path = new URL(String(url)).pathname;
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        requests.push({ path, body, headers: new Headers(init?.headers) });
+        return response({
+          data: { run: settledRun, replayed: true },
+        });
+      },
+    });
+
+    const result = await client.recordInvoiceSettlement(runId, settlementEvent);
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.path).toBe(
+      "/v1/agent/tools/tax_ar_factura_e_record_settlement/invoke",
+    );
+    expect(requests[0]?.headers.get("authorization")).toBe(
+      "Bearer agent-key-at-least-sixteen",
+    );
+    expect(requests[0]?.body).toEqual({
+      actorId: "agent:tax-settlement",
+      idempotencyKey: `invoice-settlement:${settlementEvent.eventId}`,
+      input: {
+        runId,
+        settlement: {
+          settlementReferenceHash: settlementReferenceHashForEvent(
+            settlementEvent.eventId,
+          ),
+          asset: "USDC",
+          network: "base",
+          amount: { decimal: "100.00", currency: "USDC" },
+          observedAt: settlementEvent.finalizedAt,
+          finalityState: "final",
+          fees: { decimal: "0.50", currency: "USDC" },
+          reversesSettlementReferenceHash: null,
+          evidence: {
+            version: "factura-e-settlement-evidence-v1",
+            source: settlementEvent.source,
+            sourceMoney: settlementEvent.sourceMoney,
+            sourceEquivalentAmount: settlementEvent.sourceEquivalentAmount,
+            allocationBasis: settlementEvent.allocationBasis,
+            fx: null,
+            verification: {
+              method: settlementEvent.evidence.method,
+              evidenceHash: settlementEvent.evidence.evidenceHash,
+              verifiedAt: settlementEvent.evidence.verifiedAt,
+            },
+          },
+        },
+      },
+    });
+    expect(result).toEqual({ run: settledRun, replayed: true });
+    expect(result.run.revision).toBe(12);
+  });
+
+  test("rejects a settlement mutation response for another run or workspace", async () => {
+    const mismatches = [
+      run({ runId: "10000000-0000-4000-8000-000000000099" }),
+      run({ workspaceId: "99999999-9999-4999-8999-999999999999" }),
+    ];
+    for (const mismatchedRun of mismatches) {
+      const client = new TaxAutomationClient({
+        baseUrl: "https://tax.test",
+        agentApiKey: "agent-key-at-least-sixteen",
+        evidenceIngestToken: "evidence-token-at-least-sixteen",
+        fetchImpl: async () =>
+          response({ data: { run: mismatchedRun, replayed: false } }),
+      });
+      await expect(
+        client.recordInvoiceSettlement(runId, settlementEvent),
+      ).rejects.toThrow("TAX_AUTOMATION_RESPONSE_IDENTITY_MISMATCH");
+    }
   });
 
   test("advances deterministically through approval, authority, settlement, and accounting states", async () => {

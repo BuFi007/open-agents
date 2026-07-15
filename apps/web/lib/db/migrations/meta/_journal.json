@@ -379,6 +379,13 @@
       "when": 1783898077463,
       "tag": "0053_queue_telemetry_exports",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1784091964339,
+      "tag": "0054_fair_eternals",
+      "breakpoints": true
     }
   ]
 }
