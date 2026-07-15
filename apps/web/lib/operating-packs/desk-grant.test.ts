@@ -79,6 +79,86 @@ describe("Desk workspace grants", () => {
     ).toBeNull();
   });
 
+  test("accepts authority approval only as its dedicated Tax scope", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({
+          subject: "oaUser_nanoid-123456789",
+          scopes: ["tax.invoice.authority.approve"],
+        }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toMatchObject({
+      workspaceId,
+      subject: "oaUser_nanoid-123456789",
+      scopes: ["tax.invoice.authority.approve"],
+    });
+  });
+
+  test("accepts UUID and nanoid subjects but rejects malformed identity text", () => {
+    for (const subject of [
+      "22222222-2222-4222-8222-222222222222",
+      "V1StGXR8_Z5jdHi6B-myT",
+    ])
+      expect(
+        verifyDeskWorkspaceGrant({
+          token: grant({ subject }),
+          workspaceId,
+          secret,
+          now: 5_000,
+        }),
+      ).toMatchObject({ subject });
+
+    for (const subject of [
+      "",
+      "a".repeat(192),
+      "lookalike_\u0430ctor",
+      "actor with spaces",
+      "../actor",
+    ])
+      expect(
+        verifyDeskWorkspaceGrant({
+          token: grant({ subject }),
+          workspaceId,
+          secret,
+          now: 5_000,
+        }),
+      ).toBeNull();
+  });
+
+  test("accepts a least-privilege Tax snapshot read grant", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ scopes: ["tax.snapshot.read"] }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toMatchObject({
+      workspaceId,
+      scopes: ["tax.snapshot.read"],
+    });
+  });
+
+  test("accepts each Tax setup authority only as its own narrow scope", () => {
+    for (const scope of [
+      "tax.setup.read",
+      "tax.profile.confirm",
+      "tax.snapshot.configure",
+    ]) {
+      expect(
+        verifyDeskWorkspaceGrant({
+          token: grant({ scopes: [scope] }),
+          workspaceId,
+          secret,
+          now: 5_000,
+        }),
+      ).toMatchObject({ workspaceId, scopes: [scope] });
+    }
+  });
+
   test("rejects tampering, future grants, extra fields and weak configuration", () => {
     const valid = grant();
     expect(
@@ -91,7 +171,7 @@ describe("Desk workspace grants", () => {
     ).toBeNull();
     expect(
       verifyDeskWorkspaceGrant({
-        token: grant({ issuedAt: 100_000 }),
+        token: grant({ issuedAt: 100_000, expiresAt: 101_000 }),
         workspaceId,
         secret,
         now: 5_000,
@@ -111,6 +191,33 @@ describe("Desk workspace grants", () => {
         workspaceId,
         secret: "weak",
         now: 5_000,
+      }),
+    ).toBeNull();
+  });
+
+  test("rejects inverted, overlong and stale grant lifetimes", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ issuedAt: 10_000, expiresAt: 10_000 }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toBeNull();
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ issuedAt: 1_000, expiresAt: 301_001 }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toBeNull();
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ issuedAt: 1_000, expiresAt: 200_000 }),
+        workspaceId,
+        secret,
+        now: 301_001,
       }),
     ).toBeNull();
   });

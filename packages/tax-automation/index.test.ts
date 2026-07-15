@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { createHash, createHmac } from "node:crypto";
+import { buildTaxSnapshotProblemV1 } from "@tax-engine/browser-contracts";
+import { argentinaTaxWidgetSnapshotReceiptV1Fixture } from "@tax-engine/browser-contracts/fixtures";
 import {
   AiInvoiceDocumentDispatchSchema,
   AiInvoiceArtifactDispatchSchema,
@@ -12,6 +15,7 @@ import {
   type TaxAutomationRun,
   type TaxInvoiceDispatch,
   type InvoiceSettlementEventV1,
+  type ForwardedTaxTenantPrincipalHeaders,
 } from "./index";
 
 const aiArtifactInput = {
@@ -150,11 +154,53 @@ function run(overrides: Partial<TaxAutomationRun> = {}): TaxAutomationRun {
   };
 }
 
-function response(value: unknown): Response {
-  return Response.json(value);
+function response(value: unknown, status = 200): Response {
+  return Response.json(value, { status });
+}
+
+function forwardedSnapshotPrincipal(
+  workspaceId = input.workspaceId,
+  actorId = input.actorId,
+  expiresAt = new Date(Date.now() + 240_000).toISOString(),
+): ForwardedTaxTenantPrincipalHeaders {
+  return {
+    "x-tax-tenant-principal": Buffer.from(
+      JSON.stringify({
+        version: "tax-tenant-principal-v2",
+        workspaceId,
+        actorId,
+        capability: "snapshot:read",
+        expiresAt,
+      }),
+      "utf8",
+    ).toString("base64url"),
+    "x-tax-tenant-signature": "f".repeat(64),
+  };
 }
 
 describe("Tax Automation Engine agent bridge", () => {
+  test("locks the Tax v2 snapshot-read principal wire vector", () => {
+    const encoded =
+      "eyJ2ZXJzaW9uIjoidGF4LXRlbmFudC1wcmluY2lwYWwtdjIiLCJ3b3Jrc3BhY2VJZCI6IndvcmtzcGFjZTpsZWdhY3ktMSIsImFjdG9ySWQiOiJ1c2VyOmdvbGRlbiIsImNhcGFiaWxpdHkiOiJzbmFwc2hvdDpyZWFkIiwiZXhwaXJlc0F0IjoiMjAyNi0wNy0xMFQwMDowNTowMC4wMDBaIn0";
+    expect(
+      Buffer.from(
+        JSON.stringify({
+          version: "tax-tenant-principal-v2",
+          workspaceId: "workspace:legacy-1",
+          actorId: "user:golden",
+          capability: "snapshot:read",
+          expiresAt: "2026-07-10T00:05:00.000Z",
+        }),
+        "utf8",
+      ).toString("base64url"),
+    ).toBe(encoded);
+    expect(
+      createHmac("sha256", "tax-principal-golden-secret")
+        .update(encoded, "utf8")
+        .digest("hex"),
+    ).toBe("024941b683fcac0e8fa9f49b7ef4456af521bf71bb8f87cf714ad402439f4761");
+  });
+
   test("chains the persisted BUFI AI invoice document into the durable workflow", () => {
     const dispatch = dispatchFromAiInvoiceDocument({
       workspaceId: aiArtifactInput.workspaceId,
@@ -304,6 +350,7 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -351,6 +398,7 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -370,6 +418,20 @@ describe("Tax Automation Engine agent bridge", () => {
     expect(requests[0]?.headers.get("authorization")).toBe(
       "Bearer agent-key-at-least-sixteen",
     );
+    const encodedPrincipal = requests[0]?.headers.get("x-tax-agent-principal");
+    expect(encodedPrincipal).toBeTruthy();
+    const principal = JSON.parse(
+      Buffer.from(encodedPrincipal!, "base64url").toString("utf8"),
+    );
+    expect(principal).toMatchObject({
+      version: "tax-agent-principal-v1",
+      workspaceId: settlementEvent.teamId,
+      actorId: "agent:tax-settlement",
+      toolId: "tax_ar_factura_e_record_settlement",
+      method: "POST",
+      path: "/v1/agent/tools/tax_ar_factura_e_record_settlement/invoke",
+      idempotencyKey: `invoice-settlement:${settlementEvent.eventId}`,
+    });
     expect(requests[0]?.body).toEqual({
       actorId: "agent:tax-settlement",
       idempotencyKey: `invoice-settlement:${settlementEvent.eventId}`,
@@ -402,12 +464,19 @@ describe("Tax Automation Engine agent bridge", () => {
         },
       },
     });
+    expect(principal.bodyHash).toBe(
+      createHash("sha256")
+        .update(JSON.stringify(requests[0]?.body), "utf8")
+        .digest("hex"),
+    );
+    expect(
+      requests[0]?.headers.get("x-tax-agent-principal-signature"),
+    ).toMatch(/^[a-f0-9]{64}$/);
     expect(result).toEqual({ run: settledRun, replayed: true });
     expect(result.run.revision).toBe(12);
   });
 
-  test("reads the durable workspace snapshot without traversing evidence providers", async () => {
-    const requests: Array<{ path: string; headers: Headers }> = [];
+  test("keeps the legacy internal snapshot reader available during browser V1 rollout", async () => {
     const snapshot = {
       version: "tax-widget-v1" as const,
       workspaceId: input.workspaceId,
@@ -417,14 +486,13 @@ describe("Tax Automation Engine agent bridge", () => {
       sourceCoverage: [],
       warnings: ["Bank evidence is unavailable"],
     };
+    let requestedPath: string | undefined;
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
-      fetchImpl: async (url, init) => {
-        requests.push({
-          path: new URL(String(url)).pathname,
-          headers: new Headers(init?.headers),
-        });
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async (url) => {
+        requestedPath = new URL(String(url)).pathname;
         return response({ data: snapshot });
       },
     });
@@ -432,32 +500,263 @@ describe("Tax Automation Engine agent bridge", () => {
     await expect(client.getLatestSnapshot(input.workspaceId)).resolves.toEqual(
       snapshot,
     );
-    expect(requests).toHaveLength(1);
-    expect(requests[0]?.path).toBe(`/v1/snapshots/${input.workspaceId}`);
-    expect(requests[0]?.headers.get("authorization")).toBe(
-      "Bearer agent-key-at-least-sixteen",
-    );
+    expect(requestedPath).toBe(`/v1/snapshots/${input.workspaceId}`);
   });
 
-  test("rejects a durable snapshot from another workspace", async () => {
+  test("rejects and cancels an oversized chunked Tax response", async () => {
+    let cancelled = false;
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
       fetchImpl: async () =>
-        response({
-          data: {
-            version: "tax-widget-v1",
-            workspaceId: "99999999-9999-4999-8999-999999999999",
-            period: { start: "2026-07-01", end: "2026-07-31" },
-            displayCurrency: "ARS",
-            inputHash: "d".repeat(64),
-          },
-        }),
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              controller.enqueue(new Uint8Array(300_000));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
     });
 
     await expect(client.getLatestSnapshot(input.workspaceId)).rejects.toThrow(
-      "TAX_SNAPSHOT_IDENTITY_MISMATCH",
+      "Tax Automation Engine returned invalid JSON data",
     );
+    expect(cancelled).toBe(true);
+  });
+
+  test("reads the exact frozen browser V1 result with a forwarded scoped principal", async () => {
+    const requests: Array<{ path: string; headers: Headers }> = [];
+    const forwardedPrincipal = forwardedSnapshotPrincipal();
+    const result = {
+      ok: true as const,
+      data: argentinaTaxWidgetSnapshotReceiptV1Fixture,
+    };
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async (url, init) => {
+        requests.push({
+          path: new URL(String(url)).pathname,
+          headers: new Headers(init?.headers),
+        });
+        return response(result);
+      },
+    });
+
+    await expect(
+      client.getBrowserSnapshot(
+        input.workspaceId,
+        input.actorId,
+        forwardedPrincipal,
+        "annual:2026",
+      ),
+    ).resolves.toEqual(result);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.path).toBe(
+      `/v1/browser/snapshots/${input.workspaceId}/annual%3A2026`,
+    );
+    expect(requests[0]?.headers.get("authorization")).toBe(
+      "Bearer agent-key-at-least-sixteen",
+    );
+    expect(requests[0]?.headers.get("x-tax-tenant-principal")).toBe(
+      forwardedPrincipal["x-tax-tenant-principal"],
+    );
+    expect(requests[0]?.headers.get("x-tax-tenant-signature")).toBe(
+      forwardedPrincipal["x-tax-tenant-signature"],
+    );
+  });
+
+  test("preserves canonical 404, 409, and 410 browser problem results", async () => {
+    for (const code of [
+      "TAX_SNAPSHOT_NOT_FOUND",
+      "TAX_SNAPSHOT_STALE",
+      "TAX_SNAPSHOT_EXPIRED",
+    ] as const) {
+      const problem = buildTaxSnapshotProblemV1(code);
+      const result = { ok: false as const, problem };
+      const client = new TaxAutomationClient({
+        baseUrl: "https://tax.test",
+        agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        fetchImpl: async () => response(result, problem.status),
+      });
+
+      await expect(
+        client.getBrowserSnapshot(
+          input.workspaceId,
+          input.actorId,
+          forwardedSnapshotPrincipal(),
+          "annual:2026",
+        ),
+      ).resolves.toEqual(result);
+    }
+  });
+
+  test("fails closed when browser snapshot principal headers are missing", async () => {
+    let requestCount = 0;
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => {
+        requestCount += 1;
+        return response({});
+      },
+    });
+
+    await expect(
+      // @ts-expect-error The runtime boundary must also reject an omitted pair.
+      client.getBrowserSnapshot(input.workspaceId, input.actorId),
+    ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_INVALID");
+    expect(requestCount).toBe(0);
+  });
+
+  test("rejects malformed, non-canonical, expired, and overlong snapshot principals", async () => {
+    let requestCount = 0;
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => {
+        requestCount += 1;
+        return response({});
+      },
+    });
+    const nonCanonical = {
+      "x-tax-tenant-principal": Buffer.from(
+        JSON.stringify({
+          workspaceId: input.workspaceId,
+          version: "tax-tenant-principal-v2",
+          actorId: input.actorId,
+          capability: "snapshot:read",
+          expiresAt: new Date(Date.now() + 240_000).toISOString(),
+        }),
+      ).toString("base64url"),
+      "x-tax-tenant-signature": "f".repeat(64),
+    };
+    const invalidPairs = [
+      {
+        ...forwardedSnapshotPrincipal(),
+        "x-tax-tenant-principal": "not+base64url",
+      },
+      {
+        ...forwardedSnapshotPrincipal(),
+        "x-tax-tenant-signature": "F".repeat(64),
+      },
+      nonCanonical,
+      forwardedSnapshotPrincipal(
+        input.workspaceId,
+        input.actorId,
+        new Date(Date.now() + 600_000).toISOString(),
+      ),
+      forwardedSnapshotPrincipal(
+        input.workspaceId,
+        input.actorId,
+        new Date(Date.now() - 1_000).toISOString(),
+      ),
+    ];
+
+    for (const pair of invalidPairs) {
+      await expect(
+        client.getBrowserSnapshot(input.workspaceId, input.actorId, pair),
+      ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_INVALID");
+    }
+    expect(requestCount).toBe(0);
+  });
+
+  test("rejects browser snapshot principals bound to another workspace or actor", async () => {
+    let requestCount = 0;
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => {
+        requestCount += 1;
+        return response({});
+      },
+    });
+    const mismatchedPrincipals = [
+      forwardedSnapshotPrincipal(
+        "99999999-9999-4999-8999-999999999999",
+        input.actorId,
+      ),
+      forwardedSnapshotPrincipal(input.workspaceId, "user:another"),
+    ];
+
+    for (const principal of mismatchedPrincipals) {
+      await expect(
+        client.getBrowserSnapshot(input.workspaceId, input.actorId, principal),
+      ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_SCOPE_MISMATCH");
+    }
+    expect(requestCount).toBe(0);
+  });
+
+  test("fails closed on malformed, unknown, or HTTP-inconsistent browser wire data", async () => {
+    const unknownWire = {
+      ok: true,
+      data: {
+        ...argentinaTaxWidgetSnapshotReceiptV1Fixture,
+        version: "tax-browser-snapshot-receipt-v2",
+      },
+    };
+    const unexpectedField = {
+      ok: true,
+      data: {
+        ...argentinaTaxWidgetSnapshotReceiptV1Fixture,
+        unexpected: true,
+      },
+    };
+    const legacyWrapper = {
+      data: argentinaTaxWidgetSnapshotReceiptV1Fixture,
+    };
+    const successWithWrongProjection = {
+      ok: true,
+      data: argentinaTaxWidgetSnapshotReceiptV1Fixture,
+    };
+    const stale = buildTaxSnapshotProblemV1("TAX_SNAPSHOT_STALE");
+    const cases = [
+      { status: 200, body: unknownWire, projectionKey: "annual:2026" },
+      { status: 200, body: unexpectedField, projectionKey: "annual:2026" },
+      { status: 200, body: legacyWrapper, projectionKey: "annual:2026" },
+      {
+        status: 200,
+        body: successWithWrongProjection,
+        projectionKey: "monthly:2026-07",
+      },
+      {
+        status: 404,
+        body: { ok: false, problem: stale },
+        projectionKey: "annual:2026",
+      },
+      {
+        status: 200,
+        body: { ok: false, problem: stale },
+        projectionKey: "annual:2026",
+      },
+    ];
+
+    for (const invalid of cases) {
+      const client = new TaxAutomationClient({
+        baseUrl: "https://tax.test",
+        agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        fetchImpl: async () => response(invalid.body, invalid.status),
+      });
+      await expect(
+        client.getBrowserSnapshot(
+          input.workspaceId,
+          input.actorId,
+          forwardedSnapshotPrincipal(),
+          invalid.projectionKey,
+        ),
+      ).rejects.toThrow("TAX_BROWSER_SNAPSHOT_RESPONSE_INVALID");
+    }
   });
 
   test("rejects a settlement mutation response for another run or workspace", async () => {
@@ -469,6 +768,7 @@ describe("Tax Automation Engine agent bridge", () => {
       const client = new TaxAutomationClient({
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         fetchImpl: async () =>
           response({ data: { run: mismatchedRun, replayed: false } }),
       });
@@ -483,6 +783,7 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
       fetchImpl: async (url) => {
         const path = new URL(String(url)).pathname;
         if (path === `/v1/agent/runs/${runId}`)
@@ -626,6 +927,7 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
       fetchImpl: async (url) => {
         const path = new URL(String(url)).pathname;
         if (path === `/v1/agent/runs/${runId}`)
@@ -659,6 +961,7 @@ describe("Tax Automation Engine agent bridge", () => {
         new TaxAutomationClient({
           baseUrl: "http://tax.example.com",
           agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
         }),
     ).toThrow("HTTPS");
     expect(JSON.stringify(input).toLowerCase()).not.toContain("privatekey");

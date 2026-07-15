@@ -310,6 +310,11 @@ export function OperationsCommandCenter() {
             </h1>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/operations/tax-authority-approval">
+                <ShieldCheck className="h-4 w-4" /> Tax approval
+              </Link>
+            </Button>
             <Button variant="outline" onClick={() => void refreshCatalog()}>
               <RefreshCw className="h-4 w-4" /> Refresh
             </Button>
