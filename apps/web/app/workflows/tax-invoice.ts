@@ -33,7 +33,6 @@ function client(): TaxAutomationClient {
   return new TaxAutomationClient({
     baseUrl: process.env.TAX_AUTOMATION_ENGINE_URL ?? "",
     agentApiKey: process.env.TAX_AUTOMATION_ENGINE_API_KEY ?? "",
-    evidenceIngestToken: process.env.TAX_AUTOMATION_EVIDENCE_INGEST_TOKEN ?? "",
   });
 }
 
