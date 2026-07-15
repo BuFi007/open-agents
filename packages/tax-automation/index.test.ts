@@ -297,20 +297,17 @@ describe("Tax Automation Engine agent bridge", () => {
     ).toBe(false);
   });
 
-  test("prepares accepted invoice evidence and starts a credential-less readiness handoff", async () => {
+  test("starts a credential-less readiness handoff without bypassing Desk evidence transport", async () => {
     let state = run();
     const requests: Array<{ path: string; body: unknown; headers: Headers }> =
       [];
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
-      evidenceIngestToken: "evidence-token-at-least-sixteen",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
         requests.push({ path, body, headers: new Headers(init?.headers) });
-        if (path === "/v1/evidence/append")
-          return response({ data: { appended: 1 } });
         if (path.endsWith("tax_ar_factura_e_create_case/invoke"))
           return response({ data: { run: state, replayed: false } });
         if (path.endsWith("tax_ar_reclaim_start/invoke")) {
@@ -336,20 +333,14 @@ describe("Tax Automation Engine agent bridge", () => {
       phase: "readiness_interaction_required",
       handoff: { requestUrl: "https://reclaim.test/request" },
     });
-    const evidence = requests.find(
-      (request) => request.path === "/v1/evidence/append",
-    )!;
-    expect(evidence.headers.get("x-tax-evidence-ingest-token")).toBe(
-      "evidence-token-at-least-sixteen",
-    );
-    const evidenceBody = evidence.body as {
-      records: Array<Record<string, unknown>>;
-    };
-    expect(evidenceBody.records[0]).toMatchObject({
-      money: { decimal: "1000.00", currency: "USD" },
-      reviewState: "accepted",
-      consentVersion: "tax-consent-v1",
-    });
+    expect(
+      requests.some((request) => request.path === "/v1/evidence/append"),
+    ).toBe(false);
+    expect(
+      requests.some((request) =>
+        request.headers.has("x-tax-evidence-ingest-token"),
+      ),
+    ).toBe(false);
     expect(JSON.stringify(requests)).not.toContain("clave fiscal");
   });
 
@@ -360,7 +351,6 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
-      evidenceIngestToken: "evidence-token-at-least-sixteen",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -416,6 +406,60 @@ describe("Tax Automation Engine agent bridge", () => {
     expect(result.run.revision).toBe(12);
   });
 
+  test("reads the durable workspace snapshot without traversing evidence providers", async () => {
+    const requests: Array<{ path: string; headers: Headers }> = [];
+    const snapshot = {
+      version: "tax-widget-v1" as const,
+      workspaceId: input.workspaceId,
+      period: { start: "2026-07-01", end: "2026-07-31" },
+      displayCurrency: "ARS",
+      inputHash: "d".repeat(64),
+      sourceCoverage: [],
+      warnings: ["Bank evidence is unavailable"],
+    };
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      fetchImpl: async (url, init) => {
+        requests.push({
+          path: new URL(String(url)).pathname,
+          headers: new Headers(init?.headers),
+        });
+        return response({ data: snapshot });
+      },
+    });
+
+    await expect(client.getLatestSnapshot(input.workspaceId)).resolves.toEqual(
+      snapshot,
+    );
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.path).toBe(`/v1/snapshots/${input.workspaceId}`);
+    expect(requests[0]?.headers.get("authorization")).toBe(
+      "Bearer agent-key-at-least-sixteen",
+    );
+  });
+
+  test("rejects a durable snapshot from another workspace", async () => {
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      fetchImpl: async () =>
+        response({
+          data: {
+            version: "tax-widget-v1",
+            workspaceId: "99999999-9999-4999-8999-999999999999",
+            period: { start: "2026-07-01", end: "2026-07-31" },
+            displayCurrency: "ARS",
+            inputHash: "d".repeat(64),
+          },
+        }),
+    });
+
+    await expect(client.getLatestSnapshot(input.workspaceId)).rejects.toThrow(
+      "TAX_SNAPSHOT_IDENTITY_MISMATCH",
+    );
+  });
+
   test("rejects a settlement mutation response for another run or workspace", async () => {
     const mismatches = [
       run({ runId: "10000000-0000-4000-8000-000000000099" }),
@@ -425,7 +469,6 @@ describe("Tax Automation Engine agent bridge", () => {
       const client = new TaxAutomationClient({
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
-        evidenceIngestToken: "evidence-token-at-least-sixteen",
         fetchImpl: async () =>
           response({ data: { run: mismatchedRun, replayed: false } }),
       });
@@ -440,7 +483,6 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
-      evidenceIngestToken: "evidence-token-at-least-sixteen",
       fetchImpl: async (url) => {
         const path = new URL(String(url)).pathname;
         if (path === `/v1/agent/runs/${runId}`)
@@ -584,7 +626,6 @@ describe("Tax Automation Engine agent bridge", () => {
     const client = new TaxAutomationClient({
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
-      evidenceIngestToken: "evidence-token-at-least-sixteen",
       fetchImpl: async (url) => {
         const path = new URL(String(url)).pathname;
         if (path === `/v1/agent/runs/${runId}`)
@@ -618,7 +659,6 @@ describe("Tax Automation Engine agent bridge", () => {
         new TaxAutomationClient({
           baseUrl: "http://tax.example.com",
           agentApiKey: "agent-key-at-least-sixteen",
-          evidenceIngestToken: "evidence-token-at-least-sixteen",
         }),
     ).toThrow("HTTPS");
     expect(JSON.stringify(input).toLowerCase()).not.toContain("privatekey");

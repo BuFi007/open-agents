@@ -339,6 +339,25 @@ const TaxRunSchema = z
 
 export type TaxAutomationRun = z.infer<typeof TaxRunSchema>;
 
+/**
+ * Browser/agent-safe identity envelope for Tax's durable projection. The full
+ * widget contract is frozen in the Tax package; Open Agents deliberately
+ * validates only transport identity here and never recalculates its contents.
+ */
+export const TaxWidgetSnapshotEnvelopeSchema = z
+  .object({
+    version: z.literal("tax-widget-v1"),
+    workspaceId: z.string().uuid(),
+    period: z.object({ start: isoDate, end: isoDate }).strict(),
+    displayCurrency: z.string().regex(/^[A-Z][A-Z0-9]{2,11}$/),
+    inputHash: sha256,
+  })
+  .passthrough();
+
+export type TaxWidgetSnapshotEnvelope = z.infer<
+  typeof TaxWidgetSnapshotEnvelopeSchema
+>;
+
 export type TaxSettlementRecordResult = Readonly<{
   run: TaxAutomationRun;
   replayed: boolean;
@@ -386,75 +405,20 @@ type Fetch = (
 export type TaxAutomationClientOptions = Readonly<{
   baseUrl: string;
   agentApiKey: string;
-  evidenceIngestToken: string;
   fetchImpl?: Fetch;
 }>;
 
 export class TaxAutomationClient {
   readonly #baseUrl: URL;
   readonly #agentApiKey: string;
-  readonly #evidenceIngestToken: string;
   readonly #fetch: Fetch;
 
   constructor(options: TaxAutomationClientOptions) {
     this.#baseUrl = safeBaseUrl(options.baseUrl);
     if (options.agentApiKey.length < 16)
       throw new Error("Tax agent API key is not configured");
-    if (options.evidenceIngestToken.length < 16)
-      throw new Error("Tax evidence ingest token is not configured");
     this.#agentApiKey = options.agentApiKey;
-    this.#evidenceIngestToken = options.evidenceIngestToken;
     this.#fetch = options.fetchImpl ?? fetch;
-  }
-
-  async appendInvoiceEvidence(input: TaxInvoiceDispatch): Promise<void> {
-    const parsed = TaxInvoiceDispatchSchema.parse(input);
-    const invoice = parsed.invoice;
-    const response = await this.#request("/v1/evidence/append", {
-      method: "POST",
-      headers: { "x-tax-evidence-ingest-token": this.#evidenceIngestToken },
-      body: {
-        records: [
-          {
-            evidenceId: `bufi-invoice:${invoice.ledgerInvoiceId}`,
-            workspaceId: parsed.workspaceId,
-            revision: "1",
-            sourceId: "bufi:invoice-ai",
-            sourceKind: "bufi_invoice",
-            canonicalProviderId: "bufi",
-            externalReferenceHash: hash(`artifact:${invoice.artifactId}`),
-            sourceEventHash: invoice.sourceEventHash,
-            artifactHash: invoice.artifactHash,
-            jurisdiction: "AR",
-            period: { start: invoice.issueDate, end: invoice.paymentDate },
-            observedAt: invoice.observedAt,
-            expiresAt: null,
-            economicEventId: invoice.economicEventId,
-            economicRole: "invoice",
-            countingDimension: "revenue",
-            direction: "inflow",
-            money: invoice.total,
-            normalizedMoney: invoice.total,
-            fxReferenceId: invoice.exchangeRate?.sourceReferenceId ?? null,
-            partyClaimHash: hash(invoice.foreignCustomerSafeLabel),
-            accountReferenceHash: hash(parsed.workspaceId),
-            confidence: { extraction: "1", classification: "1", matching: "1" },
-            reviewState: "accepted",
-            consentVersion: invoice.consentVersion,
-            idempotencyKey: hash(
-              [
-                parsed.workspaceId,
-                invoice.ledgerInvoiceId,
-                invoice.artifactId,
-                invoice.artifactHash,
-                invoice.consentVersion,
-              ].join(":"),
-            ),
-          },
-        ],
-      },
-    });
-    await safeJson(response);
   }
 
   async createCase(
@@ -572,6 +536,25 @@ export class TaxAutomationClient {
     return { run: parsed.data, nextActions: parsed.nextActions };
   }
 
+  async getLatestSnapshot(
+    workspaceId: string,
+  ): Promise<TaxWidgetSnapshotEnvelope> {
+    const expectedWorkspaceId = z.string().uuid().parse(workspaceId);
+    const response = await this.#request(
+      `/v1/snapshots/${encodeURIComponent(expectedWorkspaceId)}`,
+    );
+    const envelope = z
+      .object({ data: TaxWidgetSnapshotEnvelopeSchema })
+      .passthrough()
+      .parse(await safeJson(response));
+    if (envelope.data.workspaceId !== expectedWorkspaceId) {
+      throw new Error(
+        "Tax Automation Engine request failed: TAX_SNAPSHOT_IDENTITY_MISMATCH",
+      );
+    }
+    return envelope.data;
+  }
+
   async getCopilotPacket(
     runId: string,
     key: string,
@@ -658,7 +641,6 @@ export async function prepareTaxInvoiceCase(
   runId: string,
 ): Promise<TaxInvoiceCheckpoint> {
   const parsed = TaxInvoiceDispatchSchema.parse(input);
-  await client.appendInvoiceEvidence(parsed);
   await client.createCase(parsed, runId);
   const handoff = await client.startReadiness(parsed, runId);
   const { run, nextActions } = await client.getRun(runId);
