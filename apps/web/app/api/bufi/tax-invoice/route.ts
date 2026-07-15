@@ -12,10 +12,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { runTaxInvoiceWorkflow } from "@/app/workflows/tax-invoice";
 import {
+  claimOperatingPackWorkflowRestart,
   createOperatingPackRun,
   getOperatingPackRunByIdempotency,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
+import { bindTaxInvoiceRun } from "@/lib/db/tax-settlements";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
 import { ensureDeskBridgeUser } from "@/lib/operating-packs/desk-bridge-user";
 import { verifyDeskWorkspaceGrant } from "@/lib/operating-packs/desk-grant";
@@ -87,6 +89,37 @@ export async function POST(request: NextRequest) {
         { error: "Idempotency conflict" },
         { status: 409 },
       );
+    try {
+      await bindTaxInvoiceRun({
+        workspaceId: dispatch.workspaceId,
+        ledgerInvoiceId: dispatch.invoice.ledgerInvoiceId,
+        operatingPackRunId: existing.id,
+        idempotencyKey: dispatch.idempotencyKey,
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Invoice is already bound to another tax case" },
+        { status: 409 },
+      );
+    }
+    if (
+      existing.status === "failed" &&
+      existing.errorCode === "WORKFLOW_START_FAILED" &&
+      existing.workflowRunId === null
+    ) {
+      const restart = await claimOperatingPackWorkflowRestart(existing.id);
+      if (restart)
+        return startTaxInvoiceWorkflowRun(existing.id, dispatch, true);
+      return NextResponse.json(
+        {
+          executionId: existing.id,
+          workflowRunId: null,
+          status: "pending",
+          replayed: true,
+        },
+        { status: 202 },
+      );
+    }
     return NextResponse.json(
       {
         executionId: existing.id,
@@ -106,7 +139,7 @@ export async function POST(request: NextRequest) {
     session: {
       id: sessionId,
       userId,
-      title: `Tax invoice: ${dispatch.invoice.invoiceId}`,
+      title: `Tax invoice: ${dispatch.invoice.ledgerInvoiceId}`,
       repoOwner: null,
       repoName: null,
       branch: null,
@@ -136,6 +169,24 @@ export async function POST(request: NextRequest) {
     requestHash,
     status: "pending",
   });
+  try {
+    await bindTaxInvoiceRun({
+      workspaceId: dispatch.workspaceId,
+      ledgerInvoiceId: dispatch.invoice.ledgerInvoiceId,
+      operatingPackRunId: claimed.run.id,
+      idempotencyKey: dispatch.idempotencyKey,
+    });
+  } catch {
+    await updateOperatingPackRun(claimed.run.id, {
+      status: "failed",
+      errorCode: "TAX_INVOICE_BINDING_CONFLICT",
+      finished: true,
+    });
+    return NextResponse.json(
+      { error: "Invoice is already bound to another tax case" },
+      { status: 409 },
+    );
+  }
   if (!claimed.created)
     return NextResponse.json(
       {
@@ -147,6 +198,14 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
 
+  return startTaxInvoiceWorkflowRun(executionId, dispatch, false);
+}
+
+async function startTaxInvoiceWorkflowRun(
+  executionId: string,
+  dispatch: TaxInvoiceDispatch,
+  replayed: boolean,
+) {
   try {
     const run = await start(runTaxInvoiceWorkflow, [{ executionId, dispatch }]);
     return NextResponse.json(
@@ -154,7 +213,7 @@ export async function POST(request: NextRequest) {
         executionId,
         workflowRunId: run.runId,
         status: "pending",
-        replayed: false,
+        replayed,
       },
       { status: 202 },
     );

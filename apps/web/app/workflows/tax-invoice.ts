@@ -7,12 +7,22 @@ import {
   type TaxInvoiceCheckpoint,
   type TaxInvoiceDispatch,
 } from "@open-agents/tax-automation";
-import { getWorkflowMetadata, sleep } from "workflow";
+import { createHook, getWorkflowMetadata, sleep } from "workflow";
 import {
   appendOperatingPackTrace,
   attachOperatingPackWorkflowRun,
   updateOperatingPackRun,
 } from "@/lib/db/operating-pack-runs";
+import {
+  countCompletedTaxSettlementDeliveries,
+  listPendingTaxSettlementDeliveries,
+} from "@/lib/db/tax-settlements";
+import {
+  deliverTaxSettlement,
+  TaxSettlementDeliveryError,
+} from "@/lib/operating-packs/tax-settlement-delivery";
+import { getTaxSettlementHookToken } from "@/lib/operating-packs/tax-settlement-hook";
+import { drainPendingTaxSettlementDeliveries } from "@/lib/operating-packs/tax-settlement-processing";
 
 export type TaxInvoiceWorkflowInput = Readonly<{
   executionId: string;
@@ -85,7 +95,8 @@ async function markStartedStep(
       agentId: "tax_automation:tax_orchestrator",
       summary: "AI invoice to Factura E workflow started",
       data: {
-        invoiceId: input.dispatch.invoice.invoiceId,
+        ledgerInvoiceId: input.dispatch.invoice.ledgerInvoiceId,
+        artifactId: input.dispatch.invoice.artifactId,
         issuancePath: input.dispatch.issuancePath,
       },
     }),
@@ -114,6 +125,35 @@ async function advanceStep(
     dispatch,
     taxRunIdFor(dispatch.workspaceId, dispatch.idempotencyKey),
   );
+}
+
+async function flushPendingSettlementsStep(
+  input: TaxInvoiceWorkflowInput,
+  taxRunId: string,
+): Promise<number> {
+  "use step";
+  return drainPendingTaxSettlementDeliveries({
+    listPending: () => listPendingTaxSettlementDeliveries(input.executionId),
+    deliver: async (delivery) => {
+      try {
+        return await deliverTaxSettlement({
+          event: delivery.payload,
+          binding: { operatingPackRunId: input.executionId, taxRunId },
+        });
+      } catch (error) {
+        if (error instanceof TaxSettlementDeliveryError && !error.retryable)
+          return { status: "waiting_for_case" as const };
+        throw error;
+      }
+    },
+  });
+}
+
+async function completedSettlementCountStep(
+  executionId: string,
+): Promise<number> {
+  "use step";
+  return countCompletedTaxSettlementDeliveries(executionId);
 }
 
 async function persistCheckpointStep(
@@ -205,13 +245,23 @@ export async function runTaxInvoiceWorkflow(input: TaxInvoiceWorkflowInput) {
   try {
     let checkpoint = await prepareStep(input);
     await persistCheckpointStep(input, checkpoint);
+    let completedSettlementCount = await completedSettlementCountStep(
+      input.executionId,
+    );
     for (let poll = 0; poll < 487 && !checkpoint.terminal; poll += 1) {
-      // Keep Reclaim and authority interactions feeling immediate, back off
-      // across the first day, then durably monitor settlement/accounting for
-      // up to one year without holding a process or credential in memory.
-      await sleep(poll < 30 ? "2m" : poll < 122 ? "15m" : "1d");
+      completedSettlementCount = await waitForTaxProgress(
+        input.executionId,
+        checkpoint.phase,
+        poll,
+        completedSettlementCount,
+      );
       checkpoint = await advanceStep(input);
+      if ((await flushPendingSettlementsStep(input, checkpoint.taxRunId)) > 0)
+        checkpoint = await advanceStep(input);
       await persistCheckpointStep(input, checkpoint);
+      completedSettlementCount = await completedSettlementCountStep(
+        input.executionId,
+      );
     }
     if (!checkpoint.terminal) {
       await failStep(input, "TAX_EXTERNAL_INTERACTION_TIMEOUT");
@@ -230,5 +280,33 @@ export async function runTaxInvoiceWorkflow(input: TaxInvoiceWorkflowInput) {
   } catch (error) {
     await failStep(input, "TAX_AUTOMATION_EXECUTION_FAILED");
     throw error;
+  }
+}
+
+async function waitForTaxProgress(
+  executionId: string,
+  phase: TaxInvoiceCheckpoint["phase"],
+  poll: number,
+  completedSettlementCount: number,
+): Promise<number> {
+  const hook = createHook<{ eventId: string }>({
+    token: getTaxSettlementHookToken(executionId),
+  });
+  try {
+    const latestCount = await completedSettlementCountStep(executionId);
+    if (latestCount > completedSettlementCount) return latestCount;
+    const fallback =
+      phase === "settlement_pending" ||
+      phase === "settlement_attention_required"
+        ? "1d"
+        : poll < 30
+          ? "2m"
+          : poll < 122
+            ? "15m"
+            : "1d";
+    await Promise.race([hook, sleep(fallback)]);
+    return completedSettlementCountStep(executionId);
+  } finally {
+    hook.dispose();
   }
 }

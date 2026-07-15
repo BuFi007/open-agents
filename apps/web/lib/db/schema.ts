@@ -1,4 +1,5 @@
 import type { SandboxState } from "@open-agents/sandbox";
+import type { InvoiceSettlementEventV1 } from "@open-agents/tax-automation";
 import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
@@ -446,6 +447,80 @@ export const operatingPackTraces = pgTable(
   ],
 );
 
+export const taxInvoiceBindings = pgTable(
+  "tax_invoice_bindings",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    ledgerInvoiceId: text("ledger_invoice_id").notNull(),
+    operatingPackRunId: text("operating_pack_run_id")
+      .notNull()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    taxRunId: text("tax_run_id").notNull(),
+    taxIdempotencyKey: text("tax_idempotency_key").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.ledgerInvoiceId] }),
+    uniqueIndex("tax_invoice_bindings_operating_pack_run_idx").on(
+      table.operatingPackRunId,
+    ),
+    uniqueIndex("tax_invoice_bindings_tax_run_idx").on(table.taxRunId),
+  ],
+);
+
+export const taxSettlementDeliveries = pgTable(
+  "tax_settlement_deliveries",
+  {
+    eventId: text("event_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ledgerInvoiceId: text("ledger_invoice_id").notNull(),
+    operatingPackRunId: text("operating_pack_run_id").references(
+      () => operatingPackRuns.id,
+      { onDelete: "set null" },
+    ),
+    taxRunId: text("tax_run_id"),
+    eventType: text("event_type", {
+      enum: ["InvoiceSettlementFinalizedV1", "InvoiceSettlementReversedV1"],
+    }).notNull(),
+    reversesEventId: text("reverses_event_id"),
+    replayKey: text("replay_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    payload: jsonb("payload").$type<InvoiceSettlementEventV1>().notNull(),
+    status: text("status", {
+      enum: ["waiting_for_case", "processing", "completed", "failed"],
+    })
+      .notNull()
+      .default("waiting_for_case"),
+    attempts: integer("attempts").notNull().default(0),
+    processingToken: text("processing_token"),
+    processingStartedAt: timestamp("processing_started_at"),
+    lastErrorCode: text("last_error_code"),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("tax_settlement_deliveries_workspace_replay_idx").on(
+      table.workspaceId,
+      table.replayKey,
+    ),
+    index("tax_settlement_deliveries_pending_run_idx").on(
+      table.operatingPackRunId,
+      table.status,
+    ),
+    index("tax_settlement_deliveries_workspace_ledger_invoice_idx").on(
+      table.workspaceId,
+      table.ledgerInvoiceId,
+    ),
+    index("tax_settlement_deliveries_reversal_dependency_idx").on(
+      table.workspaceId,
+      table.reversesEventId,
+      table.status,
+    ),
+  ],
+);
+
 export const queueTelemetryExports = pgTable(
   "queue_telemetry_exports",
   {
@@ -817,6 +892,8 @@ export type OperatingPackCredential =
   typeof operatingPackCredentials.$inferSelect;
 export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
+export type TaxInvoiceBinding = typeof taxInvoiceBindings.$inferSelect;
+export type TaxSettlementDelivery = typeof taxSettlementDeliveries.$inferSelect;
 export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;
