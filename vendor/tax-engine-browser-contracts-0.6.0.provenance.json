@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "artifact": "tax-engine-browser-contracts-0.6.0.tgz",
+  "package": "@tax-engine/browser-contracts",
+  "version": "0.6.0",
+  "sha256": "7f9f2e0e7aaed138e07e54c0128b71b078962e2b3891547f1681b9fdaf1f8e42",
+  "goldenFixturesSha256": "703e681ee2e1bc76a6589f3f2e0bc865f07ac3855be4efc358e0c2ae0c5c9976",
+  "scenarioFixturesSha256": "68f1038903de240f96f0034bbe9103d978fc84a22afde4615c2814e6bcf5a415",
+  "sourceRepository": "https://github.com/BuFi007/tax-automation-engine.git",
+  "sourceHead": "be1e60e716628bcbf348192de0645edcf1742f73",
+  "sourceState": "review-artifact",
+  "packCommand": "npm pack --ignore-scripts packages/browser-contracts"
+}

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createHash, createHmac } from "node:crypto";
-import { buildTaxSnapshotProblemV1 } from "@tax-engine/browser-contracts";
+import {
+  buildTaxSnapshotProblemV1,
+  taxSnapshotReadResultV1Schema,
+  type TaxWidgetSnapshotReceiptV1,
+  type TaxWidgetSnapshotV1,
+} from "@tax-engine/browser-contracts";
 import {
   argentinaTaxWidgetSnapshotReceiptV1Fixture,
   facturaENeedsConsentProjectionV1Fixture,
@@ -592,6 +597,90 @@ describe("Tax Automation Engine agent bridge", () => {
     );
     expect(requests[0]?.headers.get("x-tax-tenant-signature")).toBe(
       forwardedPrincipal["x-tax-tenant-signature"],
+    );
+  });
+
+  test("passes consented evidence quality exactly without touching factoring score bytes", async () => {
+    const quality = {
+      version: "tax-evidence-quality-v1",
+      purpose: "tax_evidence_quality",
+      state: "ready",
+      value: 88,
+      band: "strong",
+      dimensions: (
+        [
+          ["subject_workspace_binding", 25, 25],
+          ["source_provenance_verification", 23, 25],
+          ["freshness_expiry", 18, 20],
+          ["required_evidence_coverage", 17, 20],
+          ["reviewed_reconciliation", 5, 10],
+        ] as const
+      ).map(([id, score, weight]) => ({
+        id,
+        score,
+        weight,
+        safeSourceRefs: ["source:quality-safe-ref"],
+        safeRevisionRefs: ["evidence:quality-safe-revision"],
+        bindingState: "verified",
+        freshnessState: "current",
+        reviewState: "accepted",
+        supersessionState: "current",
+        limitationCodes:
+          score === weight ? [] : [`${String(id).toUpperCase()}_INCOMPLETE`],
+        ruleVersion: "rule:tax-evidence-quality-v1",
+      })),
+      reasonCodes: [
+        "SOURCE_PROVENANCE_VERIFICATION_INCOMPLETE",
+        "FRESHNESS_EXPIRY_INCOMPLETE",
+        "REQUIRED_EVIDENCE_COVERAGE_INCOMPLETE",
+        "REVIEWED_RECONCILIATION_INCOMPLETE",
+      ],
+      authorizedActionIds: [],
+      consentVersion: "consent:quality-v1",
+      consentScopeRevision: "consent:quality_scope_revision_0001",
+      asOf: argentinaTaxWidgetSnapshotReceiptV1Fixture.asOf,
+      validUntil: argentinaTaxWidgetSnapshotReceiptV1Fixture.expiresAt,
+      safeSourceRefs: ["source:quality-safe-ref"],
+      limitationCodes: ["TAX_EVIDENCE_QUALITY_INCOMPLETE"],
+      use: "tax_evidence_only",
+      affectsCredit: false,
+      affectsFactoring: false,
+    } satisfies NonNullable<TaxWidgetSnapshotV1["supplementalEvidenceQuality"]>;
+    const receipt: TaxWidgetSnapshotReceiptV1 = {
+      ...argentinaTaxWidgetSnapshotReceiptV1Fixture,
+      snapshot: {
+        ...argentinaTaxWidgetSnapshotReceiptV1Fixture.snapshot,
+        supplementalEvidenceQuality: quality,
+      },
+    };
+    const result = { ok: true as const, data: receipt };
+    const parsed = taxSnapshotReadResultV1Schema.safeParse(result);
+    if (!parsed.success) {
+      throw new Error(
+        parsed.error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join("\n"),
+      );
+    }
+    const factoringBytes = JSON.stringify(
+      facturaENeedsConsentProjectionV1Fixture,
+    );
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => response(result),
+    });
+
+    const read = await client.getBrowserSnapshot(
+      input.workspaceId,
+      input.actorId,
+      forwardedSnapshotPrincipal(),
+      "annual:2026",
+    );
+    expect(read).toEqual(result);
+    expect(JSON.stringify(facturaENeedsConsentProjectionV1Fixture)).toBe(
+      factoringBytes,
     );
   });
 
