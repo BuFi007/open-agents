@@ -309,7 +309,7 @@
     "packages/tax-automation": {
       "name": "@open-agents/tax-automation",
       "dependencies": {
-        "@tax-engine/browser-contracts": "file:../../vendor/tax-engine-browser-contracts-0.4.0.tgz",
+        "@tax-engine/browser-contracts": "file:../../vendor/tax-engine-browser-contracts-0.6.0.tgz",
         "decimal.js": "^10.6.0",
         "zod": "^4.3.6",
       },
@@ -1256,7 +1256,7 @@
 
     "@tailwindcss/postcss": ["@tailwindcss/postcss@4.2.3", "", { "dependencies": { "@alloc/quick-lru": "^5.2.0", "@tailwindcss/node": "4.2.3", "@tailwindcss/oxide": "4.2.3", "postcss": "^8.5.6", "tailwindcss": "4.2.3" } }, "sha512-MehdHOQRVFf300r8F430s4cf2QL+nSjFUNIndX5ZMqDLyMwTnyL4RDZsoDsDU+ThzT5eCj1+erSDKBWdn462Nw=="],
 
-    "@tax-engine/browser-contracts": ["@tax-engine/browser-contracts@../../vendor/tax-engine-browser-contracts-0.4.0.tgz", { "dependencies": { "decimal.js": "^10.6.0", "zod": "^4.3.6" } }, "sha512-/g6xRWKQHi22n3hpKkd6yyv1ANtUjIQQnwYZImH7yGwipUtRaxqXATOhOUJ26epByE3mIw8nKGiLvAAb97XRgw=="],
+    "@tax-engine/browser-contracts": ["@tax-engine/browser-contracts@../../vendor/tax-engine-browser-contracts-0.6.0.tgz", { "dependencies": { "decimal.js": "^10.6.0", "zod": "^4.3.6" } }, "sha512-JJrzmLGV2PQ+QXpkq1fY44xmKLpB7Iujg0tsWgww4Z7hzXJPbufq+kMPme5VfJkz73w+M9JmtAMzNtkBx3tFGA=="],
 
     "@tokenizer/inflate": ["@tokenizer/inflate@0.4.1", "", { "dependencies": { "debug": "^4.4.3", "token-types": "^6.1.1" } }, "sha512-2mAv+8pkG6GIZiF1kNg1jAjh27IDxEPKwdGul3snfztFerfPGI1LjDezZp3i7BElXompqEtPmoPx6c2wgtWsOA=="],
 
