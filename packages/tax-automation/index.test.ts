@@ -181,6 +181,26 @@ function forwardedSnapshotPrincipal(
   };
 }
 
+function forwardedFactoringPrincipal(
+  workspaceId = input.workspaceId,
+  actorId = input.actorId,
+  expiresAt = new Date(Date.now() + 240_000).toISOString(),
+): ForwardedTaxTenantPrincipalHeaders {
+  return {
+    "x-tax-tenant-principal": Buffer.from(
+      JSON.stringify({
+        version: "tax-tenant-principal-v2",
+        workspaceId,
+        actorId,
+        capability: "tax.factoring.read",
+        expiresAt,
+      }),
+      "utf8",
+    ).toString("base64url"),
+    "x-tax-tenant-signature": "f".repeat(64),
+  };
+}
+
 describe("Tax Automation Engine agent bridge", () => {
   test("locks the Tax v2 snapshot-read principal wire vector", () => {
     const encoded =
@@ -603,7 +623,7 @@ describe("Tax Automation Engine agent bridge", () => {
 
   test("reads the exact Factura E factoring projection without adding an action", async () => {
     const requests: Array<{ path: string; headers: Headers }> = [];
-    const forwardedPrincipal = forwardedSnapshotPrincipal();
+    const forwardedPrincipal = forwardedFactoringPrincipal();
     const result = {
       state: "ready" as const,
       receipt: {
@@ -659,7 +679,7 @@ describe("Tax Automation Engine agent bridge", () => {
       missingClient.getBrowserFactoringProjection(
         input.workspaceId,
         input.actorId,
-        forwardedSnapshotPrincipal(),
+        forwardedFactoringPrincipal(),
         "annual:2026",
       ),
     ).resolves.toEqual(missing);
@@ -684,10 +704,33 @@ describe("Tax Automation Engine agent bridge", () => {
       invalidClient.getBrowserFactoringProjection(
         input.workspaceId,
         input.actorId,
-        forwardedSnapshotPrincipal(),
+        forwardedFactoringPrincipal(),
         "annual:2026",
       ),
     ).rejects.toThrow("TAX_FACTORING_PROJECTION_RESPONSE_INVALID");
+  });
+
+  test("rejects snapshot-read authority on the factoring-only reader", async () => {
+    let requestCount = 0;
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => {
+        requestCount += 1;
+        return response({});
+      },
+    });
+
+    await expect(
+      client.getBrowserFactoringProjection(
+        input.workspaceId,
+        input.actorId,
+        forwardedSnapshotPrincipal(),
+        "annual:2026",
+      ),
+    ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_SCOPE_MISMATCH");
+    expect(requestCount).toBe(0);
   });
 
   test("fails closed when browser snapshot principal headers are missing", async () => {

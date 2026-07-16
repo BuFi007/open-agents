@@ -35,7 +35,7 @@ function principal() {
         version: "tax-tenant-principal-v2",
         workspaceId,
         actorId,
-        capability: "snapshot:read",
+        capability: "tax.factoring.read",
         expiresAt: new Date(Date.now() + 240_000).toISOString(),
       }),
     ).toString("base64url"),
