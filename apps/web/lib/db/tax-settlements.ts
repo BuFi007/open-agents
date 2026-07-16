@@ -80,6 +80,18 @@ export async function getTaxInvoiceBinding(
   });
 }
 
+export async function getTaxInvoiceBindingByOperatingPackRun(
+  workspaceId: string,
+  operatingPackRunId: string,
+) {
+  return db.query.taxInvoiceBindings.findFirst({
+    where: and(
+      eq(taxInvoiceBindings.workspaceId, workspaceId),
+      eq(taxInvoiceBindings.operatingPackRunId, operatingPackRunId),
+    ),
+  });
+}
+
 export async function receiveTaxSettlementDelivery(input: {
   event: InvoiceSettlementEventV1;
   requestHash: string;

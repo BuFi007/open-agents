@@ -29,6 +29,7 @@ const grantPayloadSchema = z
           "tax.invoice.intent.approve",
           "tax.invoice.settlement",
           "tax.invoice.authority.approve",
+          "tax.invoice.authority.sync",
           "tax.snapshot.read",
           "tax.setup.read",
           "tax.profile.confirm",
