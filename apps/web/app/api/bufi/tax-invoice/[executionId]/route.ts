@@ -112,8 +112,7 @@ export async function GET(
               taxRunId: checkpoint.data.taxRunId,
               phase: checkpoint.data.phase,
               intentHash: checkpoint.data.intentHash,
-              taxpayerReferenceHash:
-                checkpoint.data.taxpayerReferenceHash,
+              taxpayerReferenceHash: checkpoint.data.taxpayerReferenceHash,
               foreignCustomerReferenceHash:
                 checkpoint.data.foreignCustomerReferenceHash,
               nextActions: checkpoint.data.nextActions,
