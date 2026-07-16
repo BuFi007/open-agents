@@ -492,6 +492,7 @@ const TaxTenantPrincipalSchema = z
       "profile:confirm",
       "snapshot:configure",
       "snapshot:read",
+      "tax.factoring.read",
     ]),
     expiresAt: z.iso.datetime({ offset: true }),
   })
@@ -577,7 +578,8 @@ function validateForwardedTaxTenantPrincipal(
     | "profile:read"
     | "profile:confirm"
     | "snapshot:configure"
-    | "snapshot:read",
+    | "snapshot:read"
+    | "tax.factoring.read",
   nowMs = Date.now(),
 ): void {
   // This is a fail-closed syntax/scope preflight. Tax authenticates the MAC.
@@ -1132,7 +1134,7 @@ export class TaxAutomationClient {
       signature,
       expectedWorkspaceId,
       expectedActorId,
-      "snapshot:read",
+      "tax.factoring.read",
     );
     const expectedProjectionKey = projectionKeySchema.parse(
       projectionKey ?? "default",
