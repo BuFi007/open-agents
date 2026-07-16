@@ -18,9 +18,11 @@ mock.module("@/lib/operating-packs/desk-grant", () => ({
 
 mock.module("@/lib/operating-packs/desk-bridge-user", () => ({
   ensureDeskBridgeUser: async (subject: string) => `desk_${subject}`,
+  deskBridgeUserId: (subject: string) => `desk_${subject}`,
 }));
 
 mock.module("@/lib/db/operating-pack-runs", () => ({
+  getOperatingPackRun: async () => storedRun ?? null,
   getOperatingPackRunByIdempotency: async () => storedRun ?? null,
   createOperatingPackRun: async (input: Record<string, unknown>) => {
     runUserId = String(input.userId);
@@ -93,6 +95,7 @@ mock.module("workflow/api", () => ({
 }));
 
 const { POST } = await import("./route");
+const { GET: GET_STATUS } = await import("./[executionId]/route");
 
 const secret = "shared-ingress-secret-at-least-sixteen";
 const workspaceGrant = "signed-workspace-grant".padEnd(100, "x");
@@ -239,5 +242,110 @@ describe("BUFI AI invoice Tax Automation ingress", () => {
     );
     expect(response.status).toBe(401);
     expect(started).toBe(0);
+  });
+});
+
+describe("BUFI Tax invoice status projection", () => {
+  const executionId = "tax_abcdefghijklmnopqrstuvwxyz";
+
+  function statusRequest() {
+    const query = new URLSearchParams({
+      workspaceId,
+      actorId: dispatch.actorId,
+    });
+    return new Request(
+      `https://open-agents.test/api/bufi/tax-invoice/${executionId}?${query}`,
+      {
+        headers: {
+          authorization: `Bearer ${secret}`,
+          "x-bufi-workspace-grant": workspaceGrant,
+        },
+      },
+    );
+  }
+
+  function setStatusRun() {
+    storedRun = {
+      id: executionId,
+      workspaceId,
+      userId: `desk_${dispatch.actorId}`,
+      packId: "tax_automation",
+      workflowId: "ai_invoice_to_factura_e",
+      status: "awaiting_approval",
+      errorCode: null,
+      updatedAt: new Date("2026-07-16T20:00:00.000Z"),
+      result: {
+        version: "tax-invoice-workflow-result-v1",
+        taxRunId: "33333333-3333-4333-8333-333333333333",
+        phase: "wsfex_submission_required",
+        intentHash: "a".repeat(64),
+        nextActions: ["submit_wsfex"],
+        handoff: { customer: "must-not-cross" },
+        revision: 7,
+        approvalBoundary: "tax-engine-trusted-channel",
+      },
+    };
+  }
+
+  test("returns only the grant-scoped checkpoint needed by Desk", async () => {
+    setStatusRun();
+    const response = await GET_STATUS(statusRequest(), {
+      params: Promise.resolve({ executionId }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toMatchObject({
+      executionId,
+      workspaceId,
+      checkpoint: {
+        taxRunId: "33333333-3333-4333-8333-333333333333",
+        phase: "wsfex_submission_required",
+        intentHash: "a".repeat(64),
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("must-not-cross");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  test("fails closed for invalid grants and cross-workspace runs", async () => {
+    setStatusRun();
+    grantValid = false;
+    expect(
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
+    ).toBe(403);
+    grantValid = true;
+    storedRun = {
+      ...storedRun,
+      workspaceId: "44444444-4444-4444-8444-444444444444",
+    };
+    expect(
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
+    ).toBe(404);
+  });
+
+  test("rejects malformed checkpoints instead of widening the response", async () => {
+    setStatusRun();
+    storedRun = {
+      ...storedRun,
+      result: {
+        version: "tax-invoice-workflow-result-v1",
+        handoff: { cae: "secret" },
+      },
+    };
+    expect(
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
+    ).toBe(503);
   });
 });
