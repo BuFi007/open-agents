@@ -6,6 +6,8 @@ node_modules
 out
 dist
 *.tgz
+# Frozen cross-repository Tax browser contract; integrity is test-locked.
+!vendor/tax-engine-browser-contracts-0.1.0.tgz
 
 # code coverage
 coverage

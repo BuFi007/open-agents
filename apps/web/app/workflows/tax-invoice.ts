@@ -33,6 +33,8 @@ function client(): TaxAutomationClient {
   return new TaxAutomationClient({
     baseUrl: process.env.TAX_AUTOMATION_ENGINE_URL ?? "",
     agentApiKey: process.env.TAX_AUTOMATION_ENGINE_API_KEY ?? "",
+    agentPrincipalSecret:
+      process.env.TAX_AUTOMATION_ENGINE_AGENT_PRINCIPAL_HMAC_SECRET ?? "",
   });
 }
 

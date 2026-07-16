@@ -21,6 +21,9 @@ import { bindTaxInvoiceRun } from "@/lib/db/tax-settlements";
 import { createSessionWithInitialChat } from "@/lib/db/sessions";
 import { ensureDeskBridgeUser } from "@/lib/operating-packs/desk-bridge-user";
 import { verifyDeskWorkspaceGrant } from "@/lib/operating-packs/desk-grant";
+import { readBoundedJson } from "@/lib/http/bounded-json";
+
+const MAX_REQUEST_BYTES = 256 * 1024;
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.OPEN_AGENTS_BUFI_INGRESS_SECRET;
@@ -34,7 +37,9 @@ function authorized(request: NextRequest): boolean {
 export async function POST(request: NextRequest) {
   if (!authorized(request))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = await request.json().catch(() => null);
+  const body = await readBoundedJson(request, MAX_REQUEST_BYTES).catch(
+    () => null,
+  );
   const canonical = TaxInvoiceDispatchSchema.safeParse(body);
   const aiArtifact = canonical.success
     ? null

@@ -1,0 +1,15 @@
+{
+  "artifact": "tax-engine-browser-contracts-0.1.0.tgz",
+  "package": "@tax-engine/browser-contracts",
+  "version": "0.1.0",
+  "sha256": "df86899d9a7e2815f3cef55377cd4ffd534e90cf44597555c3c7cd2decb9ce7b",
+  "goldenFixturesSha256": "4042a7cbddaec9729854e4be9f99b1120eb0f608fa056ffaadb175928f9af2c9",
+  "sourceRepository": "git+https://github.com/BuFi007/tax-automation-engine.git",
+  "sourceCheckout": "79d6595efe0c144267fc38699dc26760562aa1ea",
+  "sourcePackageGitState": "untracked-at-source-checkout; artifact content is pinned by the hashes below",
+  "sourcePackageManifestSha256": "c570e123e24c2a8f32193ce26148b2b0755600be2c1d0e743e085fe22aa2ad82",
+  "builtRootEntrypointSha256": "d291cb29d0c2e4166a67ddcc6dedc50633774d87afd9fe6de1e83080b26087c8",
+  "builtFixturesEntrypointSha256": "56323c1e3078a05829a3ac18c47864ac259e870fc3298e539cc7e381b85dad50",
+  "packCommand": "npm pack --ignore-scripts",
+  "rolloutDebt": "Replace this exact file dependency with @tax-engine/browser-contracts@0.1.0 after the immutable package is published."
+}
