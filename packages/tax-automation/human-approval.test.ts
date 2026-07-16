@@ -15,9 +15,10 @@ describe("Tax invoice human approval client", () => {
       agentPrincipalSecret: "agent-principal-secret-at-least-thirty-two",
       userApprovalToken: "user-approval-token-at-least-thirty-two",
       fetchImpl: async (input, init) => {
-        forwarded = input instanceof Request
-          ? new Request(input, init)
-          : new Request(String(input), init);
+        forwarded =
+          input instanceof Request
+            ? new Request(input, init)
+            : new Request(String(input), init);
         return Response.json({
           data: {
             run: {
@@ -47,7 +48,9 @@ describe("Tax invoice human approval client", () => {
       idempotencyKey: "44444444-4444-4444-8444-444444444444",
     });
     expect(run.approvalState).toBe("user_approved");
-    expect(forwarded!.url).toBe(`https://tax.test/v1/agent/runs/${runId}/user-approval`);
+    expect(forwarded!.url).toBe(
+      `https://tax.test/v1/agent/runs/${runId}/user-approval`,
+    );
     expect(forwarded!.headers.get("x-tax-user-approval-token")).toBe(
       "user-approval-token-at-least-thirty-two",
     );

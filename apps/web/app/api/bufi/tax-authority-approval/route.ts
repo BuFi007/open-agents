@@ -58,7 +58,11 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof TaxAutomationRequestError) {
       return privateJson(
-        { error: /^[A-Z0-9_]{1,120}$/.test(error.code) ? error.code : "TAX_AUTHORITY_APPROVAL_FAILED" },
+        {
+          error: /^[A-Z0-9_]{1,120}$/.test(error.code)
+            ? error.code
+            : "TAX_AUTHORITY_APPROVAL_FAILED",
+        },
         [400, 403, 404, 409, 422, 502, 503].includes(error.status)
           ? error.status
           : 503,
@@ -73,8 +77,10 @@ function authorized(request: Request): boolean {
   const actual = request.headers.get("authorization");
   if (!secret || secret.length < 32 || !actual) return false;
   const expected = `Bearer ${secret}`;
-  return actual.length === expected.length
-    && timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  return (
+    actual.length === expected.length &&
+    timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
+  );
 }
 
 function privateJson(value: unknown, status: number): Response {

@@ -249,7 +249,10 @@ describe("BUFI Tax invoice status projection", () => {
   const executionId = "tax_abcdefghijklmnopqrstuvwxyz";
 
   function statusRequest() {
-    const query = new URLSearchParams({ workspaceId, actorId: dispatch.actorId });
+    const query = new URLSearchParams({
+      workspaceId,
+      actorId: dispatch.actorId,
+    });
     return new Request(
       `https://open-agents.test/api/bufi/tax-invoice/${executionId}?${query}`,
       {
@@ -308,7 +311,11 @@ describe("BUFI Tax invoice status projection", () => {
     setStatusRun();
     grantValid = false;
     expect(
-      (await GET_STATUS(statusRequest(), { params: Promise.resolve({ executionId }) })).status,
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
     ).toBe(403);
     grantValid = true;
     storedRun = {
@@ -316,7 +323,11 @@ describe("BUFI Tax invoice status projection", () => {
       workspaceId: "44444444-4444-4444-8444-444444444444",
     };
     expect(
-      (await GET_STATUS(statusRequest(), { params: Promise.resolve({ executionId }) })).status,
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
     ).toBe(404);
   });
 
@@ -330,7 +341,11 @@ describe("BUFI Tax invoice status projection", () => {
       },
     };
     expect(
-      (await GET_STATUS(statusRequest(), { params: Promise.resolve({ executionId }) })).status,
+      (
+        await GET_STATUS(statusRequest(), {
+          params: Promise.resolve({ executionId }),
+        })
+      ).status,
     ).toBe(503);
   });
 });

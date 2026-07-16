@@ -771,13 +771,15 @@ export class TaxAutomationClient {
     return mutationRun(result);
   }
 
-  async approveInvoiceIntent(input: Readonly<{
-    workspaceId: string;
-    actorId: string;
-    runId: string;
-    intentHash: string;
-    idempotencyKey: string;
-  }>): Promise<TaxAutomationRun> {
+  async approveInvoiceIntent(
+    input: Readonly<{
+      workspaceId: string;
+      actorId: string;
+      runId: string;
+      intentHash: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<TaxAutomationRun> {
     if (this.#userApprovalToken.length < 32)
       throw new Error("Tax user approval channel is not configured");
     const path = `/v1/agent/runs/${encodeURIComponent(input.runId)}/user-approval`;
@@ -790,7 +792,9 @@ export class TaxAutomationClient {
         idempotencyKey: input.idempotencyKey,
       },
     });
-    const parsed = z.object({ data: z.object({ run: TaxRunSchema }).passthrough() }).passthrough()
+    const parsed = z
+      .object({ data: z.object({ run: TaxRunSchema }).passthrough() })
+      .passthrough()
       .parse(await safeJson(response));
     if (
       parsed.data.run.runId !== input.runId ||

@@ -5,10 +5,12 @@ import { getOperatingPackRun } from "@/lib/db/operating-pack-runs";
 import { deskBridgeUserId } from "@/lib/operating-packs/desk-bridge-user";
 import { verifyDeskWorkspaceGrant } from "@/lib/operating-packs/desk-grant";
 
-const querySchema = z.object({
-  workspaceId: z.string().uuid(),
-  actorId: z.string().uuid(),
-}).strict();
+const querySchema = z
+  .object({
+    workspaceId: z.string().uuid(),
+    actorId: z.string().uuid(),
+  })
+  .strict();
 
 const phaseSchema = z.enum([
   "readiness_interaction_required",
@@ -28,15 +30,20 @@ const phaseSchema = z.enum([
   "blocked",
 ]);
 
-const checkpointSchema = z.object({
-  version: z.literal("tax-invoice-workflow-result-v1"),
-  taxRunId: z.string().uuid(),
-  phase: phaseSchema,
-  intentHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
-  nextActions: z.array(z.string().min(1).max(160)).max(30),
-  revision: z.number().int().positive(),
-  approvalBoundary: z.literal("tax-engine-trusted-channel"),
-}).passthrough();
+const checkpointSchema = z
+  .object({
+    version: z.literal("tax-invoice-workflow-result-v1"),
+    taxRunId: z.string().uuid(),
+    phase: phaseSchema,
+    intentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable(),
+    nextActions: z.array(z.string().min(1).max(160)).max(30),
+    revision: z.number().int().positive(),
+    approvalBoundary: z.literal("tax-engine-trusted-channel"),
+  })
+  .passthrough();
 
 /**
  * Desk-only, grant-scoped status projection for the durable Tax invoice case.
@@ -48,9 +55,10 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ executionId: string }> },
 ) {
-  if (!authorized(request))
-    return privateJson({ error: "Unauthorized" }, 401);
-  const parsed = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!authorized(request)) return privateJson({ error: "Unauthorized" }, 401);
+  const parsed = querySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams),
+  );
   if (!parsed.success)
     return privateJson({ error: "Invalid tax invoice status request" }, 400);
   const workspaceGrant = request.headers.get("x-bufi-workspace-grant") ?? "";
@@ -78,32 +86,34 @@ export async function GET(
   )
     return privateJson({ error: "Run not found" }, 404);
 
-  const checkpoint = run.result === null
-    ? null
-    : checkpointSchema.safeParse(run.result);
+  const checkpoint =
+    run.result === null ? null : checkpointSchema.safeParse(run.result);
   if (checkpoint && !checkpoint.success)
     return privateJson({ error: "Tax invoice checkpoint unavailable" }, 503);
-  return privateJson({
-    data: {
-      version: "bufi-tax-invoice-status-v1",
-      executionId: run.id,
-      workspaceId: run.workspaceId,
-      status: run.status,
-      errorCode: run.errorCode,
-      checkpoint: checkpoint?.success
-        ? {
-            version: checkpoint.data.version,
-            taxRunId: checkpoint.data.taxRunId,
-            phase: checkpoint.data.phase,
-            intentHash: checkpoint.data.intentHash,
-            nextActions: checkpoint.data.nextActions,
-            revision: checkpoint.data.revision,
-            approvalBoundary: checkpoint.data.approvalBoundary,
-          }
-        : null,
-      updatedAt: run.updatedAt.toISOString(),
+  return privateJson(
+    {
+      data: {
+        version: "bufi-tax-invoice-status-v1",
+        executionId: run.id,
+        workspaceId: run.workspaceId,
+        status: run.status,
+        errorCode: run.errorCode,
+        checkpoint: checkpoint?.success
+          ? {
+              version: checkpoint.data.version,
+              taxRunId: checkpoint.data.taxRunId,
+              phase: checkpoint.data.phase,
+              intentHash: checkpoint.data.intentHash,
+              nextActions: checkpoint.data.nextActions,
+              revision: checkpoint.data.revision,
+              approvalBoundary: checkpoint.data.approvalBoundary,
+            }
+          : null,
+        updatedAt: run.updatedAt.toISOString(),
+      },
     },
-  }, 200);
+    200,
+  );
 }
 
 function authorized(request: Request): boolean {
@@ -111,8 +121,10 @@ function authorized(request: Request): boolean {
   const actual = request.headers.get("authorization");
   if (!secret || secret.length < 32 || !actual) return false;
   const expected = `Bearer ${secret}`;
-  return actual.length === expected.length
-    && timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  return (
+    actual.length === expected.length &&
+    timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
+  );
 }
 
 function privateJson(value: unknown, status: number): Response {
