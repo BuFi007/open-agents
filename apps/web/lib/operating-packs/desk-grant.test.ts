@@ -142,6 +142,17 @@ describe("Desk workspace grants", () => {
     });
   });
 
+  test("accepts factoring projection reads only as their narrow scope", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ scopes: ["tax.factoring.read"] }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toMatchObject({ workspaceId, scopes: ["tax.factoring.read"] });
+  });
+
   test("accepts each Tax setup authority only as its own narrow scope", () => {
     for (const scope of [
       "tax.setup.read",

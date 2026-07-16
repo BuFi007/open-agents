@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createHash, createHmac } from "node:crypto";
 import { buildTaxSnapshotProblemV1 } from "@tax-engine/browser-contracts";
-import { argentinaTaxWidgetSnapshotReceiptV1Fixture } from "@tax-engine/browser-contracts/fixtures";
+import {
+  argentinaTaxWidgetSnapshotReceiptV1Fixture,
+  facturaENeedsConsentProjectionV1Fixture,
+} from "@tax-engine/browser-contracts/fixtures";
 import {
   AiInvoiceDocumentDispatchSchema,
   AiInvoiceArtifactDispatchSchema,
@@ -596,6 +599,95 @@ describe("Tax Automation Engine agent bridge", () => {
         ),
       ).resolves.toEqual(result);
     }
+  });
+
+  test("reads the exact Factura E factoring projection without adding an action", async () => {
+    const requests: Array<{ path: string; headers: Headers }> = [];
+    const forwardedPrincipal = forwardedSnapshotPrincipal();
+    const result = {
+      state: "ready" as const,
+      receipt: {
+        version: "factura-e-factoring-projection-receipt-v1" as const,
+        projectionKey: "annual:2026",
+        revision: 1,
+        projectedAt: "2026-07-16T12:00:00.000Z",
+        projection: facturaENeedsConsentProjectionV1Fixture,
+      },
+    };
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async (url, init) => {
+        requests.push({
+          path: new URL(String(url)).pathname,
+          headers: new Headers(init?.headers),
+        });
+        return response(result);
+      },
+    });
+
+    await expect(
+      client.getBrowserFactoringProjection(
+        input.workspaceId,
+        input.actorId,
+        forwardedPrincipal,
+        "annual:2026",
+      ),
+    ).resolves.toEqual(result);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.path).toBe(
+      `/v1/browser/factoring-projections/${input.workspaceId}/annual%3A2026`,
+    );
+    expect(requests[0]?.headers.get("x-tax-tenant-principal")).toBe(
+      forwardedPrincipal["x-tax-tenant-principal"],
+    );
+  });
+
+  test("preserves a missing factoring projection and rejects mismatched wire data", async () => {
+    const missing = {
+      state: "unavailable" as const,
+      code: "FACTURA_E_FACTORING_PROJECTION_NOT_FOUND" as const,
+    };
+    const missingClient = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => response(missing, 404),
+    });
+    await expect(
+      missingClient.getBrowserFactoringProjection(
+        input.workspaceId,
+        input.actorId,
+        forwardedSnapshotPrincipal(),
+        "annual:2026",
+      ),
+    ).resolves.toEqual(missing);
+
+    const invalidClient = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () =>
+        response({
+          state: "ready",
+          receipt: {
+            version: "factura-e-factoring-projection-receipt-v1",
+            projectionKey: "another:projection",
+            revision: 1,
+            projectedAt: "2026-07-16T12:00:00.000Z",
+            projection: facturaENeedsConsentProjectionV1Fixture,
+          },
+        }),
+    });
+    await expect(
+      invalidClient.getBrowserFactoringProjection(
+        input.workspaceId,
+        input.actorId,
+        forwardedSnapshotPrincipal(),
+        "annual:2026",
+      ),
+    ).rejects.toThrow("TAX_FACTORING_PROJECTION_RESPONSE_INVALID");
   });
 
   test("fails closed when browser snapshot principal headers are missing", async () => {

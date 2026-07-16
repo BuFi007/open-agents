@@ -32,6 +32,7 @@ const grantPayloadSchema = z
           "tax.setup.read",
           "tax.profile.confirm",
           "tax.snapshot.configure",
+          "tax.factoring.read",
         ]),
       )
       .min(1)

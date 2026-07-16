@@ -1,8 +1,10 @@
 import { createHash, createHmac } from "node:crypto";
 import {
+  facturaEFactoringProjectionReadResultV1Schema,
   projectionKeySchema,
   safeReferenceSchema,
   taxSnapshotReadResultV1Schema,
+  type FacturaEFactoringProjectionReadResultV1,
   type TaxSnapshotReadResultV1,
 } from "@tax-engine/browser-contracts";
 import { Decimal } from "decimal.js";
@@ -411,6 +413,13 @@ export const TaxSnapshotReadRequestSchema = z
 
 export type TaxSnapshotReadRequest = z.infer<
   typeof TaxSnapshotReadRequestSchema
+>;
+
+export const TaxFactoringProjectionReadRequestSchema =
+  TaxSnapshotReadRequestSchema;
+
+export type TaxFactoringProjectionReadRequest = z.infer<
+  typeof TaxFactoringProjectionReadRequestSchema
 >;
 
 export type TaxSettlementRecordResult = Readonly<{
@@ -1098,6 +1107,73 @@ export class TaxAutomationClient {
     } else if (result.ok || result.problem.status !== response.status) {
       throw new TaxAutomationRequestError(
         "TAX_BROWSER_SNAPSHOT_RESPONSE_INVALID",
+        502,
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Reads the browser-safe Factura E factoring projection. This is deliberately
+   * read-only: offer acceptance and consent remain separate, authorized commands.
+   */
+  async getBrowserFactoringProjection(
+    workspaceId: string,
+    actorId: string,
+    forwardedPrincipal: ForwardedTaxTenantPrincipalHeaders,
+    projectionKey?: string,
+  ): Promise<FacturaEFactoringProjectionReadResultV1> {
+    const expectedWorkspaceId = safeReferenceSchema.parse(workspaceId);
+    const expectedActorId = z.string().min(1).max(300).parse(actorId);
+    const encodedPrincipal = forwardedPrincipal?.["x-tax-tenant-principal"];
+    const signature = forwardedPrincipal?.["x-tax-tenant-signature"];
+    validateForwardedTaxTenantPrincipal(
+      encodedPrincipal,
+      signature,
+      expectedWorkspaceId,
+      expectedActorId,
+      "snapshot:read",
+    );
+    const expectedProjectionKey = projectionKeySchema.parse(
+      projectionKey ?? "default",
+    );
+    const response = await this.#request(
+      `/v1/browser/factoring-projections/${encodeURIComponent(expectedWorkspaceId)}${
+        projectionKey === undefined
+          ? ""
+          : `/${encodeURIComponent(expectedProjectionKey)}`
+      }`,
+      {
+        headers: {
+          "x-tax-tenant-principal": encodedPrincipal,
+          "x-tax-tenant-signature": signature,
+        },
+        acceptedStatuses: [404],
+      },
+    );
+    let result: FacturaEFactoringProjectionReadResultV1;
+    try {
+      result = facturaEFactoringProjectionReadResultV1Schema.parse(
+        await safeJson(response),
+      );
+    } catch {
+      throw new TaxAutomationRequestError(
+        "TAX_FACTORING_PROJECTION_RESPONSE_INVALID",
+        502,
+      );
+    }
+    if (response.status === 200) {
+      if (
+        result.state !== "ready" ||
+        result.receipt.projectionKey !== expectedProjectionKey
+      )
+        throw new TaxAutomationRequestError(
+          "TAX_FACTORING_PROJECTION_RESPONSE_INVALID",
+          502,
+        );
+    } else if (result.state !== "unavailable") {
+      throw new TaxAutomationRequestError(
+        "TAX_FACTORING_PROJECTION_RESPONSE_INVALID",
         502,
       );
     }
