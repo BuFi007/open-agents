@@ -46,8 +46,9 @@ function principal() {
 function request(options?: {
   authorized?: boolean;
   includePrincipal?: boolean;
+  assertion?: ReturnType<typeof principal>;
 }): NextRequest {
-  const assertion = principal();
+  const assertion = options?.assertion ?? principal();
   const headers: Record<string, string> = {
     authorization:
       options?.authorized === false ? "Bearer invalid" : `Bearer ${secret}`,
@@ -102,7 +103,7 @@ describe("BUFI Factura E factoring projection ingress", () => {
       return Response.json(result);
     });
 
-    const response = await POST(request());
+    const response = await POST(request({ assertion }));
 
     expect(response.status).toBe(200);
     expect(captured?.url).toBe(
