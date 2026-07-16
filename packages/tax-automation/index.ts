@@ -470,6 +470,7 @@ export type TaxAutomationClientOptions = Readonly<{
   baseUrl: string;
   agentApiKey: string;
   agentPrincipalSecret: string;
+  userApprovalToken?: string;
   fetchImpl?: Fetch;
 }>;
 
@@ -670,6 +671,7 @@ export class TaxAutomationClient {
   readonly #baseUrl: URL;
   readonly #agentApiKey: string;
   readonly #agentPrincipalSecret: string;
+  readonly #userApprovalToken: string;
   readonly #fetch: Fetch;
 
   constructor(options: TaxAutomationClientOptions) {
@@ -685,6 +687,7 @@ export class TaxAutomationClient {
       );
     this.#agentApiKey = options.agentApiKey;
     this.#agentPrincipalSecret = options.agentPrincipalSecret;
+    this.#userApprovalToken = options.userApprovalToken ?? "";
     this.#fetch = options.fetchImpl ?? fetch;
   }
 
@@ -766,6 +769,39 @@ export class TaxAutomationClient {
       { runId },
     );
     return mutationRun(result);
+  }
+
+  async approveInvoiceIntent(input: Readonly<{
+    workspaceId: string;
+    actorId: string;
+    runId: string;
+    intentHash: string;
+    idempotencyKey: string;
+  }>): Promise<TaxAutomationRun> {
+    if (this.#userApprovalToken.length < 32)
+      throw new Error("Tax user approval channel is not configured");
+    const path = `/v1/agent/runs/${encodeURIComponent(input.runId)}/user-approval`;
+    const response = await this.#request(path, {
+      method: "POST",
+      headers: { "x-tax-user-approval-token": this.#userApprovalToken },
+      body: {
+        actorId: input.actorId,
+        intentHash: input.intentHash,
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+    const parsed = z.object({ data: z.object({ run: TaxRunSchema }).passthrough() }).passthrough()
+      .parse(await safeJson(response));
+    if (
+      parsed.data.run.runId !== input.runId ||
+      parsed.data.run.workspaceId !== input.workspaceId ||
+      parsed.data.run.intentHash !== input.intentHash
+    )
+      throw new TaxAutomationRequestError(
+        "TAX_AUTOMATION_RESPONSE_IDENTITY_MISMATCH",
+        502,
+      );
+    return parsed.data.run;
   }
 
   async recordInvoiceSettlement(

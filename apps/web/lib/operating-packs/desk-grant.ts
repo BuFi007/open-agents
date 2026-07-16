@@ -26,6 +26,7 @@ const grantPayloadSchema = z
           "agent-wallet.read",
           "agent-wallet.spend",
           "tax.invoice.prepare",
+          "tax.invoice.intent.approve",
           "tax.invoice.settlement",
           "tax.invoice.authority.approve",
           "tax.snapshot.read",
