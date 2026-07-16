@@ -279,6 +279,8 @@ describe("BUFI Tax invoice status projection", () => {
         taxRunId: "33333333-3333-4333-8333-333333333333",
         phase: "wsfex_submission_required",
         intentHash: "a".repeat(64),
+        taxpayerReferenceHash: "b".repeat(64),
+        foreignCustomerReferenceHash: "c".repeat(64),
         nextActions: ["submit_wsfex"],
         handoff: { customer: "must-not-cross" },
         revision: 7,
@@ -301,6 +303,8 @@ describe("BUFI Tax invoice status projection", () => {
         taxRunId: "33333333-3333-4333-8333-333333333333",
         phase: "wsfex_submission_required",
         intentHash: "a".repeat(64),
+        taxpayerReferenceHash: "b".repeat(64),
+        foreignCustomerReferenceHash: "c".repeat(64),
       },
     });
     expect(JSON.stringify(body)).not.toContain("must-not-cross");

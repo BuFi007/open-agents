@@ -39,6 +39,14 @@ const checkpointSchema = z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .nullable(),
+    taxpayerReferenceHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable(),
+    foreignCustomerReferenceHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable(),
     nextActions: z.array(z.string().min(1).max(160)).max(30),
     revision: z.number().int().positive(),
     approvalBoundary: z.literal("tax-engine-trusted-channel"),
@@ -104,6 +112,10 @@ export async function GET(
               taxRunId: checkpoint.data.taxRunId,
               phase: checkpoint.data.phase,
               intentHash: checkpoint.data.intentHash,
+              taxpayerReferenceHash:
+                checkpoint.data.taxpayerReferenceHash,
+              foreignCustomerReferenceHash:
+                checkpoint.data.foreignCustomerReferenceHash,
               nextActions: checkpoint.data.nextActions,
               revision: checkpoint.data.revision,
               approvalBoundary: checkpoint.data.approvalBoundary,

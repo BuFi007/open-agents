@@ -184,6 +184,8 @@ async function persistCheckpointStep(
     taxRunId: checkpoint.taxRunId,
     phase: checkpoint.phase,
     intentHash: checkpoint.intentHash,
+    taxpayerReferenceHash: checkpoint.taxpayerReferenceHash,
+    foreignCustomerReferenceHash: checkpoint.foreignCustomerReferenceHash,
     nextActions: checkpoint.nextActions,
     handoff: checkpoint.handoff,
     revision: checkpoint.revision,
@@ -210,6 +212,8 @@ async function persistCheckpointStep(
       data: {
         taxRunId: checkpoint.taxRunId,
         intentHash: checkpoint.intentHash,
+        taxpayerReferenceHash: checkpoint.taxpayerReferenceHash,
+        foreignCustomerReferenceHash: checkpoint.foreignCustomerReferenceHash,
         revision: checkpoint.revision,
         nextActions: checkpoint.nextActions,
       },
