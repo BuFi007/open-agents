@@ -378,6 +378,14 @@ const TaxRunSchema = z
     ]),
     financeEligibility: z.enum(["frozen", "reviewable"]),
     intentHash: sha256.nullable(),
+    intent: z
+      .object({
+        taxpayerReferenceHash: sha256,
+        foreignCustomerReferenceHash: sha256,
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
     revision: z.number().int().positive(),
   })
   .passthrough();
@@ -456,6 +464,8 @@ export type TaxInvoiceCheckpoint = Readonly<{
   phase: TaxInvoicePhase;
   terminal: boolean;
   intentHash: string | null;
+  taxpayerReferenceHash: string | null;
+  foreignCustomerReferenceHash: string | null;
   nextActions: readonly string[];
   handoff: Readonly<Record<string, unknown>> | null;
   revision: number;
@@ -1443,6 +1453,9 @@ function checkpoint(
     phase,
     terminal,
     intentHash: run.intentHash,
+    taxpayerReferenceHash: run.intent?.taxpayerReferenceHash ?? null,
+    foreignCustomerReferenceHash:
+      run.intent?.foreignCustomerReferenceHash ?? null,
     nextActions,
     handoff,
     revision: run.revision,
