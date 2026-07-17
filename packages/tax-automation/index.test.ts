@@ -3,6 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import {
   buildTaxSnapshotProblemV1,
   taxSnapshotReadResultV1Schema,
+  type AccountantReviewQueueV1,
   type TaxWidgetSnapshotReceiptV1,
   type TaxWidgetSnapshotV1,
 } from "@tax-engine/browser-contracts";
@@ -217,6 +218,25 @@ function forwardedAccountantPortfolioPrincipal(
         workspaceId,
         actorId,
         capability: "accountant:portfolio",
+        expiresAt: new Date(Date.now() + 240_000).toISOString(),
+      }),
+      "utf8",
+    ).toString("base64url"),
+    "x-tax-tenant-signature": "f".repeat(64),
+  };
+}
+
+function forwardedAccountantReviewQueuePrincipal(
+  workspaceId = input.workspaceId,
+  actorId = input.actorId,
+): ForwardedTaxTenantPrincipalHeaders {
+  return {
+    "x-tax-tenant-principal": Buffer.from(
+      JSON.stringify({
+        version: "tax-tenant-principal-v2",
+        workspaceId,
+        actorId,
+        capability: "accountant:review-queue",
         expiresAt: new Date(Date.now() + 240_000).toISOString(),
       }),
       "utf8",
@@ -784,6 +804,84 @@ describe("Tax Automation Engine agent bridge", () => {
         input.workspaceId,
         input.actorId,
         forwardedSnapshotPrincipal(),
+      ),
+    ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_SCOPE_MISMATCH");
+  });
+
+  test("reads a current accountant review queue without becoming its writer", async () => {
+    const queue: AccountantReviewQueueV1 = {
+      version: "accountant-review-queue-v1" as const,
+      accountantActorId: input.actorId,
+      accountantOrganizationId: input.workspaceId,
+      asOf: "2026-07-17T12:00:00.000Z",
+      items: [
+        {
+          version: "accountant-review-queue-item-v1" as const,
+          workspaceId: "33333333-3333-4333-8333-333333333333",
+          mandateId: "mandate:review",
+          caseRef: "case:opaque",
+          subject: {
+            kind: "tax_obligation" as const,
+            ref: "obligation:opaque",
+          },
+          title: "Federal information return review",
+          dueAt: "2026-07-20T12:00:00.000Z",
+          reviewState: "ready_for_review" as const,
+          snapshotRevision: "snapshot:abcdefghijklmnop",
+          caseRevision: 3,
+          evidenceHashes: ["a".repeat(64)],
+          ruleVersionIds: ["rule:opaque"],
+          policyVersionIds: ["external-accountant-decision-policy-v1"],
+          limitationCodes: ["ACCOUNTANT_REVIEW_REQUIRED"],
+          allowedOutcomes: [
+            "approved" as const,
+            "rejected" as const,
+            "needs_information" as const,
+          ],
+          allowedReasonCodes: [
+            "EVIDENCE_INCOMPLETE" as const,
+            "EVIDENCE_CONTRADICTORY" as const,
+            "RULE_VERSION_STALE" as const,
+            "PROFILE_CLASSIFICATION_UNRESOLVED" as const,
+            "JURISDICTION_SCOPE_UNSUPPORTED" as const,
+            "AUTHORITY_RECEIPT_REQUIRED" as const,
+            "CLIENT_CONFIRMATION_REQUIRED" as const,
+            "PROFESSIONAL_JUDGMENT_REQUIRED" as const,
+          ],
+        },
+      ],
+      unavailableClients: [],
+    };
+    const requests: Request[] = [];
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async (url, init) => {
+        requests.push(
+          url instanceof Request
+            ? new Request(url, init)
+            : new Request(url.toString(), init),
+        );
+        return response({ data: queue });
+      },
+    });
+    await expect(
+      client.getAccountantReviewQueue(
+        input.workspaceId,
+        input.actorId,
+        forwardedAccountantReviewQueuePrincipal(),
+      ),
+    ).resolves.toEqual(queue);
+    expect(requests[0]?.url).toBe(
+      "https://tax.test/v1/accountant-review-queue",
+    );
+    expect(requests[0]?.method).toBe("GET");
+    await expect(
+      client.getAccountantReviewQueue(
+        input.workspaceId,
+        input.actorId,
+        forwardedAccountantPortfolioPrincipal(),
       ),
     ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_SCOPE_MISMATCH");
   });

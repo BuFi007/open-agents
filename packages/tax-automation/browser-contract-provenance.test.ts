@@ -13,7 +13,7 @@ import {
 } from "@tax-engine/browser-contracts/scenarios";
 
 const EXPECTED_TARBALL_SHA256 =
-  "7f9f2e0e7aaed138e07e54c0128b71b078962e2b3891547f1681b9fdaf1f8e42";
+  "501e05415fda3be0bec10f97806f4c64e4eb1ce91cd90c641205b0e94fc2eaf2";
 const EXPECTED_GOLDEN_FIXTURE_SHA256 =
   "703e681ee2e1bc76a6589f3f2e0bc865f07ac3855be4efc358e0c2ae0c5c9976";
 const EXPECTED_SCENARIO_FIXTURE_SHA256 =
@@ -21,11 +21,11 @@ const EXPECTED_SCENARIO_FIXTURE_SHA256 =
 const packageDirectory = dirname(fileURLToPath(import.meta.url));
 const tarballPath = resolve(
   packageDirectory,
-  "../../vendor/tax-engine-browser-contracts-0.6.0.tgz",
+  "../../vendor/tax-engine-browser-contracts-0.10.0.tgz",
 );
 const provenancePath = resolve(
   packageDirectory,
-  "../../vendor/tax-engine-browser-contracts-0.6.0.provenance.json",
+  "../../vendor/tax-engine-browser-contracts-0.10.0.provenance.json",
 );
 
 describe("frozen Tax browser-contract dependency", () => {
@@ -55,9 +55,9 @@ describe("frozen Tax browser-contract dependency", () => {
       .digest("hex");
 
     expect(provenance).toMatchObject({
-      artifact: "tax-engine-browser-contracts-0.6.0.tgz",
+      artifact: "tax-engine-browser-contracts-0.10.0.tgz",
       package: "@tax-engine/browser-contracts",
-      version: "0.6.0",
+      version: "0.10.0",
       sha256: EXPECTED_TARBALL_SHA256,
       goldenFixturesSha256: EXPECTED_GOLDEN_FIXTURE_SHA256,
       scenarioFixturesSha256: EXPECTED_SCENARIO_FIXTURE_SHA256,
@@ -65,7 +65,7 @@ describe("frozen Tax browser-contract dependency", () => {
     expect(artifactHash).toBe(EXPECTED_TARBALL_SHA256);
     expect(installedManifest).toMatchObject({
       name: "@tax-engine/browser-contracts",
-      version: "0.6.0",
+      version: "0.10.0",
     });
     expect(TAX_BROWSER_GOLDEN_FIXTURES_V1_SHA256).toBe(
       EXPECTED_GOLDEN_FIXTURE_SHA256,
