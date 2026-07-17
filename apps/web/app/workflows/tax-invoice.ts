@@ -33,7 +33,8 @@ function client(): TaxAutomationClient {
   return new TaxAutomationClient({
     baseUrl: process.env.TAX_AUTOMATION_ENGINE_URL ?? "",
     agentApiKey: process.env.TAX_AUTOMATION_ENGINE_API_KEY ?? "",
-    evidenceIngestToken: process.env.TAX_AUTOMATION_EVIDENCE_INGEST_TOKEN ?? "",
+    agentPrincipalSecret:
+      process.env.TAX_AUTOMATION_ENGINE_AGENT_PRINCIPAL_HMAC_SECRET ?? "",
   });
 }
 
@@ -183,6 +184,8 @@ async function persistCheckpointStep(
     taxRunId: checkpoint.taxRunId,
     phase: checkpoint.phase,
     intentHash: checkpoint.intentHash,
+    taxpayerReferenceHash: checkpoint.taxpayerReferenceHash,
+    foreignCustomerReferenceHash: checkpoint.foreignCustomerReferenceHash,
     nextActions: checkpoint.nextActions,
     handoff: checkpoint.handoff,
     revision: checkpoint.revision,
@@ -209,6 +212,8 @@ async function persistCheckpointStep(
       data: {
         taxRunId: checkpoint.taxRunId,
         intentHash: checkpoint.intentHash,
+        taxpayerReferenceHash: checkpoint.taxpayerReferenceHash,
+        foreignCustomerReferenceHash: checkpoint.foreignCustomerReferenceHash,
         revision: checkpoint.revision,
         nextActions: checkpoint.nextActions,
       },

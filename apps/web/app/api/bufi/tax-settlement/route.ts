@@ -16,6 +16,9 @@ import {
   getTaxSettlementHookToken,
   TAX_SETTLEMENT_SERVICE_ACTOR_ID,
 } from "@/lib/operating-packs/tax-settlement-hook";
+import { readBoundedJson } from "@/lib/http/bounded-json";
+
+const MAX_REQUEST_BYTES = 64 * 1024;
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.OPEN_AGENTS_BUFI_INGRESS_SECRET;
@@ -30,7 +33,7 @@ export async function POST(request: NextRequest) {
   if (!authorized(request))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const parsed = InvoiceSettlementEventV1Schema.safeParse(
-    await request.json().catch(() => null),
+    await readBoundedJson(request, MAX_REQUEST_BYTES).catch(() => null),
   );
   if (!parsed.success)
     return NextResponse.json(

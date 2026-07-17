@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   type InvoiceSettlementEventV1,
   TaxAutomationClient,
+  TaxAutomationRequestError,
 } from "@open-agents/tax-automation";
 import {
   appendOperatingPackTraceNext,
@@ -144,7 +145,8 @@ function client(): TaxAutomationClient {
   return new TaxAutomationClient({
     baseUrl: process.env.TAX_AUTOMATION_ENGINE_URL ?? "",
     agentApiKey: process.env.TAX_AUTOMATION_ENGINE_API_KEY ?? "",
-    evidenceIngestToken: process.env.TAX_AUTOMATION_EVIDENCE_INGEST_TOKEN ?? "",
+    agentPrincipalSecret:
+      process.env.TAX_AUTOMATION_ENGINE_AGENT_PRINCIPAL_HMAC_SECRET ?? "",
   });
 }
 
@@ -204,6 +206,7 @@ async function reopenRunForReversal(
 }
 
 function taxErrorCode(error: unknown): string {
+  if (error instanceof TaxAutomationRequestError) return error.code;
   const message = error instanceof Error ? error.message : String(error);
   const match = message.match(/(?:request: |failed: )([A-Z][A-Z0-9_]{2,119})$/);
   if (match?.[1]) return match[1];
@@ -214,8 +217,9 @@ function taxErrorCode(error: unknown): string {
   return "TAX_AUTOMATION_DELIVERY_FAILED";
 }
 
-function isRetryableTaxError(code: string): boolean {
+export function isRetryableTaxError(code: string): boolean {
   return (
+    code.endsWith("_RETRYABLE") ||
     code === "TAX_AUTOMATION_NOT_CONFIGURED" ||
     code === "TAX_AUTOMATION_UPSTREAM_UNAVAILABLE" ||
     code === "TAX_AUTOMATION_DELIVERY_FAILED" ||
