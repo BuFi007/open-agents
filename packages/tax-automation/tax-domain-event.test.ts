@@ -34,7 +34,7 @@ function event() {
       state: "active",
     },
     evidenceHashes: [HASH],
-    ruleVersionIds: ["rule_1"],
+    ruleVersionIds: ["arca-wsfex-3.1.1"],
     policyVersionIds: ["policy_1"],
     actionRefs: ["action_review_arca"],
   };

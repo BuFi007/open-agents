@@ -22,7 +22,7 @@ const opaqueRef = z
   .string()
   .min(1)
   .max(200)
-  .regex(/^[A-Za-z0-9][A-Za-z0-9:_-]*$/)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9:._-]*$/)
   .refine((value) => !/^\d{9,}$/.test(value), {
     message: "Opaque references cannot be raw identifiers",
   });
