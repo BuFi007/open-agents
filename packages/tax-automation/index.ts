@@ -1,9 +1,11 @@
 import { createHash, createHmac } from "node:crypto";
 import {
+  accountantReviewQueueEnvelopeV1Schema,
   facturaEFactoringProjectionReadResultV1Schema,
   projectionKeySchema,
   safeReferenceSchema,
   taxSnapshotReadResultV1Schema,
+  type AccountantReviewQueueV1,
   type FacturaEFactoringProjectionReadResultV1,
   type TaxSnapshotReadResultV1,
 } from "@tax-engine/browser-contracts";
@@ -441,6 +443,9 @@ export const AccountantPortfolioReadRequestSchema = z
   })
   .strict();
 
+export const AccountantReviewQueueReadRequestSchema =
+  AccountantPortfolioReadRequestSchema;
+
 const AccountantClientCaseSummarySchema = z
   .object({
     version: z.literal("accountant-client-case-summary-v1"),
@@ -586,6 +591,7 @@ const TaxTenantPrincipalSchema = z
       "snapshot:read",
       "tax.factoring.read",
       "accountant:portfolio",
+      "accountant:review-queue",
     ]),
     expiresAt: z.iso.datetime({ offset: true }),
   })
@@ -673,7 +679,8 @@ function validateForwardedTaxTenantPrincipal(
     | "snapshot:configure"
     | "snapshot:read"
     | "tax.factoring.read"
-    | "accountant:portfolio",
+    | "accountant:portfolio"
+    | "accountant:review-queue",
   nowMs = Date.now(),
 ): void {
   // This is a fail-closed syntax/scope preflight. Tax authenticates the MAC.
@@ -1287,6 +1294,49 @@ export class TaxAutomationClient {
     } catch {
       throw new TaxAutomationRequestError(
         "TAX_ACCOUNTANT_PORTFOLIO_RESPONSE_INVALID",
+        502,
+      );
+    }
+  }
+
+  async getAccountantReviewQueue(
+    accountantOrganizationId: string,
+    actorId: string,
+    forwardedPrincipal: ForwardedTaxTenantPrincipalHeaders,
+  ): Promise<AccountantReviewQueueV1> {
+    const expectedOrganizationId = safeReferenceSchema.parse(
+      accountantOrganizationId,
+    );
+    const expectedActorId = z.string().min(1).max(300).parse(actorId);
+    const encodedPrincipal = forwardedPrincipal?.["x-tax-tenant-principal"];
+    const signature = forwardedPrincipal?.["x-tax-tenant-signature"];
+    validateForwardedTaxTenantPrincipal(
+      encodedPrincipal,
+      signature,
+      expectedOrganizationId,
+      expectedActorId,
+      "accountant:review-queue",
+    );
+    const response = await this.#request("/v1/accountant-review-queue", {
+      headers: {
+        "x-tax-tenant-principal": encodedPrincipal,
+        "x-tax-tenant-signature": signature,
+      },
+    });
+    try {
+      const envelope = accountantReviewQueueEnvelopeV1Schema.parse(
+        await safeJson(response),
+      );
+      if (
+        envelope.data.accountantOrganizationId !== expectedOrganizationId ||
+        envelope.data.accountantActorId !== expectedActorId
+      ) {
+        throw new Error("identity mismatch");
+      }
+      return envelope.data;
+    } catch {
+      throw new TaxAutomationRequestError(
+        "TAX_ACCOUNTANT_REVIEW_QUEUE_RESPONSE_INVALID",
         502,
       );
     }
