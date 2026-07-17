@@ -551,6 +551,24 @@ describe("Tax Automation Engine agent bridge", () => {
     expect(result.run.revision).toBe(12);
   });
 
+  test("fails closed when the dedicated settlement adapter credential is absent", async () => {
+    let called = false;
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => {
+        called = true;
+        return response({ data: { run: run(), replayed: false } });
+      },
+    });
+
+    await expect(
+      client.recordInvoiceSettlement(runId, settlementEvent),
+    ).rejects.toThrow("Invoice settlement adapter channel is not configured");
+    expect(called).toBe(false);
+  });
+
   test("keeps the legacy internal snapshot reader available during browser V1 rollout", async () => {
     const snapshot = {
       version: "tax-widget-v1" as const,
