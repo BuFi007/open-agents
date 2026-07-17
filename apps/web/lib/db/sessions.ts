@@ -78,7 +78,7 @@ export async function createSession(data: NewSession) {
   return normalizeSessionRecord(session);
 }
 
-interface CreateSessionWithInitialChatInput {
+export interface CreateSessionWithInitialChatInput {
   session: NewSession;
   initialChat: Pick<NewChat, "id" | "title" | "modelId" | "harnessId">;
 }
@@ -109,6 +109,57 @@ export async function createSessionWithInitialChat(
       throw new Error("Failed to create chat");
     }
 
+    return { session: normalizeSessionRecord(session), chat };
+  });
+}
+
+/**
+ * Replay-safe session creation for deterministic internal workflows. A
+ * concurrent replay may reuse only the exact same user/session/chat binding;
+ * collisions with any other principal fail closed.
+ */
+export async function ensureSessionWithInitialChat(
+  input: CreateSessionWithInitialChatInput,
+) {
+  return db.transaction(async (tx) => {
+    await tx.insert(sessions).values(input.session).onConflictDoNothing({
+      target: sessions.id,
+    });
+    const [session] = await tx
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, input.session.id))
+      .limit(1);
+    if (
+      !session ||
+      session.userId !== input.session.userId ||
+      session.title !== input.session.title
+    )
+      throw new Error("Session identity conflict");
+
+    await tx
+      .insert(chats)
+      .values({
+        id: input.initialChat.id,
+        sessionId: session.id,
+        title: input.initialChat.title,
+        modelId: input.initialChat.modelId,
+        harnessId: input.initialChat.harnessId,
+      })
+      .onConflictDoNothing({ target: chats.id });
+    const [chat] = await tx
+      .select()
+      .from(chats)
+      .where(eq(chats.id, input.initialChat.id))
+      .limit(1);
+    if (
+      !chat ||
+      chat.sessionId !== session.id ||
+      chat.harnessId !== input.initialChat.harnessId ||
+      chat.title !== input.initialChat.title ||
+      chat.modelId !== input.initialChat.modelId
+    )
+      throw new Error("Chat identity conflict");
     return { session: normalizeSessionRecord(session), chat };
   });
 }

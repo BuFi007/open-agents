@@ -1,5 +1,8 @@
 import type { SandboxState } from "@open-agents/sandbox";
-import type { InvoiceSettlementEventV1 } from "@open-agents/tax-automation";
+import type {
+  InvoiceSettlementEventV1,
+  TaxDomainEventV1,
+} from "@open-agents/tax-automation";
 import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
@@ -469,6 +472,40 @@ export const taxInvoiceBindings = pgTable(
   ],
 );
 
+/**
+ * Tenant-scoped registry of canonical Tax Engine cases that may be woken by
+ * privacy-minimized domain events. Invoice bindings project into this table;
+ * other TaxCase topologies register here without inventing another ledger.
+ */
+export const taxCaseBindings = pgTable(
+  "tax_case_bindings",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    taxRunId: text("tax_run_id").notNull(),
+    operatingPackRunId: text("operating_pack_run_id")
+      .notNull()
+      .references(() => operatingPackRuns.id, { onDelete: "cascade" }),
+    caseKind: text("case_kind", {
+      enum: ["invoice", "workspace", "agency", "accountant"],
+    }).notNull(),
+    status: text("status", { enum: ["active", "terminal"] })
+      .notNull()
+      .default("active"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.taxRunId] }),
+    uniqueIndex("tax_case_bindings_operating_pack_run_idx").on(
+      table.operatingPackRunId,
+    ),
+    index("tax_case_bindings_workspace_status_idx").on(
+      table.workspaceId,
+      table.status,
+    ),
+  ],
+);
+
 export const taxSettlementDeliveries = pgTable(
   "tax_settlement_deliveries",
   {
@@ -517,6 +554,88 @@ export const taxSettlementDeliveries = pgTable(
       table.workspaceId,
       table.reversesEventId,
       table.status,
+    ),
+  ],
+);
+
+/**
+ * Generic Tax Engine event inbox. Rows are inserted before a Workflow hook is
+ * resumed, so a hook race or redeploy can never make an authority fact vanish.
+ */
+export const taxDomainEventDeliveries = pgTable(
+  "tax_domain_event_deliveries",
+  {
+    eventId: text("event_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    caseRef: text("case_ref"),
+    operatingPackRunId: text("operating_pack_run_id").references(
+      () => operatingPackRuns.id,
+      { onDelete: "set null" },
+    ),
+    taxRunId: text("tax_run_id"),
+    kind: text("kind").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    payload: jsonb("payload").$type<TaxDomainEventV1>().notNull(),
+    status: text("status", {
+      enum: ["waiting_for_case", "received", "woken"],
+    })
+      .notNull()
+      .default("waiting_for_case"),
+    wokenAt: timestamp("woken_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("tax_domain_event_deliveries_workspace_idempotency_idx").on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index("tax_domain_event_deliveries_case_idx").on(
+      table.workspaceId,
+      table.taxRunId,
+      table.status,
+    ),
+  ],
+);
+
+/**
+ * Durable per-case fan-out. A workspace event is acknowledged only after all
+ * TaxCases bound at receipt time have been woken; retries resume unfinished
+ * targets without repeating completed targets.
+ */
+export const taxDomainEventTargets = pgTable(
+  "tax_domain_event_targets",
+  {
+    eventId: text("event_id")
+      .notNull()
+      .references(() => taxDomainEventDeliveries.eventId, {
+        onDelete: "cascade",
+      }),
+    workspaceId: text("workspace_id").notNull(),
+    operatingPackRunId: text("operating_pack_run_id").notNull(),
+    taxRunId: text("tax_run_id").notNull(),
+    status: text("status", { enum: ["pending", "waking", "woken"] })
+      .notNull()
+      .default("pending"),
+    leaseToken: text("lease_token"),
+    leaseUntil: timestamp("lease_until"),
+    attempts: integer("attempts").notNull().default(0),
+    lastErrorCode: text("last_error_code"),
+    wokenAt: timestamp("woken_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.operatingPackRunId] }),
+    index("tax_domain_event_targets_pending_idx").on(
+      table.eventId,
+      table.status,
+      table.leaseUntil,
+    ),
+    index("tax_domain_event_targets_workspace_case_idx").on(
+      table.workspaceId,
+      table.taxRunId,
     ),
   ],
 );
@@ -893,7 +1012,11 @@ export type OperatingPackCredential =
 export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
 export type TaxInvoiceBinding = typeof taxInvoiceBindings.$inferSelect;
+export type TaxCaseBinding = typeof taxCaseBindings.$inferSelect;
 export type TaxSettlementDelivery = typeof taxSettlementDeliveries.$inferSelect;
+export type TaxDomainEventDelivery =
+  typeof taxDomainEventDeliveries.$inferSelect;
+export type TaxDomainEventTarget = typeof taxDomainEventTargets.$inferSelect;
 export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;

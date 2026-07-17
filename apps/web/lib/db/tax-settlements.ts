@@ -5,6 +5,7 @@ import {
 import { and, asc, count, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "./client";
 import { taxInvoiceBindings, taxSettlementDeliveries } from "./schema";
+import { bindTaxCaseRun } from "./tax-domain-events";
 import { receiveTaxSettlementDeliveryWithStore } from "./tax-settlement-receive";
 
 export { TaxSettlementDeliveryConflictError } from "./tax-settlement-receive";
@@ -16,7 +17,7 @@ export async function bindTaxInvoiceRun(input: {
   idempotencyKey: string;
 }) {
   const taxRunId = taxRunIdFor(input.workspaceId, input.idempotencyKey);
-  return db.transaction(async (transaction) => {
+  const binding = await db.transaction(async (transaction) => {
     await transaction
       .insert(taxInvoiceBindings)
       .values({
@@ -66,6 +67,13 @@ export async function bindTaxInvoiceRun(input: {
       );
     return binding;
   });
+  await bindTaxCaseRun({
+    workspaceId: binding.workspaceId,
+    taxRunId: binding.taxRunId,
+    operatingPackRunId: binding.operatingPackRunId,
+    caseKind: "invoice",
+  });
+  return binding;
 }
 
 export async function getTaxInvoiceBinding(
