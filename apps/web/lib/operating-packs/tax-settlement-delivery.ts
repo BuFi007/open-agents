@@ -148,7 +148,8 @@ function client(): TaxAutomationClient {
     agentPrincipalSecret:
       process.env.TAX_AUTOMATION_ENGINE_AGENT_PRINCIPAL_HMAC_SECRET ?? "",
     invoiceSettlementPrincipalSecret:
-      process.env.TAX_AUTOMATION_ENGINE_INVOICE_SETTLEMENT_PRINCIPAL_HMAC_SECRET ?? "",
+      process.env
+        .TAX_AUTOMATION_ENGINE_INVOICE_SETTLEMENT_PRINCIPAL_HMAC_SECRET ?? "",
   });
 }
 

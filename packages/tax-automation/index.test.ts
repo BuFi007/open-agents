@@ -418,7 +418,8 @@ describe("Tax Automation Engine agent bridge", () => {
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
       agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
-      invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
+      invoiceSettlementPrincipalSecret:
+        "open-agents-invoice-settlement-principal-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -467,7 +468,8 @@ describe("Tax Automation Engine agent bridge", () => {
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
       agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
-      invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
+      invoiceSettlementPrincipalSecret:
+        "open-agents-invoice-settlement-principal-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -481,13 +483,13 @@ describe("Tax Automation Engine agent bridge", () => {
     const result = await client.recordInvoiceSettlement(runId, settlementEvent);
 
     expect(requests).toHaveLength(1);
-    expect(requests[0]?.path).toBe(
-      "/v1/invoice-settlements/record",
-    );
+    expect(requests[0]?.path).toBe("/v1/invoice-settlements/record");
     expect(requests[0]?.headers.get("authorization")).toBe(
       "Bearer agent-key-at-least-sixteen",
     );
-    const encodedPrincipal = requests[0]?.headers.get("x-invoice-settlement-principal");
+    const encodedPrincipal = requests[0]?.headers.get(
+      "x-invoice-settlement-principal",
+    );
     expect(encodedPrincipal).toBeTruthy();
     const principal = JSON.parse(
       Buffer.from(encodedPrincipal!, "base64url").toString("utf8"),
@@ -512,29 +514,29 @@ describe("Tax Automation Engine agent bridge", () => {
         recordedAt: settlementEvent.recordedAt,
       },
       settlement: {
-          settlementReferenceHash: settlementReferenceHashForEvent(
-            settlementEvent.eventId,
-          ),
-          asset: "USDC",
-          network: "base",
-          amount: { decimal: "100.00", currency: "USDC" },
-          observedAt: settlementEvent.finalizedAt,
-          finalityState: "final",
-          fees: { decimal: "0.50", currency: "USDC" },
-          reversesSettlementReferenceHash: null,
-          evidence: {
-            version: "factura-e-settlement-evidence-v1",
-            source: settlementEvent.source,
-            sourceMoney: settlementEvent.sourceMoney,
-            sourceEquivalentAmount: settlementEvent.sourceEquivalentAmount,
-            allocationBasis: settlementEvent.allocationBasis,
-            fx: null,
-            verification: {
-              method: settlementEvent.evidence.method,
-              evidenceHash: settlementEvent.evidence.evidenceHash,
-              verifiedAt: settlementEvent.evidence.verifiedAt,
-            },
+        settlementReferenceHash: settlementReferenceHashForEvent(
+          settlementEvent.eventId,
+        ),
+        asset: "USDC",
+        network: "base",
+        amount: { decimal: "100.00", currency: "USDC" },
+        observedAt: settlementEvent.finalizedAt,
+        finalityState: "final",
+        fees: { decimal: "0.50", currency: "USDC" },
+        reversesSettlementReferenceHash: null,
+        evidence: {
+          version: "factura-e-settlement-evidence-v1",
+          source: settlementEvent.source,
+          sourceMoney: settlementEvent.sourceMoney,
+          sourceEquivalentAmount: settlementEvent.sourceEquivalentAmount,
+          allocationBasis: settlementEvent.allocationBasis,
+          fx: null,
+          verification: {
+            method: settlementEvent.evidence.method,
+            evidenceHash: settlementEvent.evidence.evidenceHash,
+            verifiedAt: settlementEvent.evidence.verifiedAt,
           },
+        },
       },
     });
     expect(principal.bodyHash).toBe(
@@ -542,9 +544,9 @@ describe("Tax Automation Engine agent bridge", () => {
         .update(JSON.stringify(requests[0]?.body), "utf8")
         .digest("hex"),
     );
-    expect(requests[0]?.headers.get("x-invoice-settlement-principal-signature")).toMatch(
-      /^[a-f0-9]{64}$/,
-    );
+    expect(
+      requests[0]?.headers.get("x-invoice-settlement-principal-signature"),
+    ).toMatch(/^[a-f0-9]{64}$/);
     expect(result).toEqual({ run: settledRun, replayed: true });
     expect(result.run.revision).toBe(12);
   });
@@ -741,7 +743,8 @@ describe("Tax Automation Engine agent bridge", () => {
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
         agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
-        invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
+        invoiceSettlementPrincipalSecret:
+          "open-agents-invoice-settlement-principal-32",
         fetchImpl: async () => response(result, problem.status),
       });
 
@@ -1176,7 +1179,8 @@ describe("Tax Automation Engine agent bridge", () => {
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
         agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
-        invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
+        invoiceSettlementPrincipalSecret:
+          "open-agents-invoice-settlement-principal-32",
         fetchImpl: async () =>
           response({ data: { run: mismatchedRun, replayed: false } }),
       });
