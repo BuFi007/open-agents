@@ -1,5 +1,6 @@
 import type { SandboxState } from "@open-agents/sandbox";
 import type { InvoiceSettlementEventV1 } from "@open-agents/tax-automation";
+import type { TaxDomainEventV1 } from "@open-agents/tax-automation";
 import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
@@ -521,6 +522,47 @@ export const taxSettlementDeliveries = pgTable(
   ],
 );
 
+/**
+ * Generic Tax Engine event inbox. Rows are inserted before a Workflow hook is
+ * resumed, so a hook race or redeploy can never make an authority fact vanish.
+ */
+export const taxDomainEventDeliveries = pgTable(
+  "tax_domain_event_deliveries",
+  {
+    eventId: text("event_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    caseRef: text("case_ref"),
+    operatingPackRunId: text("operating_pack_run_id").references(
+      () => operatingPackRuns.id,
+      { onDelete: "set null" },
+    ),
+    taxRunId: text("tax_run_id"),
+    kind: text("kind").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    payload: jsonb("payload").$type<TaxDomainEventV1>().notNull(),
+    status: text("status", {
+      enum: ["waiting_for_case", "received", "woken"],
+    })
+      .notNull()
+      .default("waiting_for_case"),
+    wokenAt: timestamp("woken_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("tax_domain_event_deliveries_workspace_idempotency_idx").on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index("tax_domain_event_deliveries_case_idx").on(
+      table.workspaceId,
+      table.taxRunId,
+      table.status,
+    ),
+  ],
+);
+
 export const queueTelemetryExports = pgTable(
   "queue_telemetry_exports",
   {
@@ -894,6 +936,7 @@ export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
 export type TaxInvoiceBinding = typeof taxInvoiceBindings.$inferSelect;
 export type TaxSettlementDelivery = typeof taxSettlementDeliveries.$inferSelect;
+export type TaxDomainEventDelivery = typeof taxDomainEventDeliveries.$inferSelect;
 export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;

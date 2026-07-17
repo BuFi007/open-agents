@@ -9,6 +9,17 @@ import {
 } from "./invoice-settlement";
 
 export {
+  TAX_DOMAIN_EVENT_DELIVERY_VERSION_V1,
+  TAX_DOMAIN_EVENT_KINDS_V1,
+  TAX_DOMAIN_EVENT_VERSION_V1,
+  TaxDomainEventDeliveryV1Schema,
+  TaxDomainEventV1Schema,
+  taxDomainEventRequestHash,
+  type TaxDomainEventDeliveryV1,
+  type TaxDomainEventV1,
+} from "./tax-domain-event";
+
+export {
   type InvoiceSettlementEventV1,
   InvoiceSettlementEventV1Schema,
   type TaxSettlementCommand,
