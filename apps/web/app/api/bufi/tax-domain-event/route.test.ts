@@ -11,9 +11,7 @@ const signingSecret = "event-signing-secret-that-is-at-least-thirty-two-bytes";
 const HASH = "a".repeat(64);
 const now = "2026-07-17T00:00:00.000Z";
 
-let binding:
-  | { operatingPackRunId: string; taxRunId: string }
-  | undefined;
+let binding: { operatingPackRunId: string; taxRunId: string } | undefined;
 let deliveryStatus: "waiting_for_case" | "received" | "woken" =
   "waiting_for_case";
 let created = true;
@@ -22,7 +20,12 @@ let resumeError: Error | null = null;
 let markError: Error | null = null;
 let calls: string[] = [];
 
-class MockConflictError extends Error {}
+class MockConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MockConflictError";
+  }
+}
 
 mock.module("@/lib/db/tax-domain-events", () => ({
   TaxDomainEventDeliveryConflictError: MockConflictError,
@@ -136,9 +139,9 @@ beforeEach(() => {
 
 describe("TaxDomainEventV1 durable ingress", () => {
   test("rejects an invalid bearer or body signature before persistence", async () => {
-    expect((await POST(request(envelope(), { authorized: false }))).status).toBe(
-      401,
-    );
+    expect(
+      (await POST(request(envelope(), { authorized: false }))).status,
+    ).toBe(401);
     expect((await POST(request(envelope(), { signed: false }))).status).toBe(
       401,
     );
@@ -149,7 +152,7 @@ describe("TaxDomainEventV1 durable ingress", () => {
     expect(
       (await POST(request(envelope({ payloadHash: "b".repeat(64) })))).status,
     ).toBe(400);
-    const unsafe = { ...event(), cuit: "20123456789" };
+    const unsafe = { ...event(), cuit: "9".repeat(11) };
     expect(
       (
         await POST(

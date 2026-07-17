@@ -1,6 +1,8 @@
 import type { SandboxState } from "@open-agents/sandbox";
-import type { InvoiceSettlementEventV1 } from "@open-agents/tax-automation";
-import type { TaxDomainEventV1 } from "@open-agents/tax-automation";
+import type {
+  InvoiceSettlementEventV1,
+  TaxDomainEventV1,
+} from "@open-agents/tax-automation";
 import { sql } from "drizzle-orm";
 import type { ModelVariant } from "@/lib/model-variants";
 import type { GlobalSkillRef } from "@/lib/skills/global-skill-refs";
@@ -936,7 +938,8 @@ export type OperatingPackTrace = typeof operatingPackTraces.$inferSelect;
 export type NewOperatingPackTrace = typeof operatingPackTraces.$inferInsert;
 export type TaxInvoiceBinding = typeof taxInvoiceBindings.$inferSelect;
 export type TaxSettlementDelivery = typeof taxSettlementDeliveries.$inferSelect;
-export type TaxDomainEventDelivery = typeof taxDomainEventDeliveries.$inferSelect;
+export type TaxDomainEventDelivery =
+  typeof taxDomainEventDeliveries.$inferSelect;
 export type KnowledgeEntity = typeof knowledgeEntities.$inferSelect;
 export type NewKnowledgeEntity = typeof knowledgeEntities.$inferInsert;
 export type KnowledgeOutboxEvent = typeof knowledgeOutbox.$inferSelect;

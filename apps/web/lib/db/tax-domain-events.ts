@@ -2,10 +2,7 @@ import type { TaxDomainEventV1 } from "@open-agents/tax-automation";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "./client";
-import {
-  taxDomainEventDeliveries,
-  taxInvoiceBindings,
-} from "./schema";
+import { taxDomainEventDeliveries, taxInvoiceBindings } from "./schema";
 
 export class TaxDomainEventDeliveryConflictError extends Error {
   constructor(message: string) {

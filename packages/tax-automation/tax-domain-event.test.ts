@@ -45,15 +45,36 @@ describe("Open Agents TaxDomainEventV1 consumer boundary", () => {
     const parsed = TaxDomainEventV1Schema.parse(event());
     expect(taxDomainEventRequestHash(parsed)).toMatch(/^[a-f0-9]{64}$/);
     expect(taxDomainEventRequestHash(parsed)).toBe(
-      taxDomainEventRequestHash({ ...parsed, evidenceHashes: [...parsed.evidenceHashes] }),
+      taxDomainEventRequestHash({
+        ...parsed,
+        evidenceHashes: [...parsed.evidenceHashes],
+      }),
     );
   });
 
   test("fails closed on raw fiscal data, money, credentials, and extra fields", () => {
-    expect(TaxDomainEventV1Schema.safeParse({ ...event(), cuit: "20123456789" }).success).toBe(false);
-    expect(TaxDomainEventV1Schema.safeParse({ ...event(), amount: { decimal: "1", currency: "USD" } }).success).toBe(false);
-    expect(TaxDomainEventV1Schema.safeParse({ ...event(), source: { ...event().source, rawAuthorityResponse: "forbidden" } }).success).toBe(false);
-    expect(TaxDomainEventV1Schema.safeParse({ ...event(), authentication: { ...event().authentication, credential: "forbidden" } }).success).toBe(false);
+    expect(
+      TaxDomainEventV1Schema.safeParse({ ...event(), cuit: "9".repeat(11) })
+        .success,
+    ).toBe(false);
+    expect(
+      TaxDomainEventV1Schema.safeParse({
+        ...event(),
+        amount: { decimal: "1", currency: "USD" },
+      }).success,
+    ).toBe(false);
+    expect(
+      TaxDomainEventV1Schema.safeParse({
+        ...event(),
+        source: { ...event().source, rawAuthorityResponse: "forbidden" },
+      }).success,
+    ).toBe(false);
+    expect(
+      TaxDomainEventV1Schema.safeParse({
+        ...event(),
+        authentication: { ...event().authentication, credential: "forbidden" },
+      }).success,
+    ).toBe(false);
   });
 
   test("accepts only a delivery envelope bound to the canonical payload hash", () => {
@@ -77,5 +98,22 @@ describe("Open Agents TaxDomainEventV1 consumer boundary", () => {
         deliveredAt: now,
       }),
     ).toThrow("TAX_DOMAIN_EVENT_PAYLOAD_HASH_INVALID");
+  });
+
+  test("accepts opaque UUID references while still rejecting raw numeric IDs", () => {
+    expect(
+      TaxDomainEventV1Schema.parse({
+        ...event(),
+        workspaceId: "10000000-0000-4000-8000-000000000001",
+        caseRef: "20000000-0000-4000-8000-000000000001",
+      }),
+    ).toMatchObject({
+      workspaceId: "10000000-0000-4000-8000-000000000001",
+      caseRef: "20000000-0000-4000-8000-000000000001",
+    });
+    expect(
+      TaxDomainEventV1Schema.safeParse({ ...event(), caseRef: "9".repeat(11) })
+        .success,
+    ).toBe(false);
   });
 });
