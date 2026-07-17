@@ -206,6 +206,25 @@ function forwardedFactoringPrincipal(
   };
 }
 
+function forwardedAccountantPortfolioPrincipal(
+  workspaceId = input.workspaceId,
+  actorId = input.actorId,
+): ForwardedTaxTenantPrincipalHeaders {
+  return {
+    "x-tax-tenant-principal": Buffer.from(
+      JSON.stringify({
+        version: "tax-tenant-principal-v2",
+        workspaceId,
+        actorId,
+        capability: "accountant:portfolio",
+        expiresAt: new Date(Date.now() + 240_000).toISOString(),
+      }),
+      "utf8",
+    ).toString("base64url"),
+    "x-tax-tenant-signature": "f".repeat(64),
+  };
+}
+
 describe("Tax Automation Engine agent bridge", () => {
   test("locks the Tax v2 snapshot-read principal wire vector", () => {
     const encoded =
@@ -708,6 +727,65 @@ describe("Tax Automation Engine agent bridge", () => {
         ),
       ).resolves.toEqual(result);
     }
+  });
+
+  test("reads an accountant portfolio only for the exact firm and actor", async () => {
+    const portfolio = {
+      version: "accountant-portfolio-projection-v1" as const,
+      accountantActorId: input.actorId,
+      accountantOrganizationId: input.workspaceId,
+      asOf: "2026-07-16T12:00:00.000Z",
+      clients: [
+        {
+          version: "accountant-client-case-summary-v1" as const,
+          workspaceId: "33333333-3333-4333-8333-333333333333",
+          nextDueAt: "2026-07-20T12:00:00.000Z",
+          outstandingObligationCount: 2,
+          professionalReviewCount: 1,
+          clientApprovalCount: 1,
+        },
+      ],
+      mandates: [
+        {
+          version: "accountant-mandate-v1" as const,
+          mandateId: "mandate:review",
+          workspaceId: "33333333-3333-4333-8333-333333333333",
+          accountantActorId: input.actorId,
+          accountantOrganizationId: input.workspaceId,
+          scopes: ["review_tax_obligation" as const],
+          grantedByActorId: "user:client-owner",
+          grantedAt: "2026-07-15T12:00:00.000Z",
+          expiresAt: "2026-08-15T12:00:00.000Z",
+          revokedAt: null,
+        },
+      ],
+      totals: {
+        authorizedClientCount: 1,
+        outstandingObligationCount: 2,
+        professionalReviewCount: 1,
+        clientApprovalCount: 1,
+      },
+    };
+    const client = new TaxAutomationClient({
+      baseUrl: "https://tax.test",
+      agentApiKey: "agent-key-at-least-sixteen",
+      agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      fetchImpl: async () => response({ data: portfolio }),
+    });
+    await expect(
+      client.getAccountantPortfolio(
+        input.workspaceId,
+        input.actorId,
+        forwardedAccountantPortfolioPrincipal(),
+      ),
+    ).resolves.toEqual(portfolio);
+    await expect(
+      client.getAccountantPortfolio(
+        input.workspaceId,
+        input.actorId,
+        forwardedSnapshotPrincipal(),
+      ),
+    ).rejects.toThrow("TAX_SNAPSHOT_PRINCIPAL_SCOPE_MISMATCH");
   });
 
   test("reads the exact Factura E factoring projection without adding an action", async () => {

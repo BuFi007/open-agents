@@ -97,6 +97,17 @@ describe("Desk workspace grants", () => {
     });
   });
 
+  test("accepts the dedicated accountant portfolio read scope", () => {
+    expect(
+      verifyDeskWorkspaceGrant({
+        token: grant({ scopes: ["tax.accountant.portfolio.read"] }),
+        workspaceId,
+        secret,
+        now: 5_000,
+      }),
+    ).toMatchObject({ scopes: ["tax.accountant.portfolio.read"] });
+  });
+
   test("accepts UUID and nanoid subjects but rejects malformed identity text", () => {
     for (const subject of [
       "22222222-2222-4222-8222-222222222222",

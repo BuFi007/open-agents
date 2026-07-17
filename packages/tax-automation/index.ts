@@ -423,6 +423,76 @@ export type TaxSnapshotReadRequest = z.infer<
   typeof TaxSnapshotReadRequestSchema
 >;
 
+export const AccountantPortfolioReadRequestSchema = z
+  .object({
+    workspaceId: safeReferenceSchema,
+    actorId: z.string().min(1).max(300),
+  })
+  .strict();
+
+const AccountantClientCaseSummarySchema = z
+  .object({
+    version: z.literal("accountant-client-case-summary-v1"),
+    workspaceId: safeReferenceSchema,
+    nextDueAt: z.iso.datetime({ offset: true }).nullable(),
+    outstandingObligationCount: z.number().int().nonnegative(),
+    professionalReviewCount: z.number().int().nonnegative(),
+    clientApprovalCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const AccountantPortfolioProjectionSchema = z
+  .object({
+    version: z.literal("accountant-portfolio-projection-v1"),
+    accountantActorId: z.string().min(1).max(300),
+    accountantOrganizationId: safeReferenceSchema,
+    asOf: z.iso.datetime({ offset: true }),
+    clients: z.array(AccountantClientCaseSummarySchema).max(500),
+    mandates: z
+      .array(
+        z
+          .object({
+            version: z.literal("accountant-mandate-v1"),
+            mandateId: safeReferenceSchema,
+            workspaceId: safeReferenceSchema,
+            accountantActorId: z.string().min(1).max(300),
+            accountantOrganizationId: safeReferenceSchema,
+            scopes: z
+              .array(
+                z.enum([
+                  "review_tax_obligation",
+                  "approve_invoice_intent",
+                  "approve_invoice_adjustment",
+                  "verify_fx_ingress",
+                  "record_tax_declaration",
+                  "export_accountant_packet",
+                ]),
+              )
+              .min(1)
+              .max(6),
+            grantedByActorId: z.string().min(1).max(300),
+            grantedAt: z.iso.datetime({ offset: true }),
+            expiresAt: z.iso.datetime({ offset: true }),
+            revokedAt: z.iso.datetime({ offset: true }).nullable(),
+          })
+          .strict(),
+      )
+      .max(1_000),
+    totals: z
+      .object({
+        authorizedClientCount: z.number().int().nonnegative(),
+        outstandingObligationCount: z.number().int().nonnegative(),
+        professionalReviewCount: z.number().int().nonnegative(),
+        clientApprovalCount: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type AccountantPortfolioProjection = z.infer<
+  typeof AccountantPortfolioProjectionSchema
+>;
+
 export const TaxFactoringProjectionReadRequestSchema =
   TaxSnapshotReadRequestSchema;
 
@@ -504,6 +574,7 @@ const TaxTenantPrincipalSchema = z
       "snapshot:configure",
       "snapshot:read",
       "tax.factoring.read",
+      "accountant:portfolio",
     ]),
     expiresAt: z.iso.datetime({ offset: true }),
   })
@@ -590,7 +661,8 @@ function validateForwardedTaxTenantPrincipal(
     | "profile:confirm"
     | "snapshot:configure"
     | "snapshot:read"
-    | "tax.factoring.read",
+    | "tax.factoring.read"
+    | "accountant:portfolio",
   nowMs = Date.now(),
 ): void {
   // This is a fail-closed syntax/scope preflight. Tax authenticates the MAC.
@@ -1163,6 +1235,50 @@ export class TaxAutomationClient {
       );
     }
     return result;
+  }
+
+  async getAccountantPortfolio(
+    accountantOrganizationId: string,
+    actorId: string,
+    forwardedPrincipal: ForwardedTaxTenantPrincipalHeaders,
+  ): Promise<AccountantPortfolioProjection> {
+    const expectedOrganizationId = safeReferenceSchema.parse(
+      accountantOrganizationId,
+    );
+    const expectedActorId = z.string().min(1).max(300).parse(actorId);
+    const encodedPrincipal = forwardedPrincipal?.["x-tax-tenant-principal"];
+    const signature = forwardedPrincipal?.["x-tax-tenant-signature"];
+    validateForwardedTaxTenantPrincipal(
+      encodedPrincipal,
+      signature,
+      expectedOrganizationId,
+      expectedActorId,
+      "accountant:portfolio",
+    );
+    const response = await this.#request("/v1/accountant-portfolio", {
+      headers: {
+        "x-tax-tenant-principal": encodedPrincipal,
+        "x-tax-tenant-signature": signature,
+      },
+    });
+    try {
+      const envelope = z
+        .object({ data: AccountantPortfolioProjectionSchema })
+        .strict()
+        .parse(await safeJson(response));
+      if (
+        envelope.data.accountantOrganizationId !== expectedOrganizationId ||
+        envelope.data.accountantActorId !== expectedActorId
+      ) {
+        throw new Error("identity mismatch");
+      }
+      return envelope.data;
+    } catch {
+      throw new TaxAutomationRequestError(
+        "TAX_ACCOUNTANT_PORTFOLIO_RESPONSE_INVALID",
+        502,
+      );
+    }
   }
 
   /**
