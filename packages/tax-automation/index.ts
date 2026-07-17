@@ -448,6 +448,36 @@ export const AccountantPortfolioProjectionSchema = z
     accountantOrganizationId: safeReferenceSchema,
     asOf: z.iso.datetime({ offset: true }),
     clients: z.array(AccountantClientCaseSummarySchema).max(500),
+    mandates: z
+      .array(
+        z
+          .object({
+            version: z.literal("accountant-mandate-v1"),
+            mandateId: safeReferenceSchema,
+            workspaceId: safeReferenceSchema,
+            accountantActorId: z.string().min(1).max(300),
+            accountantOrganizationId: safeReferenceSchema,
+            scopes: z
+              .array(
+                z.enum([
+                  "review_tax_obligation",
+                  "approve_invoice_intent",
+                  "approve_invoice_adjustment",
+                  "verify_fx_ingress",
+                  "record_tax_declaration",
+                  "export_accountant_packet",
+                ]),
+              )
+              .min(1)
+              .max(6),
+            grantedByActorId: z.string().min(1).max(300),
+            grantedAt: z.iso.datetime({ offset: true }),
+            expiresAt: z.iso.datetime({ offset: true }),
+            revokedAt: z.iso.datetime({ offset: true }).nullable(),
+          })
+          .strict(),
+      )
+      .max(1_000),
     totals: z
       .object({
         authorizedClientCount: z.number().int().nonnegative(),

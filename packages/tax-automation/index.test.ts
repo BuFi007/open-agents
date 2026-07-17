@@ -745,6 +745,20 @@ describe("Tax Automation Engine agent bridge", () => {
           clientApprovalCount: 1,
         },
       ],
+      mandates: [
+        {
+          version: "accountant-mandate-v1" as const,
+          mandateId: "mandate:review",
+          workspaceId: "33333333-3333-4333-8333-333333333333",
+          accountantActorId: input.actorId,
+          accountantOrganizationId: input.workspaceId,
+          scopes: ["review_tax_obligation" as const],
+          grantedByActorId: "user:client-owner",
+          grantedAt: "2026-07-15T12:00:00.000Z",
+          expiresAt: "2026-08-15T12:00:00.000Z",
+          revokedAt: null,
+        },
+      ],
       totals: {
         authorizedClientCount: 1,
         outstandingObligationCount: 2,
