@@ -566,6 +566,8 @@ export type TaxAutomationClientOptions = Readonly<{
   baseUrl: string;
   agentApiKey: string;
   agentPrincipalSecret: string;
+  /** Dedicated Invoice 2.0/Open Agents outbox credential; never an agent tool secret. */
+  invoiceSettlementPrincipalSecret?: string;
   userApprovalToken?: string;
   fetchImpl?: Fetch;
 }>;
@@ -599,6 +601,7 @@ const TaxTenantPrincipalSchema = z
 
 const TAX_TENANT_PRINCIPAL_MAX_TTL_MS = 300_000;
 const TAX_AGENT_PRINCIPAL_TTL_MS = 60_000;
+const INVOICE_SETTLEMENT_ADAPTER_TTL_MS = 60_000;
 const taxCataloguesEnvelopeSchema = z
   .object({ data: z.array(TaxSetupCatalogueSchema).min(1).max(10) })
   .strict();
@@ -647,6 +650,30 @@ function taxAgentPrincipalHeaders(
     "x-tax-agent-principal-signature": createHmac("sha256", input.secret)
       .update(encoded, "utf8")
       .digest("hex"),
+  };
+}
+
+function invoiceSettlementAdapterPrincipalHeaders(input: Readonly<{
+  secret: string; workspaceId: string; path: string; rawBody: string;
+  idempotencyKey: string; expiresAt: string;
+}>): Record<string, string> {
+  if (input.secret.length < 32) throw new Error("Invoice settlement adapter channel is not configured");
+  const principal = {
+    version: "invoice-settlement-adapter-principal-v1" as const,
+    workspaceId: z.string().uuid().parse(input.workspaceId),
+    adapterId: "open-agents-invoice-settlement" as const,
+    method: "POST" as const,
+    path: "/v1/invoice-settlements/record" as const,
+    bodyHash: createHash("sha256").update(input.rawBody, "utf8").digest("hex"),
+    idempotencyKey: z.string().min(8).max(200).parse(input.idempotencyKey),
+    expiresAt: z.iso.datetime({ offset: true }).parse(input.expiresAt),
+  };
+  const remainingTtl = Date.parse(principal.expiresAt) - Date.now();
+  if (remainingTtl <= 0 || remainingTtl > INVOICE_SETTLEMENT_ADAPTER_TTL_MS) throw new Error("Invoice settlement adapter principal lifetime is invalid");
+  const encoded = Buffer.from(JSON.stringify(principal), "utf8").toString("base64url");
+  return {
+    "x-invoice-settlement-principal": encoded,
+    "x-invoice-settlement-principal-signature": createHmac("sha256", input.secret).update(encoded, "utf8").digest("hex"),
   };
 }
 const taxConfigurationEnvelopeSchema = z
@@ -771,6 +798,7 @@ export class TaxAutomationClient {
   readonly #baseUrl: URL;
   readonly #agentApiKey: string;
   readonly #agentPrincipalSecret: string;
+  readonly #invoiceSettlementPrincipalSecret: string | null;
   readonly #userApprovalToken: string;
   readonly #fetch: Fetch;
 
@@ -787,6 +815,7 @@ export class TaxAutomationClient {
       );
     this.#agentApiKey = options.agentApiKey;
     this.#agentPrincipalSecret = options.agentPrincipalSecret;
+    this.#invoiceSettlementPrincipalSecret = options.invoiceSettlementPrincipalSecret ?? null;
     this.#userApprovalToken = options.userApprovalToken ?? "";
     this.#fetch = options.fetchImpl ?? fetch;
   }
@@ -911,19 +940,28 @@ export class TaxAutomationClient {
   async recordInvoiceSettlement(
     runId: string,
     event: InvoiceSettlementEventV1,
-    actorId = "agent:tax-settlement",
   ): Promise<TaxSettlementRecordResult> {
     const parsedEvent = InvoiceSettlementEventV1Schema.parse(event);
-    const result = await this.#invoke(
-      "tax_ar_factura_e_record_settlement",
-      parsedEvent.teamId,
-      actorId,
-      `invoice-settlement:${parsedEvent.eventId}`,
-      {
-        runId,
-        settlement: taxSettlementCommandFor(parsedEvent),
+    const idempotencyKey = `invoice-settlement:${parsedEvent.eventId}`;
+    const path = "/v1/invoice-settlements/record";
+    const body = {
+      runId, idempotencyKey,
+      event: {
+        schemaVersion: parsedEvent.schemaVersion, eventId: parsedEvent.eventId,
+        teamId: parsedEvent.teamId, eventType: parsedEvent.eventType,
+        replayKey: parsedEvent.replayKey, recordedAt: parsedEvent.recordedAt,
       },
-    );
+      settlement: taxSettlementCommandFor(parsedEvent),
+    };
+    const rawBody = JSON.stringify(body);
+    const result = await safeJson(await this.#request(path, {
+      method: "POST", rawBody,
+      headers: invoiceSettlementAdapterPrincipalHeaders({
+        secret: this.#invoiceSettlementPrincipalSecret ?? "",
+        workspaceId: parsedEvent.teamId, path, rawBody, idempotencyKey,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      }),
+    }));
     const parsed = z
       .object({ run: TaxRunSchema, replayed: z.boolean() })
       .passthrough()

@@ -418,6 +418,7 @@ describe("Tax Automation Engine agent bridge", () => {
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
       agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -466,6 +467,7 @@ describe("Tax Automation Engine agent bridge", () => {
       baseUrl: "https://tax.test",
       agentApiKey: "agent-key-at-least-sixteen",
       agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+      invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
       fetchImpl: async (url, init) => {
         const path = new URL(String(url)).pathname;
         const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -480,31 +482,36 @@ describe("Tax Automation Engine agent bridge", () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0]?.path).toBe(
-      "/v1/agent/tools/tax_ar_factura_e_record_settlement/invoke",
+      "/v1/invoice-settlements/record",
     );
     expect(requests[0]?.headers.get("authorization")).toBe(
       "Bearer agent-key-at-least-sixteen",
     );
-    const encodedPrincipal = requests[0]?.headers.get("x-tax-agent-principal");
+    const encodedPrincipal = requests[0]?.headers.get("x-invoice-settlement-principal");
     expect(encodedPrincipal).toBeTruthy();
     const principal = JSON.parse(
       Buffer.from(encodedPrincipal!, "base64url").toString("utf8"),
     );
     expect(principal).toMatchObject({
-      version: "tax-agent-principal-v1",
+      version: "invoice-settlement-adapter-principal-v1",
       workspaceId: settlementEvent.teamId,
-      actorId: "agent:tax-settlement",
-      toolId: "tax_ar_factura_e_record_settlement",
+      adapterId: "open-agents-invoice-settlement",
       method: "POST",
-      path: "/v1/agent/tools/tax_ar_factura_e_record_settlement/invoke",
+      path: "/v1/invoice-settlements/record",
       idempotencyKey: `invoice-settlement:${settlementEvent.eventId}`,
     });
     expect(requests[0]?.body).toEqual({
-      actorId: "agent:tax-settlement",
+      runId,
       idempotencyKey: `invoice-settlement:${settlementEvent.eventId}`,
-      input: {
-        runId,
-        settlement: {
+      event: {
+        schemaVersion: 1,
+        eventId: settlementEvent.eventId,
+        teamId: settlementEvent.teamId,
+        eventType: settlementEvent.eventType,
+        replayKey: settlementEvent.replayKey,
+        recordedAt: settlementEvent.recordedAt,
+      },
+      settlement: {
           settlementReferenceHash: settlementReferenceHashForEvent(
             settlementEvent.eventId,
           ),
@@ -528,7 +535,6 @@ describe("Tax Automation Engine agent bridge", () => {
               verifiedAt: settlementEvent.evidence.verifiedAt,
             },
           },
-        },
       },
     });
     expect(principal.bodyHash).toBe(
@@ -536,7 +542,7 @@ describe("Tax Automation Engine agent bridge", () => {
         .update(JSON.stringify(requests[0]?.body), "utf8")
         .digest("hex"),
     );
-    expect(requests[0]?.headers.get("x-tax-agent-principal-signature")).toMatch(
+    expect(requests[0]?.headers.get("x-invoice-settlement-principal-signature")).toMatch(
       /^[a-f0-9]{64}$/,
     );
     expect(result).toEqual({ run: settledRun, replayed: true });
@@ -735,6 +741,7 @@ describe("Tax Automation Engine agent bridge", () => {
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
         agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
         fetchImpl: async () => response(result, problem.status),
       });
 
@@ -1169,6 +1176,7 @@ describe("Tax Automation Engine agent bridge", () => {
         baseUrl: "https://tax.test",
         agentApiKey: "agent-key-at-least-sixteen",
         agentPrincipalSecret: "open-agents-tax-agent-principal-secret-32",
+        invoiceSettlementPrincipalSecret: "open-agents-invoice-settlement-principal-32",
         fetchImpl: async () =>
           response({ data: { run: mismatchedRun, replayed: false } }),
       });
