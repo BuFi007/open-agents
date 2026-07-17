@@ -4,8 +4,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { resumeHook } from "workflow/api";
 
 import {
-  markTaxDomainEventWoken,
+  claimTaxDomainEventTargets,
+  completeTaxDomainEventTarget,
+  getTaxDomainEventProgress,
   receiveTaxDomainEventDelivery,
+  releaseTaxDomainEventTarget,
   TaxDomainEventDeliveryConflictError,
 } from "@/lib/db/tax-domain-events";
 import { getTaxWorkflowWakeHookToken } from "@/lib/operating-packs/tax-settlement-hook";
@@ -104,7 +107,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!received.binding)
+  if (received.targets.length === 0)
     return NextResponse.json(
       receipt({
         deliveryId,
@@ -129,19 +132,75 @@ export async function POST(request: NextRequest) {
       }),
     );
 
+  const now = new Date();
+  let claims: Awaited<ReturnType<typeof claimTaxDomainEventTargets>>;
   try {
-    await resumeHook(
-      getTaxWorkflowWakeHookToken(received.binding.operatingPackRunId),
-      { eventId: event.eventId },
-    );
-    await markTaxDomainEventWoken({
+    claims = await claimTaxDomainEventTargets({
       eventId: event.eventId,
-      operatingPackRunId: received.binding.operatingPackRunId,
-      taxRunId: received.binding.taxRunId,
+      now,
+      leaseUntil: new Date(now.getTime() + 5 * 60_000),
     });
   } catch {
-    // The durable `received` row remains. The producer retains and retries the
-    // outbox item instead of fabricating workflow progress.
+    return NextResponse.json(
+      { error: "TAX_DOMAIN_EVENT_PERSISTENCE_UNAVAILABLE" },
+      { status: 503 },
+    );
+  }
+  let wakeFailed = false;
+  for (const target of claims) {
+    if (!target.leaseToken) {
+      wakeFailed = true;
+      continue;
+    }
+    try {
+      await resumeHook(getTaxWorkflowWakeHookToken(target.operatingPackRunId), {
+        eventId: event.eventId,
+      });
+      await completeTaxDomainEventTarget({
+        eventId: event.eventId,
+        operatingPackRunId: target.operatingPackRunId,
+        leaseToken: target.leaseToken,
+      });
+    } catch {
+      wakeFailed = true;
+      try {
+        await releaseTaxDomainEventTarget({
+          eventId: event.eventId,
+          operatingPackRunId: target.operatingPackRunId,
+          leaseToken: target.leaseToken,
+          errorCode: "TAX_DOMAIN_EVENT_WAKE_UNAVAILABLE",
+        });
+      } catch {
+        // The fenced lease expires and becomes retryable even if the explicit
+        // release cannot reach Postgres.
+      }
+    }
+  }
+
+  let progress: Awaited<ReturnType<typeof getTaxDomainEventProgress>>;
+  try {
+    progress = await getTaxDomainEventProgress(event.eventId);
+  } catch {
+    return NextResponse.json(
+      { error: "TAX_DOMAIN_EVENT_PERSISTENCE_UNAVAILABLE" },
+      { status: 503 },
+    );
+  }
+  if (progress.delivery?.status !== "woken") {
+    // Every successful target remains durably woken. The producer retains the
+    // outbox item and retries only unfinished or expired targets.
+    if (!wakeFailed)
+      return NextResponse.json(
+        receipt({
+          deliveryId,
+          eventId: event.eventId,
+          payloadHash,
+          accepted: false,
+          status: "waiting_for_tax_case",
+          replayed: !received.created,
+        }),
+        { status: 202 },
+      );
     return NextResponse.json(
       { error: "TAX_DOMAIN_EVENT_WAKE_UNAVAILABLE" },
       { status: 503 },

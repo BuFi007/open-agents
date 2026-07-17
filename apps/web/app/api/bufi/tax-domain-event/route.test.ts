@@ -11,9 +11,14 @@ const signingSecret = "event-signing-secret-that-is-at-least-thirty-two-bytes";
 const HASH = "a".repeat(64);
 const now = "2026-07-17T00:00:00.000Z";
 
-let binding: { operatingPackRunId: string; taxRunId: string } | undefined;
 let deliveryStatus: "waiting_for_case" | "received" | "woken" =
   "waiting_for_case";
+let targets: Array<{
+  operatingPackRunId: string;
+  taxRunId: string;
+  leaseToken: string;
+}> = [];
+let completedTargets = new Set<string>();
 let created = true;
 let receiveError: Error | null = null;
 let resumeError: Error | null = null;
@@ -33,15 +38,30 @@ mock.module("@/lib/db/tax-domain-events", () => ({
     calls.push("persist");
     if (receiveError) throw receiveError;
     return {
-      binding,
+      targets,
       created,
       delivery: { status: deliveryStatus },
     };
   },
-  markTaxDomainEventWoken: async () => {
+  claimTaxDomainEventTargets: async () => {
+    calls.push("claim");
+    return deliveryStatus === "received" ? targets : [];
+  },
+  completeTaxDomainEventTarget: async (input: {
+    operatingPackRunId: string;
+  }) => {
     calls.push("mark-woken");
     if (markError) throw markError;
-    return { status: "woken" };
+    completedTargets.add(input.operatingPackRunId);
+    if (completedTargets.size === targets.length) deliveryStatus = "woken";
+    return { complete: deliveryStatus === "woken" };
+  },
+  releaseTaxDomainEventTarget: async () => {
+    calls.push("release");
+  },
+  getTaxDomainEventProgress: async () => {
+    calls.push("progress");
+    return { delivery: { status: deliveryStatus }, targets };
   },
 }));
 
@@ -128,8 +148,9 @@ function request(
 beforeEach(() => {
   process.env.OPEN_AGENTS_BUFI_INGRESS_SECRET = ingressSecret;
   process.env.OPEN_AGENTS_TAX_DOMAIN_EVENT_HMAC_SECRET = signingSecret;
-  binding = undefined;
   deliveryStatus = "waiting_for_case";
+  targets = [];
+  completedTargets = new Set();
   created = true;
   receiveError = null;
   resumeError = null;
@@ -180,10 +201,13 @@ describe("TaxDomainEventV1 durable ingress", () => {
   });
 
   test("persists before waking a bound Tax workflow and binds the receipt", async () => {
-    binding = {
-      operatingPackRunId: "tax_execution_1",
-      taxRunId: "taxcase_opaque_1",
-    };
+    targets = [
+      {
+        operatingPackRunId: "tax_execution_1",
+        taxRunId: "taxcase_opaque_1",
+        leaseToken: "lease_1",
+      },
+    ];
     deliveryStatus = "received";
     const response = await POST(request(envelope()));
     expect(response.status).toBe(200);
@@ -194,25 +218,43 @@ describe("TaxDomainEventV1 durable ingress", () => {
       accepted: true,
       status: "woken",
     });
-    expect(calls).toEqual(["persist", "resume", "mark-woken"]);
+    expect(calls).toEqual([
+      "persist",
+      "claim",
+      "resume",
+      "mark-woken",
+      "progress",
+    ]);
   });
 
   test("retains the durable inbox row when workflow wake-up fails", async () => {
-    binding = {
-      operatingPackRunId: "tax_execution_1",
-      taxRunId: "taxcase_opaque_1",
-    };
+    targets = [
+      {
+        operatingPackRunId: "tax_execution_1",
+        taxRunId: "taxcase_opaque_1",
+        leaseToken: "lease_1",
+      },
+    ];
     deliveryStatus = "received";
     resumeError = new Error("workflow unavailable");
     expect((await POST(request(envelope()))).status).toBe(503);
-    expect(calls).toEqual(["persist", "resume"]);
+    expect(calls).toEqual([
+      "persist",
+      "claim",
+      "resume",
+      "release",
+      "progress",
+    ]);
   });
 
   test("acknowledges a woken replay without waking twice", async () => {
-    binding = {
-      operatingPackRunId: "tax_execution_1",
-      taxRunId: "taxcase_opaque_1",
-    };
+    targets = [
+      {
+        operatingPackRunId: "tax_execution_1",
+        taxRunId: "taxcase_opaque_1",
+        leaseToken: "lease_1",
+      },
+    ];
     deliveryStatus = "woken";
     created = false;
     const response = await POST(request(envelope()));
@@ -222,6 +264,37 @@ describe("TaxDomainEventV1 durable ingress", () => {
       replayed: true,
     });
     expect(calls).toEqual(["persist"]);
+  });
+
+  test("fans a workspace event out once to every bound TaxCase", async () => {
+    targets = [
+      {
+        operatingPackRunId: "tax_execution_1",
+        taxRunId: "taxcase_opaque_1",
+        leaseToken: "lease_1",
+      },
+      {
+        operatingPackRunId: "tax_execution_2",
+        taxRunId: "taxcase_opaque_2",
+        leaseToken: "lease_2",
+      },
+    ];
+    deliveryStatus = "received";
+    const response = await POST(
+      request(
+        envelope({
+          event: { ...event(), caseRef: null, kind: "consent.revoked" },
+          payloadHash: taxDomainEventRequestHash({
+            ...event(),
+            caseRef: null,
+            kind: "consent.revoked",
+          }),
+        }),
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(calls.filter((call) => call === "resume")).toHaveLength(2);
+    expect(calls.filter((call) => call === "mark-woken")).toHaveLength(2);
   });
 
   test("distinguishes deterministic conflicts from persistence outages", async () => {
