@@ -673,7 +673,12 @@ async function persistFailedStep(
   error: unknown,
 ): Promise<void> {
   "use step";
-  console.error(`[operating-pack] FAIL execution=${input.executionId}`, error);
+  const safeError = sanitizeTraceText(
+    error instanceof Error ? error.message : String(error),
+  );
+  console.error(
+    `[operating-pack] FAIL execution=${input.executionId} error=${safeError}`,
+  );
   await Promise.all([
     updateOperatingPackRun(input.executionId, {
       status: "failed",

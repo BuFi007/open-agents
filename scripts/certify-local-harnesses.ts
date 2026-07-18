@@ -152,6 +152,90 @@ async function certifyCircleWalletReadOnly(): Promise<Observation> {
   }
 }
 
+async function certifyCircleServiceDiscoveryReadOnly(): Promise<Observation> {
+  const startedAtMs = Date.now();
+  const search = await run("circle", [
+    "services",
+    "search",
+    "crypto",
+    "--limit",
+    "5",
+    "--output",
+    "json",
+  ]);
+  try {
+    const payload = JSON.parse(search.output) as {
+      data?: {
+        items?: Array<{ resource?: unknown }>;
+      };
+    };
+    const resources = (payload.data?.items ?? [])
+      .map((item) => item.resource)
+      .filter(
+        (resource): resource is string =>
+          typeof resource === "string" && resource.startsWith("https://"),
+      )
+      .slice(0, 5);
+    if (search.exitCode !== 0 || resources.length === 0) {
+      throw new Error(
+        "Circle service discovery returned no bounded HTTPS service",
+      );
+    }
+    let inspectedResource: string | undefined;
+    let inspectedStatus: string | undefined;
+    let inspectedCommand = "";
+    for (const resource of resources) {
+      const inspect = await run("circle", [
+        "services",
+        "inspect",
+        resource,
+        "--output",
+        "json",
+      ]);
+      try {
+        const inspected = JSON.parse(inspect.output) as {
+          data?: { url?: unknown; method?: unknown; status?: unknown };
+        };
+        if (
+          inspect.exitCode === 0 &&
+          inspected.data?.url === resource &&
+          typeof inspected.data.method === "string" &&
+          (inspected.data.status === "free" || inspected.data.status === "paid")
+        ) {
+          inspectedResource = resource;
+          inspectedStatus = inspected.data.status;
+          inspectedCommand = inspect.command;
+          break;
+        }
+      } catch {
+        // Try the next bounded result; discovery must not fail on one stale listing.
+      }
+    }
+    if (!inspectedResource || !inspectedStatus) {
+      throw new Error(
+        "Circle service inspection returned no usable bounded schema",
+      );
+    }
+    return {
+      command:
+        "circle services search crypto + inspect first HTTPS result (read-only)",
+      startedAtMs,
+      completedAtMs: Date.now(),
+      exitCode: 0,
+      output: `search=${search.exitCode};inspect=${inspectedCommand};status=${inspectedStatus};resourceHash=${hash(inspectedResource)}`,
+    };
+  } catch (error) {
+    return {
+      command:
+        "circle services search crypto + inspect first HTTPS result (read-only)",
+      startedAtMs,
+      completedAtMs: Date.now(),
+      exitCode: 1,
+      output: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function evidence(
   id: string,
   target: HarnessCertificationTarget,
@@ -301,6 +385,8 @@ async function main() {
     hyperToolsPresent.length === requiredHyperTools.length;
   const circleWallet = await certifyCircleWalletReadOnly();
   const circleWalletPassed = circleWallet.exitCode === 0;
+  const circleServiceDiscovery = await certifyCircleServiceDiscoveryReadOnly();
+  const circleServiceDiscoveryPassed = circleServiceDiscovery.exitCode === 0;
 
   const claudeGatewayKey = process.env.AI_GATEWAY_API_KEY;
   const claudeEnvironment = claudeGatewayKey
@@ -390,6 +476,13 @@ async function main() {
       circleWallet,
       circleWalletPassed ? ["circleWalletReadOnly"] : [],
     ),
+    evidence(
+      "circle_service_discovery_open_agents",
+      "open-agents",
+      "endpoint-smoke",
+      circleServiceDiscovery,
+      circleServiceDiscoveryPassed ? ["circleServiceDiscovery"] : [],
+    ),
   ];
   for (const target of targets) {
     allEvidence.push(
@@ -427,6 +520,8 @@ async function main() {
           target === "open-agents" && contract.exitCode === 0,
         readOnlyHyperSmoke: target === "open-agents" && hyperPassed,
         circleWalletReadOnly: target === "open-agents" && circleWalletPassed,
+        circleServiceDiscovery:
+          target === "open-agents" && circleServiceDiscoveryPassed,
         deniedSpendWithoutApproval:
           target === "open-agents" && contract.exitCode === 0,
         ...(target === "computer-use"

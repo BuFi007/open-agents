@@ -515,3 +515,320 @@ deadline and the certifier's `finally` cleanup path remained active. This is
 real current backpressure evidence, not a pass and not CPU/memory saturation
 evidence. The production capacity/fairness gate remains open and the strict
 score remains **83.9%**.
+
+## Fresh hosted worker-plane probe — 2026-07-14
+
+The disposable certifier was rerun through the linked Railway production
+environment with its deployed Redis, Typesense and AI Gateway configuration.
+One controlled run passed, then a **32-way concurrent probe completed 32/32**:
+each run published canonical-write, deterministic enrichment, a 1,536-dimension
+embedding, a version-bound Typesense projection, four payload-free telemetry
+completions, and a stable-hash repair replay. Every fixture was removed by the
+certifier cleanup path. This closes the previously observed bounded convergence
+failure for this probe size; it is still not an absolute provider/DB saturation
+ceiling or a seven-day operating-week report.
+
+The live harness certifier also now includes bounded read-only Circle service
+search and inspection (Open Agents PR #7), in addition to wallet status/list/
+balance. A fresh production BUFI ingress dispatch was accepted with HTTP 200
+and created session `0r7UQZ78uoy8cZF89qKqb`, but terminal polling then reported
+failure. Vercel logs identify `resolveChatSandboxRuntime` and
+`runProvisioning` exhausting four attempts before returning `USER_ERROR`; this
+is a hosted sandbox-provisioning gate rather than an ingress or Circle-tool
+surface failure. Preview deployments remain queued. The overall 100% bucket
+claim is not made while authenticated Desk/Expo journeys, authorized
+connectors, live Circle mutation, Claude/TCC and the operating-week window
+remain open.
+
+## Hermes ↔ bufi-hyper transport certification — 2026-07-14
+
+Normal Hermes dogfood isolated a protocol mismatch in the production
+`bufi-hyper` gateway: the server returned `2024-11-05` and emitted the legacy
+SSE `endpoint` event during a Streamable HTTP session. Hermes logged
+`Unknown SSE event: endpoint` and could not complete a normal model/tool
+session, even though `hermes mcp test` could enumerate the tools.
+
+Defi-web-app PR #340 (`bb805b18`) now negotiates `2025-03-26` when advertised,
+sends a protocol-safe SSE comment for modern clients, preserves legacy
+`endpoint` discovery for `2024-11-05`, and covers all three paths with tests.
+Against the patched local gateway, normal Hermes with Gemini discovered 100
+tools and called `get__api_markets`, returning six live markets. Production
+currently still negotiates `2024-11-05`; its read-only tools/list exposes 117
+tools including all 17 Circle wallet tools, but normal Hermes remains blocked
+until PR #340 is merged and deployed. This is a transport deployment gate,
+not a missing Circle tool-surface claim.
+
+## Gateman verification — agent-wallet and operating-pack workflow — 2026-07-14
+
+The post-implementation audit was run against the current Open Agents branch,
+Desk PR #573, and bufi-hyper PR #340. The audit did not treat local contracts,
+green package tests, or dispatch acceptance as proof of hosted completion.
+
+| Category | Score | Finding |
+| --- | ---: | --- |
+| Error handling | 8/10 | Wallet writes return an ambiguous reconciliation result and are not retried; hosted sandbox failures are persisted as failed workflow state. |
+| Logging | 8/10 | Trace data is redacted and bounded; raw operating-pack failure objects were removed from logs in commit `0d098cf5`. |
+| Type safety | 9/10 | Circle tool registry, actor-bound adapters, strict schemas, and response parsers are covered by typechecks and boundary tests. |
+| Testability | 9/10 | 27/27 Desk wallet assertions and the Open Agents certification/knowledge suite pass; live credentialed suites remain explicit skips. |
+| Performance | 8/10 | Railway worker-plane passes one-run and 32-way concurrency probes; provider saturation and larger recall/latency tests remain open. |
+| Security | 8/10 | Workspace grants, tenant binding, approval gates, SSRF/prototype-pollution checks, and secret redaction pass; no live spend is enabled by this audit. |
+| AI verification | 8/10 | Every cited commit, route, tool, and test was re-read or executed; hosted dispatch was followed to terminal failure instead of counted as success. |
+
+**Verdict: `YES_WITH_FOLLOWUPS` for local review, `NO` for production sign-off.**
+The remaining blockers are evidence gaps, not assumptions: hosted sandbox
+provisioning (`resolveChatSandboxRuntime`/`runProvisioning` exhaust retries),
+zero-step Desk and bufi-hyper hosted checks, 19 intentionally skipped
+credentialed integration tests, authenticated Expo physical-device coverage,
+Claude Code login/Computer Use TCC, authorized connector sandboxes, and live
+Circle mutation behind approval. These must be closed before claiming 100%.
+
+## Current-state addendum — 2026-07-14 rebase and hosted billing gate
+
+The Desk wallet slice was rebased again onto the current `development` tip
+(`0ea8ee918984f1a6d5cc4987a8237faa993a0fac`, including the audio pipeline line)
+and force-pushed as `f10ee9ed7`. The safe worktree preserved unrelated Expo
+edits. Focused Desk certification remains **27 pass, 0 fail** and
+`@bu/intelligence` typecheck passes.
+
+The hosted PR checks were retriggered against the new head. Both Desk Validate
+run `29327726435` and Claude review run `29327726480` terminated before any
+steps. GitHub's annotation is explicit: recent account payments failed or the
+spending limit must be increased. This is an account-capacity gate, not a
+wallet-code failure, and it prevents hosted merge evidence.
+
+Open Agents PR #7 continues to pass lint/typecheck on `ac175cd9`; its Vercel
+preview check remains pending, and `vercel inspect` cannot find the referenced
+deployment under the project context. The local Open Agents certification
+suite remains **112 pass, 19 explicit live-integration skips, 0 fail**.
+
+After restoring dependencies in the isolated bufi-hyper worktree, the
+Streamable HTTP, MCP initialize negotiation, and legacy SSE compatibility tests
+pass **3/3**. PR #340's hosted Perps/Vercel gates remain external failures.
+
+The strict score remains **83.9%**. No bucket points are added for these local
+passes because the missing evidence is still hosted deployment/account
+capacity, authorized provider/database/BullMQ saturation, authenticated
+Expo/Cleo device journeys, and approved live Circle mutation.
+
+## Disposable local data-plane certification — 2026-07-14
+
+To separate implementation defects from hosted-capacity gaps, an isolated
+Postgres/pgvector, Redis, and Typesense stack was started in disposable Docker
+containers. Against that stack:
+
+- Postgres knowledge integration: **8/8 pass**, including tenant RLS,
+  bounded lexical retrieval, enrichment receipts, context packets, leases,
+  and credential/size rejection.
+- BullMQ runtime integration: **1/1 pass**, including mixed-workload budgets,
+  deadlines, retries, and compact DLQ behavior.
+- Postgres outbox relay: **1/1 pass**, including crash-after-enqueue recovery
+  without duplicate delivery.
+- Connected data plane: **1/1 pass**, moving a source artifact through
+  canonical write, enrichment, embedding, alternate projection, telemetry,
+  and repair replay.
+- Typesense projection: **4/4 pass**, including a real tenant-filtered
+  upsert/retrieval against the disposable Typesense instance.
+
+This materially closes the local integration evidence gap (15 additional
+integration assertions, 0 failures), but it is intentionally not counted as
+production saturation or an authorized external-provider certification. The
+hosted account/Vercel gates and live AI Gateway/provider evidence remain open.
+
+## Fresh local harness matrix — 2026-07-14
+
+`bun --env-file=.env.local scripts/certify-local-harnesses.ts` was rerun. The
+individual evidence slices passed for the Open Agents contract suite,
+production bufi-hyper Circle-tool smoke (**17/17**), Circle wallet read-only
+status/list/balance, Circle service discovery/inspection, Codex handshake, and
+Hermes handshake. The aggregate report correctly remained failed: Claude Code
+handshake exited non-zero, the hosted Open Agents dispatch still exhausted
+sandbox provisioning retries, and `hermes computer-use doctor` exited non-zero.
+No wallet spend, signing, funding, or mutation was attempted. These are
+explicit remaining harness/hosted gates rather than unobserved success.
+
+## Desk/Cleo local E2E recheck — 2026-07-14
+
+Against Desk commit `c2693e348` (the wallet branch rebased onto the current
+development/audio line), the local command-center contract was re-executed:
+
+- Desk command-center, evidence-context, and team-cockpit UI suites: **8/8**.
+- Authenticated operations route suite: **7/7**.
+- Internal broker authorization suite: **7/7**.
+- Agent-wallet and intelligence suites: **34/34**.
+- Expo Metro exports: iOS **9,619 modules** and Android **9,613 modules**, both
+  successful with 61.4 MB bundles.
+
+The UI tests cover launch, approval, rejection, cancellation, pause/resume,
+manifest composition, citations, and proof that browser state never receives a
+workspace grant. The route and broker tests cover membership, replay rejection,
+scope denial, bufi-hyper forwarding, wallet read precision, approval-required
+writes, and ambiguous reconciliation. This closes the local Desk/Cleo evidence
+slice only; physical-device push/deep-link behavior and hosted authenticated
+execution remain unproven.
+
+## BU-216 consolidation — 2026-07-14
+
+The previously separate Desk PR #544 was evaluated against the wallet branch
+and consolidated into Desk PR #573 at `c5a728104`. The workflow inbox and its
+Shiva bridge now sit on the same branch as the guarded Circle agent-wallet
+integration. The consolidation preserved deployment configuration and the
+newer mobile-safe Circle/worklets fixes; duplicate draft PR #544 was closed as
+superseded.
+
+Merged-branch evidence:
+
+- Expo workspace service: **1/1**.
+- Shiva workspace-grant route: **4/4**.
+- Push controller: **3/3** under Vitest.
+- Wallet/intelligence suite: **32/32**.
+- Expo iOS export: **7,956 modules**, pass.
+- Expo Android export: **7,950 modules**, pass.
+
+This closes the BU-216 local implementation slice, but not physical-device
+approval/push/deep-link execution or hosted authenticated CI.
+
+## Agent-wallet safety review remediation — 2026-07-14
+
+Greptile review findings on Desk PR #573 were reproduced and fixed in commit
+`eb0215b67`:
+
+- Chainless balance reads now fail closed when multiple agent wallets match;
+  the adapter no longer selects an arbitrary chain.
+- x402 payment discovery caches the complete offer and the dispatch gate
+  requires exact URL, amount, currency, chain, and (when advertised) method
+  and payload equality. Tampered terms are rejected before the adapter is
+  called.
+- Ambiguous transfer/payment outcomes now return the outer failure shape
+  (`ok: false`) with a reconciliation payload, so callers cannot mistake an
+  unknown write state for success.
+
+The focused safety suite is **20/20 pass, 0 fail** (56 expectations), and the
+`@bu/intelligence` typecheck passes. This closes the review defects locally;
+the hosted CI/Vercel checks for PR #573 still terminate before steps because
+the GitHub account payment/spending limit gate is unresolved.
+
+## Live local data-plane rerun — 2026-07-14
+
+The integration services were available locally and the guarded live suites
+were rerun with unique workspace IDs and cleanup:
+
+- Postgres connector artifact/outbox path: **1/1 pass**.
+- Postgres knowledge resolver, replay, and tenant path: **1/1 pass**.
+- BullMQ production runtime with mixed profiles, deadlines, retries, and DLQ:
+  **1/1 pass**.
+- Postgres outbox → BullMQ crash/replay path: **1/1 pass**.
+- Connected source-artifact → canonical write → enrichment → embedding →
+  projection → repair pipeline: **1/1 pass**.
+
+That is **5/5 live integration tests, 0 failures** on the current local
+services. It strengthens the local parity claim; it does not substitute for
+authorized hosted database/Redis/provider saturation or kill/restart evidence.
+
+## Hermes/Circle perps boundary — 2026-07-14
+
+The public bufi-hyper MCP was queried without performing a write. Its trade
+prepare contract accepts the documented Hermes Circle agent address on Arc
+(chain `5042002`) and returns a `TelaranaFxOrderSettlement` EIP-712
+`SignedOrder` with digest, nonce, deadline, and typed-data domain. This proves
+the prepare/schema boundary is Circle-address compatible. The subsequent SCA
+signature and `post__api_trade_execute` remain unverified because the local
+Arc Circle CLI session is expired; no signature, spend, or position mutation
+was attempted. BU-201's ERC-1271 executor fix is already marked Done, so the
+remaining evidence is an authenticated Arc re-dogfood, not a new fallback to
+the hot-lane EOA.
+
+## Operating-week report attempt — 2026-07-14
+
+`bun --env-file=.env.local scripts/certify-operating-week.ts` found real
+workspace activity and produced a hashed report, but correctly failed the
+seven-day coverage gate. The observed window contains **18 workflow runs, 7
+completed runs, 108 tool calls, 8 approval events, 209 traces, 5 workflow
+families, and zero unexpected spend**, but spans only about 21 hours. This is
+useful production evidence and an honest zero-spend result; it is not a
+seven-day operating-week certification and must remain open until the window
+actually covers seven days.
+
+## Development-line rebase — 2026-07-14
+
+Desk PR #573 was rebased onto the current `development` tip `6ddf8ef72`,
+including the latest audio/intelligence and invoice commits, then force-pushed
+as `50d993cc6`. The consolidated branch still passes **25/25** focused Bun
+tests (wallet, Expo workspace service, Shiva grant route, and intelligence),
+**14/14** Vitest command-center/operations/push tests, and the
+`@bu/intelligence` typecheck. Expo exports also pass from the app workspace:
+iOS **7,956 modules** and Android **7,950 modules**.
+
+The new hosted Validate run fails before executing a step with the same GitHub
+account payment/spending-limit annotation; Vercel contexts fail immediately
+with the build-rate-limit gate. The rebase removes branch drift but does not
+manufacture hosted evidence.
+
+## Current hosted status correction — 2026-07-14
+
+The fork's Open Agents PR #7 (`BuFi007/open-agents`, head
+`codex/circle-service-certification`) is **OPEN**. Its latest completed
+`lint-and-typecheck` run passed; the docs-only head at `d0bf54f7` has a new CI
+run still in progress, while Vercel is rate-limited. PR #7 has no reported
+application-code failure.
+
+The broad Desk `@bu/app` actions typecheck is a separate baseline/resource
+gate: the default local shard timed out, a 4 GB heap run OOM'd, and an 8 GB
+heap run surfaced pre-existing errors across email, billing, invoice/bill,
+bank-account, and audio utility types. Wallet-specific suites, the
+`@bu/intelligence` typecheck, and Expo iOS/Android exports remain green. This
+must not be reported as a wallet regression, but it does prevent claiming a
+clean whole-app typecheck until the existing baseline debt or CI resource
+limit is addressed.
+
+## Fresh live data-plane certification — 2026-07-14
+
+With the disposable local Postgres and Redis services available, the guarded
+integration set was rerun with:
+
+```text
+RUN_CONNECTED_PIPELINE_INTEGRATION=1
+RUN_LIVE_QUEUE_TESTS=1
+RUN_LIVE_DATA_PLANE_TESTS=1
+RUN_LIVE_KNOWLEDGE_TESTS=1
+```
+
+The result was **12 pass, 0 fail** across six files (the connector test was
+then rerun with its explicit opt-in flag): tenant-safe connector persistence,
+knowledge RLS and bounded lexical recall,
+version-bound enrichment and context packets, crash-safe outbox replay, the
+real mixed BullMQ runtime, and the connected source-artifact → canonical
+write → enrichment → embedding → projection → repair pipeline. This is fresh
+local production-shape evidence; hosted saturation, provider sandboxes,
+kill/restart across independent machines, and seven-day freshness remain open.
+
+Open Agents PR #7's latest completed `lint-and-typecheck` run passed at the
+previous docs head; the current `d0bf54f7` rerun is still in progress and the
+Vercel deployment remains rate-limited.
+
+## Fresh live semantic certification — 2026-07-14
+
+The opt-in semantic tests were also run against the configured Postgres,
+Redis, and AI Gateway services. Both passed (**2/2, 0 failures**): real
+embedding and hybrid retrieval preserved tenant isolation, rejected stale
+vectors, used the cosine index, and met the combined-recall threshold; the
+durable semantic worker relayed a real entity event through BullMQ into an
+embedding projection and verified replay idempotency. This closes the local
+semantic-worker evidence gap. Hosted provider quotas, multi-tenant load,
+kill/restart across independent workers, and seven-day freshness are still
+separate production gates.
+
+## Open Agents CI completion — 2026-07-14
+
+The latest Open Agents PR #7 head `65679bc5` completed hosted CI successfully
+(lint/format, typecheck, tests, and DB check all passed). Its remaining Vercel
+context is an account build-rate-limit failure, not a repository check failure.
+
+## Fresh kill/recovery certification — 2026-07-14
+
+The explicit BullMQ SIGKILL harness passed all three recovery boundaries
+against the configured Redis/Postgres services: queued-before-claim,
+active-before-effect, and effect-before-ack. Every recovered job completed,
+committed-job loss stayed at zero, and the effect-before-ack replay preserved
+the same entity identity and version without a duplicate effect. This closes
+the local kill/restart boundary; multi-host saturation and noisy-neighbor
+capacity evidence remain separate requirements.
